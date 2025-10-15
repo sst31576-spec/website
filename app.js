@@ -101,33 +101,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const renderGetKeyPage = () => {
+    const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
-        container.innerHTML = '';
-
-        if (currentUser.user_status === 'Perm' || currentUser.isAdmin) {
-            container.innerHTML = `<p>Fetching your permanent key...</p><div id="key-display-area"></div>`;
-            handleGenerateKey();
-            return;
-        }
-        
-        const urlParams = new URLSearchParams(window.location.search);
-        const hasCompletedTask = urlParams.get('completed') === 'true';
-
-        if (hasCompletedTask) {
-            container.innerHTML = `
-                <p>Thank you! You can now get your key.</p>
-                <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                <div id="key-display-area" class="hidden"></div>
-            `;
-            document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
-        } else {
-            container.innerHTML = `
-                <p>To get your 24-hour key, please complete the task below.</p>
-                <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-            `;
+        container.innerHTML = `<p>Checking for an existing key...</p>`;
+        try {
+            const response = await fetch('/api/generate-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed_task: false })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                displayKey(data);
+                return;
+            }
+            if (response.status === 403) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasCompletedTask = urlParams.get('completed') === 'true';
+                if (hasCompletedTask) {
+                    container.innerHTML = `
+                        <p>Thank you! You can now get your key.</p>
+                        <button id="generate-key-btn" class="discord-btn">Get Key</button>
+                        <div id="key-display-area" class="hidden"></div>
+                    `;
+                    document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
+                } else {
+                    container.innerHTML = `
+                        <p>To get your 24-hour key, please complete the task below.</p>
+                        <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                        <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+                    `;
+                }
+            } else {
+                throw new Error(data.error || 'An unexpected error occurred.');
+            }
+        } catch (error) {
+            container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
     };
 
@@ -160,8 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
             if (event && event.target) {
                 event.target.classList.add('hidden');
-                event.target.disabled = false;
-                event.target.textContent = 'Get Key';
             }
         }
     };
@@ -239,26 +247,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/admin/keys');
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
-            if (keys.length === 0) { container.innerHTML = '<p>No keys found.</p>'; return; }
+            
             container.innerHTML = `
-                <table class="admin-table">
-                    <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead>
-                    <tbody>
-                    ${keys.map(key => `
-                        <tr data-key-id="${key.id}">
-                            <td class="key-value">${key.key_value}</td>
-                            <td>${key.key_type}</td>
-                            <td>${key.discord_username || 'N/A'}</td>
-                            <td class="hwid-cell">${key.roblox_user_id || 'Not Set'}</td>
-                            <td>${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
-                            <td class="actions-cell">
-                                <button class="edit-hwid-btn secondary-btn">Edit</button>
-                                <button class="delete-key-btn secondary-btn-red">Delete</button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                    </tbody>
-                </table>`;
+                <input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">
+            `;
+
+            const table = document.createElement('table');
+            table.className = 'admin-table';
+            table.innerHTML = `
+                <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+            `;
+            container.appendChild(table);
+            const tbody = table.querySelector('tbody');
+
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
+            } else {
+                tbody.innerHTML = keys.map(key => `
+                    <tr data-key-id="${key.id}">
+                        <td class="key-value">${key.key_value}</td>
+                        <td>${key.key_type}</td>
+                        <td class="owner-name">${key.discord_username || 'N/A'}</td>
+                        <td class="hwid-cell">${key.roblox_user_id || 'Not Set'}</td>
+                        <td>${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td class="actions-cell">
+                            <button class="edit-hwid-btn secondary-btn">Edit</button>
+                            <button class="delete-key-btn secondary-btn-red">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            const searchInput = document.getElementById('admin-search-input');
+            const tableRows = container.querySelectorAll('tbody tr');
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                tableRows.forEach(row => {
+                    const keyValue = row.querySelector('.key-value').textContent.toLowerCase();
+                    const ownerName = row.querySelector('.owner-name').textContent.toLowerCase();
+                    row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none';
+                });
+            });
+
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             document.querySelectorAll('.edit-hwid-btn').forEach(btn => btn.addEventListener('click', handleEditHwid));
         } catch (error) {
