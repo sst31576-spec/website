@@ -44,20 +44,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const showLoginView = (message = null) => {
-        loginContainer.classList.remove('hidden');
-        mainAppContainer.classList.add('hidden');
-        if (message) loginError.textContent = message;
+        if (loginContainer) loginContainer.classList.remove('hidden');
+        if (mainAppContainer) mainAppContainer.classList.add('hidden');
+        if (message && loginError) loginError.textContent = message;
     };
 
     const setupMainApp = (user) => {
-        loginContainer.classList.add('hidden');
-        mainAppContainer.classList.remove('hidden');
-        userNameEl.textContent = user.discord_username;
-        userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
+        if (loginContainer) loginContainer.classList.add('hidden');
+        if (mainAppContainer) mainAppContainer.classList.remove('hidden');
+        if (userNameEl) userNameEl.textContent = user.discord_username;
+        if (userAvatarEl) userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
         const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
-        userStatusBadgeEl.textContent = displayStatus;
-        userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
-        if (user.isAdmin) {
+        if (userStatusBadgeEl) {
+            userStatusBadgeEl.textContent = displayStatus;
+            userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
+        }
+        if (user.isAdmin && manageKeysLink) {
             manageKeysLink.classList.remove('hidden');
         }
         handleRouting();
@@ -97,19 +99,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+    if (userProfileToggle) {
+        userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+    }
     window.addEventListener('click', (e) => {
         if (!userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
         }
     });
 
-    // ✅ FIX: Partie get-key synchronisée avec l’API backend complète
+    // ===== get-key page logic (robust, POST call) =====
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
         container.innerHTML = `<p>Checking for an existing key...</p>`;
         try {
+            // First: try to get existing key (empty body)
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -121,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // No existing key — check for hash in URL
             const urlParams = new URLSearchParams(window.location.search);
             const hash = urlParams.get('hash');
 
@@ -129,10 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p>Thank you! You can now get your key.</p>
                     <button id="generate-key-btn" class="discord-btn">Get Key</button>
                     <div id="key-display-area" class="hidden"></div>
+                    <div id="generate-error" class="error-message" style="margin-top: 8px;"></div>
                 `;
-                document.getElementById('generate-key-btn').addEventListener('click', () => handleGenerateKey(hash));
-                // 🔁 Auto-claim pour éviter les expirations Linkvertise
-                setTimeout(() => handleGenerateKey(hash), 100);
+                const btn = document.getElementById('generate-key-btn');
+                btn.addEventListener('click', () => handleGenerateKey(hash));
+                // Auto-claim immediately to avoid the 10s expiry (but keep UI same)
+                setTimeout(() => {
+                    try {
+                        handleGenerateKey(hash);
+                    } catch (e) {
+                        console.error('Immediate claim failed:', e);
+                    }
+                }, 80);
             } else {
                 container.innerHTML = `
                     <p>To get your 24-hour key, please complete the task below.</p>
@@ -141,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
         } catch (error) {
+            console.error(error);
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
     };
@@ -152,23 +167,40 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Generating...';
         }
         const displayArea = document.getElementById('key-display-area');
+        const errorEl = document.getElementById('generate-error');
         if (displayArea) {
             displayArea.classList.remove('hidden');
             displayArea.innerHTML = '';
         }
-        
+        if (errorEl) errorEl.textContent = '';
+
         try {
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(hash ? { hash } : {})
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Could not generate key.');
+
+            // Try to parse JSON (even on non-2xx)
+            const text = await response.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
+
+            if (!response.ok) {
+                console.error('Server returned non-OK:', response.status, data);
+                // Show friendly message with optional details
+                const msg = (data && data.error) ? data.error : 'Could not generate key.';
+                const details = (data && data.details) ? JSON.stringify(data.details) : '';
+                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>${details ? `<br><small>${details}</small>` : ''}`;
+                if (btn) btn.classList.add('hidden');
+                return;
+            }
+
             displayKey(data);
         } catch (error) {
+            console.error('Request failed:', error);
             if (displayArea) {
-                displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
+                displayArea.innerHTML = `<p class="error-message">Request failed. Try disabling adblock or retrying.</p>`;
             }
             if (btn) btn.classList.add('hidden');
         }
@@ -211,13 +243,13 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.textContent = result.message;
         } catch (error) {
             statusEl.className = 'status-message error';
-            statusEl.textContent = error.message;
+            statusEl.textContent = error.message || 'Failed to reset HWID.';
         } finally {
             setTimeout(() => { btn.disabled = false; }, 2000);
         }
     };
 
-    // Suggestion system (inchangé)
+    // Suggestion system (unchanged)
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -238,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 suggestionTextarea.value = '';
             } catch (error) {
                 suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = error.message;
+                suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Suggestion';
@@ -246,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Admin Panel (inchangé)
+    // Admin panel (unchanged)
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         if (!container) return;
