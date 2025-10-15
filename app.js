@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 403) {
                 const data = await response.json();
                 // Custom logic for Discord Join Error
-                const errorMessage = 'You must join the Discord server.';
+                const errorMessage = 'You must join the Discord server';
                 const discordLink = 'https://discord.gg/RhDnUQr4Du';
                 showLoginView(errorMessage, discordLink);
                 return;
