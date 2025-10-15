@@ -1,4 +1,3 @@
-// netlify/functions/api-generate-key.js
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const db = require('./db');
@@ -14,7 +13,7 @@ const generateRandomString = (length) => {
 exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
-    // parse cookies & auth
+    // --- Parse cookies & auth ---
     const cookies = event.headers.cookie ? cookie.parse(event.headers.cookie) : {};
     const token = cookies.auth_token;
     if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
@@ -28,7 +27,7 @@ exports.handler = async function (event, context) {
 
         const userStatus = rows[0].user_status;
 
-        // ---- Free user flow (temporary key) ----
+        // ---- Free user flow ----
         if (userStatus === 'Free') {
             // If user already has an active temp key, return it
             const { rows: existingKeyRows } = await db.query(
@@ -46,12 +45,11 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            // Now we expect a verification hash in the body
+            // Parse request body
             let body = {};
             try {
                 body = event.body ? JSON.parse(event.body) : {};
             } catch (err) {
-                // If body parse fails, keep body = {}
                 console.error('Failed to parse body JSON:', err.message);
             }
 
@@ -60,38 +58,37 @@ exports.handler = async function (event, context) {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Verification hash is missing.' }) };
             }
 
-            if (!process.env.LINKVERTISE_API_TOKEN) {
-                console.error('LINKVERTISE_API_TOKEN is not set in environment.');
-                return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfiguration.' }) };
-            }
-
-            const verificationUrl = `https://publisher.linkvertise.com/api/v1/anti_bypassing?token=${encodeURIComponent(process.env.LINKVERTISE_API_TOKEN)}&hash=${encodeURIComponent(hash)}`;
+            // --- Linkvertise verification ---
+            const LINKVERTISE_ID = "1409420"; // ✅ ton vrai ID Linkvertise
+            const verificationUrl = `https://publisher.linkvertise.com/api/v2/redirect/link?id=${LINKVERTISE_ID}&hash=${encodeURIComponent(hash)}`;
 
             let response;
             try {
-                // axios.post with an explicit empty body
-                response = await axios.post(verificationUrl, {});
+                response = await axios.get(verificationUrl);
             } catch (err) {
-                // Log details for debugging
                 const respData = err.response ? err.response.data : err.message;
                 console.error('Axios error calling Linkvertise:', respData);
-                return { statusCode: 502, body: JSON.stringify({ error: 'Linkvertise verification request failed.', details: respData }) };
+                return {
+                    statusCode: 502,
+                    body: JSON.stringify({ error: 'Linkvertise verification request failed.', details: respData })
+                };
             }
 
-            // Log Linkvertise reply for debugging
-            console.log('Linkvertise response data:', response.data);
+            console.log('Linkvertise response:', response.data);
 
-            // Normalize response: accept boolean true or string "TRUE"/"true"
-            const respNormalized = (typeof response.data === 'string')
-                ? response.data.trim().toLowerCase()
-                : String(response.data).toLowerCase();
-
-            if (respNormalized !== 'true') {
-                // return details to the frontend to aid debugging (don't leak secrets)
-                return { statusCode: 403, body: JSON.stringify({ error: 'Linkvertise task not completed or already claimed.', details: response.data }) };
+            // --- Check validity according to new v2 API format ---
+            const valid = response.data?.data?.valid === true;
+            if (!valid) {
+                return {
+                    statusCode: 403,
+                    body: JSON.stringify({
+                        error: 'Linkvertise task not completed or already claimed.',
+                        details: response.data
+                    })
+                };
             }
 
-            // If we reach here, verification passed
+            // --- Generate and store new key ---
             const newKey = `KINGFREE-${generateRandomString(20)}`;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
             await db.query(
@@ -107,17 +104,22 @@ exports.handler = async function (event, context) {
 
         // ---- Permanent user flow ----
         if (userStatus === 'Perm') {
-            const { rows: existingRows } = await db.query('SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2', [id, 'perm']);
+            const { rows: existingRows } = await db.query(
+                'SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2',
+                [id, 'perm']
+            );
             let newKey;
             if (existingRows.length > 0) newKey = existingRows[0].key_value;
             else {
                 newKey = `KINGPERM-${generateRandomString(16)}`;
-                await db.query('INSERT INTO keys (key_value, key_type, owner_discord_id) VALUES ($1, $2, $3)', [newKey, 'perm', id]);
+                await db.query(
+                    'INSERT INTO keys (key_value, key_type, owner_discord_id) VALUES ($1, $2, $3)',
+                    [newKey, 'perm', id]
+                );
             }
             return { statusCode: 200, body: JSON.stringify({ key: newKey, type: 'perm' }) };
         }
 
-        // If user_status not recognized
         return { statusCode: 400, body: JSON.stringify({ error: 'Unknown user status.' }) };
     } catch (error) {
         console.error('Key Generation Error:', error && error.stack ? error.stack : error);
