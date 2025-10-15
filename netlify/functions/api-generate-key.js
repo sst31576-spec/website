@@ -38,7 +38,7 @@ exports.handler = async function (event, context) {
 
         // ==== FREE USERS ====
         if (userStatus === 'Free') {
-            // 🔁 Vérifie si un key temporaire actif existe déjà
+            // Vérifie si un key temporaire actif existe déjà
             const { rows: existingKeyRows } = await db.query(
                 'SELECT * FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
                 [id, 'temp']
@@ -69,48 +69,49 @@ exports.handler = async function (event, context) {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Verification hash is missing.' }) };
             }
 
-            // ==== LINKVERTISE VERIFICATION (NOUVELLE VERSION STABLE) ====
-            const LINKVERTISE_ID = "1409420"; // Ton vrai ID Linkvertise
-            const verificationUrl = `https://publisher.linkvertise.com/api/v1/redirect/link?id=${LINKVERTISE_ID}&hash=${encodeURIComponent(hash)}&o=sharing`;
+            // ==== LINKVERTISE ANTI_BYPASS VERIFICATION ====
+            const LINKVERTISE_TOKEN = process.env.LINKVERTISE_API_TOKEN;
+            if (!LINKVERTISE_TOKEN) {
+                console.error('Missing LINKVERTISE_API_TOKEN in environment.');
+                return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfiguration (missing LINKVERTISE token).' }) };
+            }
 
-            console.log("Checking Linkvertise verification:", verificationUrl);
+            const verificationUrl = `https://publisher.linkvertise.com/api/v1/anti_bypassing?token=${encodeURIComponent(LINKVERTISE_TOKEN)}&hash=${encodeURIComponent(hash)}`;
 
-            let response;
+            let lvResponse;
             try {
-                response = await axios.get(verificationUrl, {
-                    headers: {
-                        "User-Agent": "KeySystem/1.0",
-                        "Accept": "application/json"
-                    },
-                    validateStatus: () => true
+                // use POST as doc specifies; no body required
+                lvResponse = await axios.post(verificationUrl, {}, {
+                    headers: { 'Accept': 'application/json' },
+                    validateStatus: () => true // handle non-2xx gracefully
                 });
             } catch (err) {
                 const respData = err.response ? err.response.data : err.message;
-                console.error("Axios error calling Linkvertise:", respData);
+                console.error("Axios error calling Linkvertise Anti-Bypass:", respData);
                 return {
                     statusCode: 502,
                     body: JSON.stringify({
-                        error: 'Linkvertise verification request failed.',
+                        error: 'Linkvertise Anti-Bypass verification failed.',
                         details: respData
                     })
                 };
             }
 
-            console.log("Linkvertise API Raw:", response.status, response.data);
+            console.log('Linkvertise anti_bypassing raw response:', lvResponse.status, lvResponse.data);
 
-            // Vérifie les formats valides de retour possibles
-            const valid =
-                response.status === 200 &&
-                (response.data?.data?.valid === true ||
-                    response.data?.success === true ||
-                    response.data?.valid === true);
+            // The API returns TRUE (boolean or string) when valid, otherwise FALSE or error.
+            const resp = lvResponse.data;
+            const isTrue =
+                resp === true ||
+                (typeof resp === 'string' && resp.trim().toLowerCase() === 'true');
 
-            if (!valid) {
+            if (!isTrue) {
+                // include details to help debug (safe to include response body)
                 return {
                     statusCode: 403,
                     body: JSON.stringify({
-                        error: 'Linkvertise task not completed or invalid hash.',
-                        details: response.data || { status: response.status }
+                        error: 'Linkvertise task not completed or invalid/expired hash.',
+                        details: resp
                     })
                 };
             }
