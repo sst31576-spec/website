@@ -17,7 +17,6 @@ exports.handler = async function (event, context) {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
     
-    // Vérifie que l'utilisateur est authentifié
     const cookies = event.headers.cookie ? cookie.parse(event.headers.cookie) : {};
     const token = cookies.auth_token;
     if (!token) {
@@ -28,7 +27,6 @@ exports.handler = async function (event, context) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { id } = decoded;
 
-        // Récupère le statut de l'utilisateur
         const { rows } = await db.query('SELECT user_status FROM users WHERE discord_id = $1', [id]);
         if (rows.length === 0) {
             return { statusCode: 404, body: JSON.stringify({ error: 'User not found' }) };
@@ -38,9 +36,19 @@ exports.handler = async function (event, context) {
 
         // --- Logique pour les utilisateurs GRATUITS ---
         if (userStatus === 'Free') {
-            const { completed_task } = JSON.parse(event.body);
+            // On vérifie d'abord si une clé valide existe
+            const { rows: existingKeyRows } = await db.query(
+                'SELECT key_value, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
+                [id, 'temp']
+            );
 
-            // Nouvelle vérification : on se fie au frontend qui confirme que l'utilisateur a cliqué sur "Start Task"
+            if (existingKeyRows.length > 0) {
+                // Si une clé valide existe, on la renvoie directement
+                return { statusCode: 200, body: JSON.stringify({ key: existingKeyRows[0].key_value, type: 'temp', expires: existingKeyRows[0].expires_at }) };
+            }
+            
+            // Si aucune clé valide n'existe, on continue avec la logique Linkvertise
+            const { completed_task } = JSON.parse(event.body);
             if (completed_task !== true) {
                 return { statusCode: 403, body: JSON.stringify({ error: 'Linkvertise task verification failed.' }) };
             }
