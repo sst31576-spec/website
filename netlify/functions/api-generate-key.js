@@ -29,7 +29,7 @@ exports.handler = async function (event, context) {
 
         // ---- Free user flow ----
         if (userStatus === 'Free') {
-            // If user already has an active temp key, return it
+            // Vérifie si déjà une clé active
             const { rows: existingKeyRows } = await db.query(
                 'SELECT * FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
                 [id, 'temp']
@@ -45,7 +45,7 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            // Parse request body
+            // --- Parse le hash envoyé ---
             let body = {};
             try {
                 body = event.body ? JSON.parse(event.body) : {};
@@ -58,13 +58,18 @@ exports.handler = async function (event, context) {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Verification hash is missing.' }) };
             }
 
-            // --- Linkvertise verification ---
-            const LINKVERTISE_ID = "1409420"; // ✅ ton vrai ID Linkvertise
-            const verificationUrl = `https://publisher.linkvertise.com/api/v2/redirect/link?id=${LINKVERTISE_ID}&hash=${encodeURIComponent(hash)}`;
+            // --- ✅ Nouvelle API Linkvertise vérifiée ---
+            const LINKVERTISE_ID = "1409420"; // ton vrai ID
+            const verificationUrl = `https://publisher.linkvertise.com/api/v1/redirect/link?id=${LINKVERTISE_ID}&hash=${encodeURIComponent(hash)}&o=sharing`;
 
             let response;
             try {
-                response = await axios.get(verificationUrl);
+                response = await axios.get(verificationUrl, {
+                    headers: {
+                        'User-Agent': 'KeySystem/1.0',
+                        'Accept': 'application/json'
+                    }
+                });
             } catch (err) {
                 const respData = err.response ? err.response.data : err.message;
                 console.error('Axios error calling Linkvertise:', respData);
@@ -74,21 +79,21 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            console.log('Linkvertise response:', response.data);
+            console.log('✅ Linkvertise raw response:', JSON.stringify(response.data, null, 2));
 
-            // --- Check validity according to new v2 API format ---
-            const valid = response.data?.data?.valid === true;
+            // --- Vérifie la validité ---
+            const valid = response.data?.data?.valid === true || response.data?.success === true;
             if (!valid) {
                 return {
                     statusCode: 403,
                     body: JSON.stringify({
-                        error: 'Linkvertise task not completed or already claimed.',
+                        error: 'Linkvertise task not completed or invalid hash.',
                         details: response.data
                     })
                 };
             }
 
-            // --- Generate and store new key ---
+            // --- Génération + stockage de la nouvelle clé ---
             const newKey = `KINGFREE-${generateRandomString(20)}`;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
             await db.query(
