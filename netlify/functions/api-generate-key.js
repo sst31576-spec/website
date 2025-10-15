@@ -11,8 +11,10 @@ const generateRandomString = (length) => {
 };
 
 exports.handler = async function (event, context) {
-    console.log("Incoming request:", event.httpMethod, event.body);
+    // DEBUG: log incoming request (body will be string if Netlify)
+    console.log("Incoming request:", event.httpMethod, event.path);
 
+    // Only accept POST
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
@@ -28,24 +30,21 @@ exports.handler = async function (event, context) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { id } = decoded;
 
-        // Vérifie si l’utilisateur existe
-        const { rows } = await db.query('SELECT user_status FROM users WHERE discord_id = $1', [id]);
-        if (rows.length === 0) {
+        // Verify user exists
+        const userRes = await db.query('SELECT user_status FROM users WHERE discord_id = $1', [id]);
+        if (userRes.rows.length === 0) {
             return { statusCode: 404, body: JSON.stringify({ error: 'User not found' }) };
         }
+        const userStatus = userRes.rows[0].user_status;
 
-        const userStatus = rows[0].user_status;
-
-        // ==== FREE USERS ====
+        // ---- Free user flow ----
         if (userStatus === 'Free') {
-            // Vérifie si un key temporaire actif existe déjà
+            // If user already has an active temp key, return it
             const { rows: existingKeyRows } = await db.query(
                 'SELECT * FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
                 [id, 'temp']
             );
-
             if (existingKeyRows.length > 0) {
-                console.log(`Existing temp key for user ${id} found.`);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({
@@ -56,12 +55,12 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            // --- Parse request body ---
+            // Parse request body (safe)
             let body = {};
             try {
                 body = event.body ? JSON.parse(event.body) : {};
             } catch (err) {
-                console.error('Failed to parse body JSON:', err.message);
+                console.error('Failed to parse body JSON:', err && err.message ? err.message : err);
             }
 
             const { hash } = body;
@@ -80,10 +79,10 @@ exports.handler = async function (event, context) {
 
             let lvResponse;
             try {
-                // use POST as doc specifies; no body required
+                // POST per docs; allow non-2xx so we can inspect body/status
                 lvResponse = await axios.post(verificationUrl, {}, {
                     headers: { 'Accept': 'application/json' },
-                    validateStatus: () => true // handle non-2xx gracefully
+                    validateStatus: () => true
                 });
             } catch (err) {
                 const respData = err.response ? err.response.data : err.message;
@@ -99,24 +98,25 @@ exports.handler = async function (event, context) {
 
             console.log('Linkvertise anti_bypassing raw response:', lvResponse.status, lvResponse.data);
 
-            // The API returns TRUE (boolean or string) when valid, otherwise FALSE or error.
+            // The API returns TRUE (boolean) when valid, otherwise FALSE or an error object.
             const resp = lvResponse.data;
             const isTrue =
                 resp === true ||
-                (typeof resp === 'string' && resp.trim().toLowerCase() === 'true');
+                (typeof resp === 'string' && resp.trim().toLowerCase() === 'true') ||
+                (typeof resp === 'object' && resp === true); // defensive
 
             if (!isTrue) {
-                // include details to help debug (safe to include response body)
+                // Include small details to help debugging (not secrets)
                 return {
                     statusCode: 403,
                     body: JSON.stringify({
                         error: 'Linkvertise task not completed or invalid/expired hash.',
-                        details: resp
+                        details: resp || { status: lvResponse.status }
                     })
                 };
             }
 
-            // ==== GÉNÉRATION DE LA CLÉ ====
+            // ==== GENERATE AND STORE KEY ====
             const newKey = `KINGFREE-${generateRandomString(20)}`;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
             await db.query(
@@ -132,29 +132,25 @@ exports.handler = async function (event, context) {
             };
         }
 
-        // ==== PERMANENT USERS ====
+        // ---- Permanent user flow ----
         if (userStatus === 'Perm') {
             const { rows: existingRows } = await db.query(
                 'SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2',
                 [id, 'perm']
             );
-
             let newKey;
-            if (existingRows.length > 0) {
-                newKey = existingRows[0].key_value;
-            } else {
+            if (existingRows.length > 0) newKey = existingRows[0].key_value;
+            else {
                 newKey = `KINGPERM-${generateRandomString(16)}`;
                 await db.query(
                     'INSERT INTO keys (key_value, key_type, owner_discord_id) VALUES ($1, $2, $3)',
                     [newKey, 'perm', id]
                 );
             }
-
-            console.log(`Permanent key for ${id}: ${newKey}`);
             return { statusCode: 200, body: JSON.stringify({ key: newKey, type: 'perm' }) };
         }
 
-        // ==== UNKNOWN STATUS ====
+        // Unknown status
         return { statusCode: 400, body: JSON.stringify({ error: 'Unknown user status.' }) };
     } catch (error) {
         console.error('Key Generation Error:', error && error.stack ? error.stack : error);
