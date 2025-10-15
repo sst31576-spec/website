@@ -1,29 +1,43 @@
+// Fonction pour calculer et formater le temps restant
 function formatTimeRemaining(expiryDate) {
-    if (!expiryDate) return 'N/A';
+    if (!expiryDate) return 'N/A'; // Pour les clés permanentes
     const expiry = new Date(expiryDate);
     const now = new Date();
     const diff = expiry - now;
-    if (diff <= 0) return 'Expired';
+
+    if (diff <= 0) {
+        return 'Expired';
+    }
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
     return `${hours}h ${minutes}m`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Éléments de l'interface
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
+
+    // Éléments utilisateur
     const userNameEl = document.getElementById('user-name');
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
+
+    // Navigation
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page');
     const userProfileToggle = document.getElementById('user-profile-toggle');
     const dropdownMenu = document.getElementById('dropdown-menu');
     const manageKeysLink = document.getElementById('manage-keys-link');
+
+    // Éléments de suggestion
     const suggestionForm = document.getElementById('suggestion-form');
     const suggestionTextarea = document.getElementById('suggestion-textarea');
     const suggestionStatus = document.getElementById('suggestion-status');
+
     let currentUser = null;
 
     const checkUserStatus = async () => {
