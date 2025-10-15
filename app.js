@@ -1,43 +1,29 @@
-// Fonction pour calculer et formater le temps restant
 function formatTimeRemaining(expiryDate) {
-    if (!expiryDate) return 'N/A'; // Pour les clés permanentes
+    if (!expiryDate) return 'N/A';
     const expiry = new Date(expiryDate);
     const now = new Date();
     const diff = expiry - now;
-
-    if (diff <= 0) {
-        return 'Expired';
-    }
-
+    if (diff <= 0) return 'Expired';
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
     return `${hours}h ${minutes}m`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Éléments de l'interface
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
-
-    // Éléments utilisateur
     const userNameEl = document.getElementById('user-name');
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
-
-    // Navigation
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page');
     const userProfileToggle = document.getElementById('user-profile-toggle');
     const dropdownMenu = document.getElementById('dropdown-menu');
     const manageKeysLink = document.getElementById('manage-keys-link');
-
-    // Éléments de suggestion
     const suggestionForm = document.getElementById('suggestion-form');
     const suggestionTextarea = document.getElementById('suggestion-textarea');
     const suggestionStatus = document.getElementById('suggestion-status');
-
     let currentUser = null;
 
     const checkUserStatus = async () => {
@@ -117,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
-        if (!currentUser) return;
+        if (!container || !currentUser) return;
         container.innerHTML = `<p>Checking for an existing key...</p>`;
         try {
             const response = await fetch('/api/generate-key', {
@@ -156,12 +142,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleGenerateKey = async (event) => {
-        if(event && event.target) {
+        if (event && event.target) {
             const btn = event.target;
             btn.disabled = true;
             btn.textContent = 'Generating...';
         }
         const displayArea = document.getElementById('key-display-area');
+        if (!displayArea) return;
         displayArea.classList.remove('hidden');
         displayArea.innerHTML = '';
         const isFreeUserFlow = currentUser.user_status === 'Free';
@@ -181,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayKey(data);
         } catch (error) {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
-            if(event && event.target) {
+            if (event && event.target) {
                 event.target.classList.add('hidden');
             }
         }
@@ -189,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const displayKey = (data) => {
         const displayArea = document.getElementById('key-display-area');
+        if (!displayArea) return;
         displayArea.innerHTML = `
             <h4>Your key is ready:</h4>
             <div class="key-container">
@@ -226,38 +214,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    suggestionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const suggestion = suggestionTextarea.value;
-        const btn = e.target.querySelector('button');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        suggestionStatus.textContent = '';
-        try {
-            const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
-            suggestionStatus.className = 'status-message success';
-            suggestionStatus.textContent = 'Suggestion sent successfully!';
-            suggestionTextarea.value = '';
-        } catch (error) {
-            suggestionStatus.className = 'status-message error';
-            suggestionStatus.textContent = error.message;
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Send Suggestion';
-        }
-    });
+    if (suggestionForm) {
+        suggestionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const suggestion = suggestionTextarea.value;
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            suggestionStatus.textContent = '';
+            try {
+                const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                suggestionStatus.className = 'status-message success';
+                suggestionStatus.textContent = 'Suggestion sent successfully!';
+                suggestionTextarea.value = '';
+            } catch (error) {
+                suggestionStatus.className = 'status-message error';
+                suggestionStatus.textContent = error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Suggestion';
+            }
+        });
+    }
 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
+        if (!container) return;
         container.innerHTML = '<p>Loading keys...</p>';
         try {
             const response = await fetch('/api/admin/keys');
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
             if (keys.length === 0) { container.innerHTML = '<p>No keys found.</p>'; return; }
-            
             container.innerHTML = `
                 <table class="admin-table">
                     <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead>
@@ -277,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `).join('')}
                     </tbody>
                 </table>`;
-
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             document.querySelectorAll('.edit-hwid-btn').forEach(btn => btn.addEventListener('click', handleEditHwid));
         } catch (error) {
