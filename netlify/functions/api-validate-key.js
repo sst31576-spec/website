@@ -18,10 +18,17 @@ const gameScripts = {
     '18337464872': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/3333333"
 };
 
-exports.handler = async function (event, context) {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
-    }
+if (event.httpMethod === 'GET') {
+    const params = event.queryStringParameters;
+    event.body = JSON.stringify({
+        key: params.key,
+        roblox_user_id: params.roblox_user_id,
+        place_id: params.place_id
+    });
+} else if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
+}
+
 
     try {
         const { key, roblox_user_id, place_id } = JSON.parse(event.body);
