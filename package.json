@@ -1,0 +1,11 @@
+{
+  "name": "kinggen-netlify-backend",
+  "version": "1.0.0",
+  "description": "Serverless functions for KingGen",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cookie": "^0.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.5"
+  }
+}
