@@ -1,0 +1,54 @@
+# netlify.toml (Version Complète et Corrigée)
+
+[build]
+  functions = "netlify/functions"
+
+# Redirige les appels d'API vers les fonctions serverless
+[[redirects]]
+  from = "/auth/discord"
+  to = "/.netlify/functions/auth-discord"
+  status = 200
+
+[[redirects]]
+  from = "/auth/discord/callback"
+  to = "/.netlify/functions/auth-discord-callback"
+  status = 200
+
+[[redirects]]
+  from = "/auth/logout"
+  to = "/.netlify/functions/auth-logout"
+  status = 200
+
+[[redirects]]
+  from = "/api/user"
+  to = "/.netlify/functions/api-user"
+  status = 200
+
+[[redirects]]
+  from = "/api/generate-key"
+  to = "/.netlify/functions/api-generate-key"
+  status = 200
+
+[[redirects]]
+  from = "/api/reset-hwid"
+  to = "/.netlify/functions/api-reset-hwid"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/keys"
+  to = "/.netlify/functions/api-admin-keys"
+  status = 200
+  
+[[redirects]]
+  from = "/api/send-suggestion"
+  to = "/.netlify/functions/api-send-suggestion"
+  status = 200
+
+# ## CORRECTION CRUCIALE CI-DESSOUS ##
+# Règle "catch-all" pour les applications à page unique (SPA).
+# Ceci redirige toutes les URLs non trouvées (comme /get-key) vers index.html,
+# permettant au JavaScript de gérer l'affichage de la bonne page.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
