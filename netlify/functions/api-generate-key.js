@@ -62,39 +62,36 @@ exports.handler = async function (event, context) {
             }
 
             // Linkvertise Anti-Bypass verification (POST with token & hash as params)
-            const LV_TOKEN = process.env.LINKVERTISE_TOKEN;
+            const LV_TOKEN = process.env.LINKVERTISE_API_TOKEN; // <- bien lire la variable Netlify
             if (!LV_TOKEN) {
-                return { statusCode: 500, body: JSON.stringify({ error: 'Server misconfiguration (missing Linkvertise token).' }) };
+                return {
+                    statusCode: 500,
+                    body: JSON.stringify({
+                        error: 'Server misconfiguration: Linkvertise token not set. Please define LINKVERTISE_API_TOKEN in Netlify environment variables.'
+                    })
+                };
             }
 
             const verificationUrl = 'https://publisher.linkvertise.com/api/v1/anti_bypassing';
-
             let lvResp;
             try {
-                // send token & hash as query params (Linkvertise expects token & hash)
                 const resp = await axios.post(verificationUrl, null, {
                     params: { token: LV_TOKEN, hash: hash },
                     headers: { Accept: 'application/json' },
-                    validateStatus: () => true // always resolve so we can inspect response body & status
+                    validateStatus: () => true
                 });
                 lvResp = resp.data;
             } catch (err) {
-                const details = err && err.response && err.response.data ? err.response.data : (err && err.message ? err.message : 'Unknown');
+                const details = err?.response?.data ?? err?.message ?? 'Unknown';
                 return { statusCode: 502, body: JSON.stringify({ error: 'Linkvertise verification request failed.', details }) };
             }
 
-            // Accept multiple valid response formats:
-            // - boolean true
-            // - string "TRUE"
-            // - object with status: true
-            // - object with success: true
             const isValid =
                 lvResp === true ||
                 (typeof lvResp === 'string' && lvResp.trim().toLowerCase() === 'true') ||
                 (typeof lvResp === 'object' && (lvResp.status === true || lvResp.success === true));
 
             if (!isValid) {
-                // Return details so frontend can display why it failed (but token not included)
                 return {
                     statusCode: 403,
                     body: JSON.stringify({
@@ -140,6 +137,6 @@ exports.handler = async function (event, context) {
         // Unknown user status
         return { statusCode: 400, body: JSON.stringify({ error: 'Unknown user status.' }) };
     } catch (error) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate key.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate key.', details: error.message }) };
     }
 };
