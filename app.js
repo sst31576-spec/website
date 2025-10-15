@@ -110,13 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         container.innerHTML = '';
 
+        // ## CORRECTION POUR LA CLÉ PERMANENTE ##
         if (currentUser.user_status === 'Perm' || currentUser.isAdmin) {
-            container.innerHTML = `
-                <p>As a permanent user, you get one permanent key linked to you forever.</p>
-                <button id="generate-key-btn" class="discord-btn">Get my Permanent Key</button>
-                <div id="key-display-area" class="hidden"></div>
-            `;
-            document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
+            container.innerHTML = `<p>Fetching your permanent key...</p><div id="key-display-area"></div>`;
+            handleGenerateKey(); // On appelle la fonction directement
             return;
         }
 
@@ -140,20 +137,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleGenerateKey = async (event) => {
-        const btn = event.target;
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
+        // Gère le cas où la fonction est appelée sans clic de bouton (pour les Perms)
+        if(event && event.target) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+        }
+
         const displayArea = document.getElementById('key-display-area');
         displayArea.classList.remove('hidden');
         displayArea.innerHTML = '';
 
-        // Détermine si l'utilisateur est free et a potentiellement complété la tâche
         const isFreeUserFlow = currentUser.user_status === 'Free';
         const urlParams = new URLSearchParams(window.location.search);
         const hasCompletedTask = urlParams.get('completed') === 'true';
 
         const bodyPayload = {
-            // Envoie 'true' si c'est un utilisateur free ET qu'il revient de linkvertise
             completed_task: isFreeUserFlow && hasCompletedTask ? true : undefined
         };
 
@@ -169,7 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
         } finally {
-            btn.classList.add('hidden');
+            if(event && event.target) {
+                event.target.classList.add('hidden');
+            }
         }
     };
 
