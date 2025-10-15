@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { showLoginView(); return; }
             if (response.status === 403) {
                 const data = await response.json();
-                showLoginView(data.error || 'You must join our Discord server.');
+                showLoginView(data.error || 'You must join our Discord server : https://discord.gg/RhDnUQr4Du');
                 return;
             }
             if (!response.ok) throw new Error('Failed to fetch user data');
