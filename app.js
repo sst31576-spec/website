@@ -273,25 +273,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Suggestion system (unchanged)
+    // Suggestion system (MODIFIED)
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const suggestionTextarea = document.getElementById('suggestion-textarea');
+            const gameNameInput = document.getElementById('game-name-input');
+            const gameLinkInput = document.getElementById('game-link-input');
             const suggestionStatus = document.getElementById('suggestion-status');
-            if(!suggestionTextarea || !suggestionStatus) return;
-            const suggestion = suggestionTextarea.value;
+
+            if(!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return;
+            
+            const suggestion = suggestionTextarea.value.trim();
+            const gameName = gameNameInput.value.trim();
+            const gameLink = gameLinkInput.value.trim();
+            
+            // Validation check
+            if (gameName === '' || gameLink === '' || suggestion === '') {
+                suggestionStatus.className = 'status-message error';
+                suggestionStatus.textContent = 'Please provide a **Game Name**, a **Roblox Game Link**, and your detailed **Suggestion** to send.';
+                return;
+            }
+
             const btn = e.target.querySelector('button');
             btn.disabled = true;
             btn.textContent = 'Sending...';
             suggestionStatus.textContent = '';
+            
             try {
-                const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
+                const response = await fetch('/api/send-suggestion', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ suggestion, gameName, gameLink }) 
+                });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
+                
                 suggestionStatus.className = 'status-message success';
-                suggestionStatus.textContent = 'Suggestion sent successfully!';
+                suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
+                
+                // Clear inputs on success
                 suggestionTextarea.value = '';
+                gameNameInput.value = '';
+                gameLinkInput.value = '';
             } catch (error) {
                 suggestionStatus.className = 'status-message error';
                 suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
