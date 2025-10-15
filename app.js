@@ -207,8 +207,47 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
 
-    const handleResetHwid = async () => { /* ... (Code identique à la version précédente) ... */ };
-    suggestionForm.addEventListener('submit', async (e) => { /* ... (Code identique à la version précédente) ... */ });
+    const handleResetHwid = async () => {
+        const btn = document.getElementById('reset-hwid-btn');
+        const statusEl = document.getElementById('hwid-status');
+        btn.disabled = true;
+        statusEl.textContent = 'Resetting...';
+        try {
+            const response = await fetch('/api/reset-hwid', { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            statusEl.className = 'status-message success';
+            statusEl.textContent = result.message;
+        } catch (error) {
+            statusEl.className = 'status-message error';
+            statusEl.textContent = error.message;
+        } finally {
+            setTimeout(() => { btn.disabled = false; }, 2000);
+        }
+    };
+
+    suggestionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const suggestion = suggestionTextarea.value;
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        suggestionStatus.textContent = '';
+        try {
+            const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            suggestionStatus.className = 'status-message success';
+            suggestionStatus.textContent = 'Suggestion sent successfully!';
+            suggestionTextarea.value = '';
+        } catch (error) {
+            suggestionStatus.className = 'status-message error';
+            suggestionStatus.textContent = error.message;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Send Suggestion';
+        }
+    });
 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
