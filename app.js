@@ -64,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             manageKeysLink.classList.remove('hidden');
         }
         
-        // Gère l'affichage de la page en fonction de l'URL
         handleRouting();
     };
 
@@ -82,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const handleRouting = () => {
         const path = window.location.pathname;
-        let pageId = 'home'; // Page par défaut
+        let pageId = 'home';
         if (path.includes('/get-key')) pageId = 'get-key';
         if (path.includes('/suggestion')) pageId = 'suggestion';
         if (path.includes('/manage-keys')) pageId = 'manage-keys';
@@ -148,8 +147,22 @@ document.addEventListener('DOMContentLoaded', () => {
         displayArea.classList.remove('hidden');
         displayArea.innerHTML = '';
 
+        // Détermine si l'utilisateur est free et a potentiellement complété la tâche
+        const isFreeUserFlow = currentUser.user_status === 'Free';
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasCompletedTask = urlParams.get('completed') === 'true';
+
+        const bodyPayload = {
+            // Envoie 'true' si c'est un utilisateur free ET qu'il revient de linkvertise
+            completed_task: isFreeUserFlow && hasCompletedTask ? true : undefined
+        };
+
         try {
-            const response = await fetch('/api/generate-key', { method: 'POST' });
+            const response = await fetch('/api/generate-key', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyPayload)
+            });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
             displayKey(data);
