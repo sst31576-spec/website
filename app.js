@@ -1,3 +1,4 @@
+// app.js
 function formatTimeRemaining(expiryDate) {
     if (!expiryDate) return 'N/A';
     const expiry = new Date(expiryDate);
@@ -109,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container || !currentUser) return;
         container.innerHTML = `<p>Checking for an existing key...</p>`;
         try {
+            // First call: check if there's already an existing key (body empty)
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -120,17 +122,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // If not ok, try to see if there's a hash in URL
             const urlParams = new URLSearchParams(window.location.search);
             const hash = urlParams.get('hash');
 
             if (hash) {
+                // Keep the same appearance as before: show the "Thank you" text and the Get Key button
                 container.innerHTML = `
                     <p>Thank you! You can now get your key.</p>
                     <button id="generate-key-btn" class="discord-btn">Get Key</button>
                     <div id="key-display-area" class="hidden"></div>
                 `;
                 document.getElementById('generate-key-btn').addEventListener('click', () => handleGenerateKey(hash));
+                
+                // IMPORTANT: call handleGenerateKey immediately to avoid Linkvertise 10s expiration,
+                // while still leaving the UI (button/text) unchanged for the user.
+                // This will attempt to claim the hash right away.
+                setTimeout(() => {
+                    try {
+                        handleGenerateKey(hash);
+                    } catch (e) {
+                        console.error('Immediate claim failed:', e);
+                    }
+                }, 50);
             } else {
+                // No hash: show the Start Task link exactly as before
                 container.innerHTML = `
                     <p>To get your 24-hour key, please complete the task below.</p>
                     <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
@@ -163,13 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(bodyPayload)
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
+            if (!response.ok) throw new Error(data.error || 'Could not generate key.');
             displayKey(data);
         } catch (error) {
             if(displayArea) {
+                // show the detailed error if available
                 displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
             }
             if (btn) {
+                // keep the button visible? we hide it to avoid repeated failed attempts, consistent with original UX
                 btn.classList.add('hidden');
             }
         }
