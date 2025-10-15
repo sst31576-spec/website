@@ -13,8 +13,6 @@ const generateRandomString = (length) => {
 };
 
 exports.handler = async function (event, context) {
-    // ## LIGNE DE TEST AJOUTÉE ##
-    console.log("--- DÉBUT DE L'EXÉCUTION DE API-GENERATE-KEY ---");
 
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
