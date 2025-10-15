@@ -34,20 +34,16 @@ exports.handler = async function (event, context) {
         
         const userStatus = rows[0].user_status;
 
-        // --- Logique pour les utilisateurs GRATUITS ---
         if (userStatus === 'Free') {
-            // On vérifie d'abord si une clé valide existe
             const { rows: existingKeyRows } = await db.query(
                 'SELECT key_value, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
                 [id, 'temp']
             );
 
             if (existingKeyRows.length > 0) {
-                // Si une clé valide existe, on la renvoie directement
                 return { statusCode: 200, body: JSON.stringify({ key: existingKeyRows[0].key_value, type: 'temp', expires: existingKeyRows[0].expires_at }) };
             }
             
-            // Si aucune clé valide n'existe, on continue avec la logique Linkvertise
             const { completed_task } = JSON.parse(event.body);
             if (completed_task !== true) {
                 return { statusCode: 403, body: JSON.stringify({ error: 'Linkvertise task verification failed.' }) };
@@ -59,7 +55,6 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify({ key: newKey, type: 'temp', expires: expiresAt }) };
         }
 
-        // --- Logique pour les utilisateurs PERMANENTS ---
         if (userStatus === 'Perm') {
             const { rows: existingRows } = await db.query('SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2', [id, 'perm']);
             let newKey;
