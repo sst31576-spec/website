@@ -20,16 +20,23 @@ exports.handler = async function (event, context) {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { username } = decoded;
-        const { suggestion } = JSON.parse(event.body);
+        const { suggestion, gameName, gameLink } = JSON.parse(event.body); // Destructure new fields
 
-        if (!suggestion || suggestion.trim() === '') {
-            return { statusCode: 400, body: JSON.stringify({ error: 'Suggestion cannot be empty.' }) };
+        // MODIFIED Validation Check
+        if (!suggestion || suggestion.trim() === '' || !gameName || gameName.trim() === '' || !gameLink || gameLink.trim() === '') {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Suggestion must include a Game Name, Game Link, and a detailed Suggestion.' }) };
         }
 
-        // Create a formatted embed for Discord
+        // Create a formatted embed for Discord (MODIFIED to use Game Name and Link)
         const embed = {
-            author: { name: `New Suggestion from ${username}` },
-            description: suggestion,
+            // Use Game Name as the title, and Game Link as the URL to make it clickable
+            title: `[${gameName}] - New Suggestion`,
+            url: gameLink,
+            author: { name: `Suggested by: ${username}` },
+            description: `**Suggestion Details:**\n${suggestion}`,
+            fields: [
+                { name: 'Roblox Game Link', value: gameLink, inline: false },
+            ],
             color: 16776960, // Yellow
             timestamp: new Date().toISOString()
         };
