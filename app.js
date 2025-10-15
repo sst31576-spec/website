@@ -30,7 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { showLoginView(); return; }
             if (response.status === 403) {
                 const data = await response.json();
-                showLoginView(data.error || 'You must join our Discord server : https://discord.gg/RhDnUQr4Du');
+                // Custom logic for Discord Join Error
+                const errorMessage = 'You must join the Discord server.';
+                const discordLink = 'https://discord.gg/RhDnUQr4Du';
+                showLoginView(errorMessage, discordLink);
                 return;
             }
             if (!response.ok) throw new Error('Failed to fetch user data');
@@ -43,10 +46,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const showLoginView = (message = null) => {
+    const showLoginView = (message = null, discordLink = null) => {
         if (loginContainer) loginContainer.classList.remove('hidden');
         if (mainAppContainer) mainAppContainer.classList.add('hidden');
-        if (message && loginError) loginError.textContent = message;
+        if (loginError) {
+            loginError.textContent = message;
+            // Clear any previous button/content
+            const parent = loginError.closest('.card-box');
+            let existingBtn = document.getElementById('discord-join-btn');
+            if(existingBtn) existingBtn.remove();
+            
+            // Add custom Discord join button if the specific error message is present
+            if (message === 'You must join the Discord server.' && discordLink) {
+                const joinBtn = document.createElement('a');
+                joinBtn.id = 'discord-join-btn';
+                joinBtn.href = discordLink;
+                joinBtn.target = '_blank';
+                joinBtn.className = 'discord-btn';
+                joinBtn.style.marginTop = '15px';
+                joinBtn.textContent = 'Click to join the discord';
+                parent.appendChild(joinBtn);
+            }
+        }
     };
 
     const setupMainApp = (user) => {
@@ -92,10 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault();
+            // Only handle internal links for SPA routing
             const pageId = e.target.dataset.page;
-            window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
-            switchPage(pageId);
+            if (pageId) {
+                e.preventDefault();
+                window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
+                switchPage(pageId);
+            }
         });
     });
 
