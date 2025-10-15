@@ -1,43 +1,29 @@
 function formatTimeRemaining(expiryDate) {
     if (!expiryDate) return 'N/A';
-
     const expiry = new Date(expiryDate);
     const now = new Date();
     const diff = expiry - now;
-
-    if (diff <= 0) {
-        return 'Expired';
-    }
-
+    if (diff <= 0) return 'Expired';
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    return `${hours}h ${minutes}m remaining`;
+    return `${hours}h ${minutes}m`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Éléments de l'interface
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
-
-    // Éléments utilisateur
     const userNameEl = document.getElementById('user-name');
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
-
-    // Navigation
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page');
     const userProfileToggle = document.getElementById('user-profile-toggle');
     const dropdownMenu = document.getElementById('dropdown-menu');
     const manageKeysLink = document.getElementById('manage-keys-link');
-
-    // Éléments de suggestion
     const suggestionForm = document.getElementById('suggestion-form');
     const suggestionTextarea = document.getElementById('suggestion-textarea');
     const suggestionStatus = document.getElementById('suggestion-status');
-
     let currentUser = null;
 
     const checkUserStatus = async () => {
@@ -50,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (!response.ok) throw new Error('Failed to fetch user data');
-
             const user = await response.json();
             currentUser = user;
             setupMainApp(user);
@@ -69,18 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupMainApp = (user) => {
         loginContainer.classList.add('hidden');
         mainAppContainer.classList.remove('hidden');
-
         userNameEl.textContent = user.discord_username;
         userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
-
         const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
         userStatusBadgeEl.textContent = displayStatus;
         userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
-
         if (user.isAdmin) {
             manageKeysLink.classList.remove('hidden');
         }
-        
         handleRouting();
     };
 
@@ -91,18 +72,16 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             link.classList.toggle('active', link.dataset.page === pageId);
         });
-
         if (pageId === 'get-key') renderGetKeyPage();
         if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
     };
-    
+
     const handleRouting = () => {
         const path = window.location.pathname;
         let pageId = 'home';
         if (path.includes('/get-key')) pageId = 'get-key';
         if (path.includes('/suggestion')) pageId = 'suggestion';
         if (path.includes('/manage-keys')) pageId = 'manage-keys';
-        
         switchPage(pageId);
     };
 
@@ -110,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const pageId = e.target.dataset.page;
-            window.history.pushState({page: pageId}, '', `/${pageId === 'home' ? '' : pageId}`);
+            window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
             switchPage(pageId);
         });
     });
@@ -122,59 +101,64 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const renderGetKeyPage = () => {
+    const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
-        if (!currentUser) return;
-        container.innerHTML = '';
-
-        // ## CORRECTION POUR LA CLÉ PERMANENTE ##
-        if (currentUser.user_status === 'Perm' || currentUser.isAdmin) {
-            container.innerHTML = `<p>Fetching your permanent key...</p><div id="key-display-area"></div>`;
-            handleGenerateKey(); // On appelle la fonction directement
-            return;
-        }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const hasCompletedTask = urlParams.get('completed') === 'true';
-
-        if (hasCompletedTask) {
-            container.innerHTML = `
-                <p>Thank you! You can now get your key.</p>
-                <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                <div id="key-display-area" class="hidden"></div>
-            `;
-            document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
-        } else {
-            container.innerHTML = `
-                <p>To get your 24-hour key, please complete the task below.</p>
-                <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-            `;
+        if (!container || !currentUser) return;
+        container.innerHTML = `<p>Checking for an existing key...</p>`;
+        try {
+            const response = await fetch('/api/generate-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed_task: false })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                displayKey(data);
+                return;
+            }
+            if (response.status === 403) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasCompletedTask = urlParams.get('completed') === 'true';
+                if (hasCompletedTask) {
+                    container.innerHTML = `
+                        <p>Thank you! You can now get your key.</p>
+                        <button id="generate-key-btn" class="discord-btn">Get Key</button>
+                        <div id="key-display-area" class="hidden"></div>
+                    `;
+                    document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
+                } else {
+                    container.innerHTML = `
+                        <p>To get your 24-hour key, please complete the task below.</p>
+                        <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                        <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+                    `;
+                }
+            } else {
+                throw new Error(data.error || 'An unexpected error occurred.');
+            }
+        } catch (error) {
+            container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
     };
 
     const handleGenerateKey = async (event) => {
-        // Gère le cas où la fonction est appelée sans clic de bouton (pour les Perms)
-        if(event && event.target) {
+        if (event && event.target) {
             const btn = event.target;
             btn.disabled = true;
             btn.textContent = 'Generating...';
         }
-
         const displayArea = document.getElementById('key-display-area');
+        if (!displayArea) return;
         displayArea.classList.remove('hidden');
         displayArea.innerHTML = '';
-
         const isFreeUserFlow = currentUser.user_status === 'Free';
         const urlParams = new URLSearchParams(window.location.search);
         const hasCompletedTask = urlParams.get('completed') === 'true';
-
         const bodyPayload = {
             completed_task: isFreeUserFlow && hasCompletedTask ? true : undefined
         };
-
         try {
-            const response = await fetch('/api/generate-key', { 
+            const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyPayload)
@@ -184,8 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayKey(data);
         } catch (error) {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
-        } finally {
-            if(event && event.target) {
+            if (event && event.target) {
                 event.target.classList.add('hidden');
             }
         }
@@ -193,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const displayKey = (data) => {
         const displayArea = document.getElementById('key-display-area');
+        if (!displayArea) return;
         displayArea.innerHTML = `
             <h4>Your key is ready:</h4>
             <div class="key-container">
@@ -230,41 +214,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    suggestionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const suggestion = suggestionTextarea.value;
-        const btn = e.target.querySelector('button');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        suggestionStatus.textContent = '';
-        try {
-            const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
-            suggestionStatus.className = 'status-message success';
-            suggestionStatus.textContent = 'Suggestion sent successfully!';
-            suggestionTextarea.value = '';
-        } catch (error) {
-            suggestionStatus.className = 'status-message error';
-            suggestionStatus.textContent = error.message;
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Send Suggestion';
-        }
-    });
+    if (suggestionForm) {
+        suggestionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const suggestion = suggestionTextarea.value;
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            suggestionStatus.textContent = '';
+            try {
+                const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                suggestionStatus.className = 'status-message success';
+                suggestionStatus.textContent = 'Suggestion sent successfully!';
+                suggestionTextarea.value = '';
+            } catch (error) {
+                suggestionStatus.className = 'status-message error';
+                suggestionStatus.textContent = error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Send Suggestion';
+            }
+        });
+    }
 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
+        if (!container) return;
         container.innerHTML = '<p>Loading keys...</p>';
         try {
             const response = await fetch('/api/admin/keys');
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
             if (keys.length === 0) { container.innerHTML = '<p>No keys found.</p>'; return; }
-            
             container.innerHTML = `
                 <table class="admin-table">
-                    <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead>
                     <tbody>
                     ${keys.map(key => `
                         <tr data-key-id="${key.id}">
@@ -272,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${key.key_type}</td>
                             <td>${key.discord_username || 'N/A'}</td>
                             <td class="hwid-cell">${key.roblox_user_id || 'Not Set'}</td>
+                            <td>${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
                             <td class="actions-cell">
                                 <button class="edit-hwid-btn secondary-btn">Edit</button>
                                 <button class="delete-key-btn secondary-btn-red">Delete</button>
@@ -280,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `).join('')}
                     </tbody>
                 </table>`;
-
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             document.querySelectorAll('.edit-hwid-btn').forEach(btn => btn.addEventListener('click', handleEditHwid));
         } catch (error) {
