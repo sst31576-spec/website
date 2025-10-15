@@ -11,30 +11,41 @@ const generateRandomString = (length) => {
 };
 
 exports.handler = async function (event, context) {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+    console.log("Incoming request:", event.httpMethod, event.body);
+
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
+    }
 
     // --- Parse cookies & auth ---
     const cookies = event.headers.cookie ? cookie.parse(event.headers.cookie) : {};
     const token = cookies.auth_token;
-    if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
+    if (!token) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
+    }
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { id } = decoded;
 
+        // Vérifie si l’utilisateur existe
         const { rows } = await db.query('SELECT user_status FROM users WHERE discord_id = $1', [id]);
-        if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'User not found' }) };
+        if (rows.length === 0) {
+            return { statusCode: 404, body: JSON.stringify({ error: 'User not found' }) };
+        }
 
         const userStatus = rows[0].user_status;
 
-        // ---- Free user flow ----
+        // ==== FREE USERS ====
         if (userStatus === 'Free') {
-            // Vérifie si déjà une clé active
+            // 🔁 Vérifie si un key temporaire actif existe déjà
             const { rows: existingKeyRows } = await db.query(
                 'SELECT * FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
                 [id, 'temp']
             );
+
             if (existingKeyRows.length > 0) {
+                console.log(`Existing temp key for user ${id} found.`);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({
@@ -45,7 +56,7 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            // --- Parse le hash envoyé ---
+            // --- Parse request body ---
             let body = {};
             try {
                 body = event.body ? JSON.parse(event.body) : {};
@@ -58,42 +69,53 @@ exports.handler = async function (event, context) {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Verification hash is missing.' }) };
             }
 
-            // --- ✅ Nouvelle API Linkvertise vérifiée ---
-            const LINKVERTISE_ID = "1409420"; // ton vrai ID
+            // ==== LINKVERTISE VERIFICATION (NOUVELLE VERSION STABLE) ====
+            const LINKVERTISE_ID = "1409420"; // Ton vrai ID Linkvertise
             const verificationUrl = `https://publisher.linkvertise.com/api/v1/redirect/link?id=${LINKVERTISE_ID}&hash=${encodeURIComponent(hash)}&o=sharing`;
+
+            console.log("Checking Linkvertise verification:", verificationUrl);
 
             let response;
             try {
                 response = await axios.get(verificationUrl, {
                     headers: {
-                        'User-Agent': 'KeySystem/1.0',
-                        'Accept': 'application/json'
-                    }
+                        "User-Agent": "KeySystem/1.0",
+                        "Accept": "application/json"
+                    },
+                    validateStatus: () => true
                 });
             } catch (err) {
                 const respData = err.response ? err.response.data : err.message;
-                console.error('Axios error calling Linkvertise:', respData);
+                console.error("Axios error calling Linkvertise:", respData);
                 return {
                     statusCode: 502,
-                    body: JSON.stringify({ error: 'Linkvertise verification request failed.', details: respData })
+                    body: JSON.stringify({
+                        error: 'Linkvertise verification request failed.',
+                        details: respData
+                    })
                 };
             }
 
-            console.log('✅ Linkvertise raw response:', JSON.stringify(response.data, null, 2));
+            console.log("Linkvertise API Raw:", response.status, response.data);
 
-            // --- Vérifie la validité ---
-            const valid = response.data?.data?.valid === true || response.data?.success === true;
+            // Vérifie les formats valides de retour possibles
+            const valid =
+                response.status === 200 &&
+                (response.data?.data?.valid === true ||
+                    response.data?.success === true ||
+                    response.data?.valid === true);
+
             if (!valid) {
                 return {
                     statusCode: 403,
                     body: JSON.stringify({
                         error: 'Linkvertise task not completed or invalid hash.',
-                        details: response.data
+                        details: response.data || { status: response.status }
                     })
                 };
             }
 
-            // --- Génération + stockage de la nouvelle clé ---
+            // ==== GÉNÉRATION DE LA CLÉ ====
             const newKey = `KINGFREE-${generateRandomString(20)}`;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
             await db.query(
@@ -101,30 +123,37 @@ exports.handler = async function (event, context) {
                 [newKey, 'temp', id, expiresAt]
             );
 
+            console.log(`Generated new temp key for user ${id}: ${newKey}`);
+
             return {
                 statusCode: 200,
                 body: JSON.stringify({ key: newKey, type: 'temp', expires: expiresAt })
             };
         }
 
-        // ---- Permanent user flow ----
+        // ==== PERMANENT USERS ====
         if (userStatus === 'Perm') {
             const { rows: existingRows } = await db.query(
                 'SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2',
                 [id, 'perm']
             );
+
             let newKey;
-            if (existingRows.length > 0) newKey = existingRows[0].key_value;
-            else {
+            if (existingRows.length > 0) {
+                newKey = existingRows[0].key_value;
+            } else {
                 newKey = `KINGPERM-${generateRandomString(16)}`;
                 await db.query(
                     'INSERT INTO keys (key_value, key_type, owner_discord_id) VALUES ($1, $2, $3)',
                     [newKey, 'perm', id]
                 );
             }
+
+            console.log(`Permanent key for ${id}: ${newKey}`);
             return { statusCode: 200, body: JSON.stringify({ key: newKey, type: 'perm' }) };
         }
 
+        // ==== UNKNOWN STATUS ====
         return { statusCode: 400, body: JSON.stringify({ error: 'Unknown user status.' }) };
     } catch (error) {
         console.error('Key Generation Error:', error && error.stack ? error.stack : error);
