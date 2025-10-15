@@ -112,40 +112,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed_task: false })
+                body: JSON.stringify({}) // Send empty body to check for existing key
             });
             const data = await response.json();
             if (response.ok) {
                 displayKey(data);
                 return;
             }
-            if (response.status === 403) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const hasCompletedTask = urlParams.get('completed') === 'true';
-                if (hasCompletedTask) {
-                    container.innerHTML = `
-                        <p>Thank you! You can now get your key.</p>
-                        <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                        <div id="key-display-area" class="hidden"></div>
-                    `;
-                    document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
-                } else {
-                    container.innerHTML = `
-                        <p>To get your 24-hour key, please complete the task below.</p>
-                        <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                        <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-                    `;
-                }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const hash = urlParams.get('hash');
+
+            if (hash) {
+                container.innerHTML = `
+                    <p>Thank you! You can now get your key.</p>
+                    <button id="generate-key-btn" class="discord-btn">Get Key</button>
+                    <div id="key-display-area" class="hidden"></div>
+                `;
+                document.getElementById('generate-key-btn').addEventListener('click', () => handleGenerateKey(hash));
             } else {
-                throw new Error(data.error || 'An unexpected error occurred.');
+                container.innerHTML = `
+                    <p>To get your 24-hour key, please complete the task below.</p>
+                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+                `;
             }
         } catch (error) {
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
     };
 
-    const handleGenerateKey = async (event) => {
-        const btn = event ? event.target : document.getElementById('generate-key-btn');
+    const handleGenerateKey = async (hash = null) => {
+        const btn = document.getElementById('generate-key-btn');
         if (btn) {
             btn.disabled = true;
             btn.textContent = 'Generating...';
@@ -156,12 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayArea.innerHTML = '';
         }
         
-        const isFreeUserFlow = currentUser.user_status === 'Free';
-        const urlParams = new URLSearchParams(window.location.search);
-        const hasCompletedTask = urlParams.get('completed') === 'true';
-        const bodyPayload = {
-            completed_task: isFreeUserFlow && hasCompletedTask ? true : undefined
-        };
+        const bodyPayload = { hash: hash };
 
         try {
             const response = await fetch('/api/generate-key', {
