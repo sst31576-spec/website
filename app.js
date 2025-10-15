@@ -1,3 +1,20 @@
+function formatTimeRemaining(expiryDate) {
+    if (!expiryDate) return 'N/A';
+
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const diff = expiry - now;
+
+    if (diff <= 0) {
+        return 'Expired';
+    }
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hours}h ${minutes}m remaining`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Éléments de l'interface
     const loginContainer = document.getElementById('login-container');
@@ -184,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
             <div id="hwid-status" class="status-message"></div>
-            ${data.type === 'temp' ? `<p>This key will expire in 24 hours.</p>` : ''}
+            ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
         `;
         document.getElementById('copy-key-btn').addEventListener('click', () => {
             const input = document.getElementById('generated-key-input');
