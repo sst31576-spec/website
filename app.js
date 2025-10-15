@@ -105,57 +105,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const renderGetKeyPage = async () => {
+    const renderGetKeyPage = () => {
         const container = document.getElementById('key-generation-content');
         if (!currentUser) return;
-        container.innerHTML = `<p>Checking for an existing key...</p>`;
+        container.innerHTML = '';
 
-        try {
-            // On essaie de récupérer une clé existante SANS confirmation de Linkvertise
-            const response = await fetch('/api/generate-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed_task: false }) // On dit qu'on a pas fait la tâche
-            });
-            
-            const data = await response.json();
+        // ## CORRECTION POUR LA CLÉ PERMANENTE ##
+        if (currentUser.user_status === 'Perm' || currentUser.isAdmin) {
+            container.innerHTML = `<p>Fetching your permanent key...</p><div id="key-display-area"></div>`;
+            handleGenerateKey(); // On appelle la fonction directement
+            return;
+        }
 
-            if (response.ok) {
-                // Succès ! Le serveur a trouvé une clé valide (soit Perm, soit une Free non expirée)
-                displayKey(data);
-                return;
-            }
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasCompletedTask = urlParams.get('completed') === 'true';
 
-            // Si le serveur répond avec une erreur de permission (403), cela signifie qu'aucune clé valide n'a été trouvée
-            // ET que l'utilisateur est "Free" et doit compléter la tâche.
-            if (response.status === 403) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const hasCompletedTask = urlParams.get('completed') === 'true';
-
-                if (hasCompletedTask) {
-                    container.innerHTML = `
-                        <p>Thank you! You can now get your key.</p>
-                        <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                        <div id="key-display-area" class="hidden"></div>
-                    `;
-                    document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
-                } else {
-                    container.innerHTML = `
-                        <p>To get your 24-hour key, please complete the task below.</p>
-                        <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                        <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-                    `;
-                }
-            } else {
-                // Gère les autres erreurs
-                throw new Error(data.error || 'An unexpected error occurred.');
-            }
-        } catch (error) {
-            container.innerHTML = `<p class="error-message">${error.message}</p>`;
+        if (hasCompletedTask) {
+            container.innerHTML = `
+                <p>Thank you! You can now get your key.</p>
+                <button id="generate-key-btn" class="discord-btn">Get Key</button>
+                <div id="key-display-area" class="hidden"></div>
+            `;
+            document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
+        } else {
+            container.innerHTML = `
+                <p>To get your 24-hour key, please complete the task below.</p>
+                <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+            `;
         }
     };
 
     const handleGenerateKey = async (event) => {
+        // Gère le cas où la fonction est appelée sans clic de bouton (pour les Perms)
         if(event && event.target) {
             const btn = event.target;
             btn.disabled = true;
@@ -185,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
             displayKey(data);
         } catch (error) {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
+        } finally {
             if(event && event.target) {
                 event.target.classList.add('hidden');
             }
