@@ -101,43 +101,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const renderGetKeyPage = async () => {
+    const renderGetKeyPage = () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
-        container.innerHTML = `<p>Checking for an existing key...</p>`;
-        try {
-            const response = await fetch('/api/generate-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed_task: false })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                displayKey(data);
-                return;
-            }
-            if (response.status === 403) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const hasCompletedTask = urlParams.get('completed') === 'true';
-                if (hasCompletedTask) {
-                    container.innerHTML = `
-                        <p>Thank you! You can now get your key.</p>
-                        <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                        <div id="key-display-area" class="hidden"></div>
-                    `;
-                    document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
-                } else {
-                    container.innerHTML = `
-                        <p>To get your 24-hour key, please complete the task below.</p>
-                        <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                        <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-                    `;
-                }
-            } else {
-                throw new Error(data.error || 'An unexpected error occurred.');
-            }
-        } catch (error) {
-            container.innerHTML = `<p class="error-message">${error.message}</p>`;
+        container.innerHTML = '';
+
+        if (currentUser.user_status === 'Perm' || currentUser.isAdmin) {
+            container.innerHTML = `<p>Fetching your permanent key...</p><div id="key-display-area"></div>`;
+            handleGenerateKey();
+            return;
+        }
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasCompletedTask = urlParams.get('completed') === 'true';
+
+        if (hasCompletedTask) {
+            container.innerHTML = `
+                <p>Thank you! You can now get your key.</p>
+                <button id="generate-key-btn" class="discord-btn">Get Key</button>
+                <div id="key-display-area" class="hidden"></div>
+            `;
+            document.getElementById('generate-key-btn').addEventListener('click', handleGenerateKey);
+        } else {
+            container.innerHTML = `
+                <p>To get your 24-hour key, please complete the task below.</p>
+                <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+            `;
         }
     };
 
@@ -170,6 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
             displayArea.innerHTML = `<p class="error-message">${error.message || 'Could not generate key. Please try again.'}</p>`;
             if (event && event.target) {
                 event.target.classList.add('hidden');
+                event.target.disabled = false;
+                event.target.textContent = 'Get Key';
             }
         }
     };
