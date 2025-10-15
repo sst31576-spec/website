@@ -77,11 +77,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleRouting = () => {
-        const path = window.location.pathname;
+        const path = window.location.pathname.replace(/\/$/, "");
         let pageId = 'home';
-        if (path.includes('/get-key')) pageId = 'get-key';
-        if (path.includes('/suggestion')) pageId = 'suggestion';
-        if (path.includes('/manage-keys')) pageId = 'manage-keys';
+        if (path === '/get-key') pageId = 'get-key';
+        if (path === '/suggestion') pageId = 'suggestion';
+        if (path === '/manage-keys') pageId = 'manage-keys';
+        
+        if (pageId === 'home' && path !== '') {
+            window.history.replaceState({page: pageId}, '', '/');
+        }
+        
         switchPage(pageId);
     };
 
@@ -198,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
         const statusEl = document.getElementById('hwid-status');
+        if (!btn || !statusEl) return;
         btn.disabled = true;
         statusEl.textContent = 'Resetting...';
         try {
@@ -217,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const suggestionTextarea = document.getElementById('suggestion-textarea');
+            const suggestionStatus = document.getElementById('suggestion-status');
             const suggestion = suggestionTextarea.value;
             const btn = e.target.querySelector('button');
             btn.disabled = true;
@@ -247,20 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/admin/keys');
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
-            
-            container.innerHTML = `
-                <input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">
-            `;
-
+            container.innerHTML = `<input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">`;
             const table = document.createElement('table');
             table.className = 'admin-table';
-            table.innerHTML = `
-                <thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-            `;
+            table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead><tbody></tbody>`;
             container.appendChild(table);
             const tbody = table.querySelector('tbody');
-
             if (keys.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
             } else {
@@ -275,10 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="edit-hwid-btn secondary-btn">Edit</button>
                             <button class="delete-key-btn secondary-btn-red">Delete</button>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`).join('');
             }
-
             const searchInput = document.getElementById('admin-search-input');
             const tableRows = container.querySelectorAll('tbody tr');
             searchInput.addEventListener('input', () => {
@@ -289,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none';
                 });
             });
-
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             document.querySelectorAll('.edit-hwid-btn').forEach(btn => btn.addEventListener('click', handleEditHwid));
         } catch (error) {
