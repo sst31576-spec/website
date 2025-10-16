@@ -109,7 +109,6 @@ nav a.active {
     border-radius: 4px;
     font-size: 12px;
     font-weight: 700;
-    text-transform: capitalize;
 }
 .status-badge.admin { background-color: var(--brand-red); color: white; }
 .status-badge.perm { background-color: var(--brand-blue); color: white; }
@@ -166,6 +165,7 @@ nav a.active {
 
 .page {
     width: 100%;
+    /* Centering admin table for larger screens */
     display: flex;
     justify-content: center;
 }
@@ -233,9 +233,8 @@ nav a.active {
 
 .admin-table th, .admin-table td {
     border: 1px solid var(--background-primary);
-    padding: 12px 10px;
+    padding: 10px 8px;
     text-align: left;
-    vertical-align: middle;
 }
 
 .admin-table th {
@@ -272,19 +271,10 @@ nav a.active {
     margin-bottom: 10px;
 }
 
-/* --- Key Type Badges (Admin Panel) --- */
-.key-type-badge {
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 12px;
-    color: white;
-    text-transform: capitalize;
-    white-space: nowrap;
+/* Cache par défaut le conteneur des liens mobiles sur grand écran */
+#mobile-nav-links {
+    display: none;
 }
-.key-type-perm { background-color: var(--brand-blue); }
-.key-type-temp { background-color: var(--text-muted); }
-.key-type-trial { background-color: var(--brand-red); }
 
 
 /* ======================================= */
@@ -292,9 +282,25 @@ nav a.active {
 /* ======================================= */
 
 @media (max-width: 900px) {
+    /* Cache la navigation principale sur les écrans de moins de 900px */
     .top-bar-left nav {
         display: none;
     }
+    
+    /* Le conteneur pour les liens mobiles dans le dropdown */
+    #mobile-nav-links {
+        display: block; /* Affiche le conteneur sur mobile */
+        border-bottom: 1px solid var(--background-primary); /* Ajoute un séparateur */
+        margin-bottom: 5px;
+        padding-bottom: 5px;
+    }
+
+    #mobile-nav-links a {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    /* Styles généraux pour mobile (inchangés) */
     .content {
         padding: 16px;
     }
@@ -319,29 +325,46 @@ nav a.active {
     }
 }
 
+/* Téléphones portables */
 @media (max-width: 500px) {
+    /* Réduit la taille des éléments de l'en-tête */
     .top-bar {
         padding: 0 10px;
         height: 50px;
     }
-    .header-logo, #user-avatar {
+
+    .header-logo {
         width: 30px;
         height: 30px;
     }
+
+    #user-avatar {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Cache le nom de l'utilisateur pour gagner de la place */
     #user-name {
         display: none;
     }
+    
+    /* Affiche le menu déroulant directement sous l'icône de profil */
     .dropdown-content {
         top: 45px; 
     }
+
+    /* Pour les formulaires, comme la suggestion */
     #suggestion-form input,
     #suggestion-form textarea {
         font-size: 14px;
     }
+
+    /* Pour la clé générée, empile les éléments */
     .key-container {
         flex-direction: column;
         gap: 10px;
     }
+    
     #generated-key-input {
         width: 100%;
         box-sizing: border-box;
