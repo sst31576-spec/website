@@ -1,93 +1,363 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KingGen Web</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="/assets/logo.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
+:root {
+    --background-primary: #36393f;
+    --background-secondary: #2f3136;
+    --background-tertiary: #202225;
+    --header-primary: #ffffff;
+    --text-normal: #dcddde;
+    --text-muted: #72767d;
+    --brand-red: #f04747;
+    --brand-green: #43b581;
+    --brand-blue: #5865f2;
+    --border-radius: 8px;
+}
 
-    <div id="login-container" class="view-container">
-        <div class="card-box">
-            <img src="/assets/logo.png" alt="Logo" class="logo">
-            <h1>Welcome to KingGen HUB</h1>
-            <p>Please connect with Discord to continue.</p>
-            <a href="/auth/discord" class="discord-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M20.317 4.431c-1.457-.793-3.04-1.28-4.707-1.42-.14.417-.27.83-.393 1.243-1.84-.277-3.72-.277-5.552 0-.12-.413-.253-.826-.394-1.243-1.666.14-3.25.627-4.707 1.42-3.11 4.54-4.323 8.356-3.882 11.517.518 3.766 4.3 6.786 8.446 7.067.844.056 1.688.056 2.532 0 4.146-.28 7.928-3.3 8.446-7.067.44-3.16-1.31-6.977-3.88-11.517zM8.57 15.655c-.93 0-1.685-.815-1.685-1.812s.754-1.81 1.685-1.81c.93 0 1.685.815 1.685 1.81s-.754 1.812-1.685 1.812zm6.86 0c-.93 0-1.685-.815-1.685-1.812s.754-1.81 1.685-1.81c.93 0 1.685.815 1.685 1.81s-.754 1.812-1.685 1.812z\"/></svg>
-                Sign in with Discord
-            </a>
-            <p id="login-error-message" class="status-message error hidden"></p>
-        </div>
-    </div>
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    margin: 0;
+}
 
-    <div id="main-app" class="view-container hidden">
-        <header class="top-bar">
-            <div class="header-left">
-                <img src="/assets/logo.png" alt="Logo" class="header-logo">
-                <nav class="main-nav">
-                    <a href="#" class="nav-link" data-page="page-home">Home</a>
-                    <a href="#" class="nav-link" data-page="page-get-key">Get Key</a>
-                    <a href="#" class="nav-link" data-page="page-suggestion">Suggestions</a>
-                    <a href="#" class="nav-link hidden" id="manage-keys-link" data-page="page-manage-keys">Manage Keys</a>
-                </nav>
-            </div>
-            <div class="user-profile-dropdown">
-                <div class="user-info" id="user-profile-toggle">
-                    <img id="user-avatar" alt="User Avatar" class="user-avatar">
-                    <span id="user-name"></span>
-                    <span id="user-status-badge" class="status-badge"></span>
-                </div>
-                <div class="dropdown-content" id="dropdown-menu">
-                    <a href="#" id="reset-hwid-link">Reset HWID</a>
-                    <a href="/auth/logout">Logout</a>
-                </div>
-            </div>
-        </header>
+.hidden { display: none !important; }
 
-        <main class="content-area">
-            <div id="page-home" class="page">
-                <div class="card-box">
-                    <h2>Welcome, <span id="home-user-name">User</span>!</h2>
-                    <p>Your current status is: <span id="home-user-status" class="status-badge">Loading...</span></p>
-                    <p>Use the navigation bar to get your key, manage your access, or submit suggestions for new scripts.</p>
-                </div>
-            </div>
+/* --- General Views --- */
+.view-container { width: 100%; min-height: 100vh; }
+#login-container { display: flex; justify-content: center; align-items: center; }
 
-            <div id="page-get-key" class="page hidden">
-                <div class="card-box">
-                    <h2>Get Your Key</h2>
-                    <div id="key-generation-content"></div>
-                </div>
-            </div>
+.card-box {
+    background-color: var(--background-secondary);
+    padding: 32px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    width: 100%;
+    max-width: 400px;
+    margin: 20px auto;
+}
 
-            <div id="page-suggestion" class="page hidden">
-                <div class="card-box">
-                    <h2>Suggestions</h2>
-                    <p>Have an idea to improve our script? Let us know below!</p>
-                    <form id="suggestion-form">
-                        <input type="text" id="game-name-input" placeholder="Game Name (e.g., Blox Fruits)" required>
-                        <input type="url" id="game-link-input" placeholder="Roblox Game Link (e.g., https://www.roblox.com/games/...)" required>
-                        <textarea id="suggestion-textarea" placeholder="Type your detailed suggestion here..." required></textarea>
-                        <button type="submit" class="discord-btn">Send Suggestion</button>
-                        <div id="suggestion-status" class="status-message"></div>
-                    </form>
-                </div>
-            </div>
-            
-            <div id="page-manage-keys" class="page hidden">
-                <div class="card-box" style="max-width: 900px; text-align: left;">
-                    <h2>Manage Keys</h2>
-                    <!-- NOUVEL ÉLÉMENT POUR LES MESSAGES DE STATUT D'ADMINISTRATION -->
-                    <div id="admin-status-message" class="status-message hidden"></div>
-                    <div id="admin-key-list"></div>
-                </div>
-            </div>
-        </main>
-    </div>
+.logo { width: 80px; height: 80px; margin-bottom: 20px; }
+.card-box h1 { color: var(--header-primary); font-size: 24px; margin-bottom: 10px; }
+.card-box p { color: var(--text-normal); margin-bottom: 20px; }
 
-    <script src="app.js"></script>
-</body>
-</html>
+/* --- Buttons --- */
+.discord-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--brand-blue);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    gap: 8px;
+}
+.discord-btn:hover { background-color: #4e5d94; }
+.discord-btn:active { transform: translateY(1px); }
+
+/* --- Top Bar & Navigation --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--background-tertiary);
+    padding: 0 32px;
+    height: 60px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.header-logo {
+    width: 40px;
+    height: 40px;
+}
+
+nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 18px 12px;
+    transition: color 0.2s, background-color 0.2s;
+    font-weight: 500;
+}
+nav a:hover {
+    color: var(--text-normal);
+}
+nav a.active {
+    color: var(--header-primary);
+    border-bottom: 3px solid var(--brand-blue);
+}
+
+/* --- User Profile & Dropdown --- */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative; /* Pour positionner le dropdown */
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.status-badge.admin { background-color: var(--brand-red); color: white; }
+.status-badge.perm { background-color: var(--brand-blue); color: white; }
+.status-badge.free { background-color: var(--text-muted); color: white; }
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s;
+}
+.user-profile:hover {
+    background-color: var(--background-secondary);
+}
+#user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background-color: var(--background-secondary);
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: var(--border-radius);
+    z-index: 100;
+    display: none;
+    overflow: hidden;
+}
+.dropdown-content.show { display: block; }
+.dropdown-content a {
+    color: var(--text-normal);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+.dropdown-content a:hover {
+    background-color: var(--background-primary);
+}
+
+/* --- Main Content --- */
+.content {
+    padding: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.page {
+    width: 100%;
+    /* Centering admin table for larger screens */
+    display: flex;
+    justify-content: center;
+}
+
+/* --- Forms & Inputs --- */
+#suggestion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+    margin-top: 16px;
+}
+#suggestion-form input,
+#suggestion-form textarea {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 12px;
+}
+#suggestion-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.status-message { margin-top: 8px; font-weight: 500; }
+.status-message.success { color: var(--brand-green); }
+.status-message.error { color: var(--brand-red); }
+
+/* --- Get Key Page --- */
+.key-container { display: flex; gap: 8px; margin-bottom: 16px; }
+#generated-key-input {
+    flex-grow: 1;
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    text-align: center;
+}
+.secondary-btn {
+    padding: 10px 16px;
+    border: none;
+    background-color: var(--text-muted);
+    color: white;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: filter 0.2s;
+}
+.secondary-btn:hover { filter: brightness(1.2); }
+.secondary-btn-red { background-color: var(--brand-red); }
+.secondary-btn-red:hover { filter: brightness(1.2); }
+
+/* --- Admin Table --- */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.admin-table th, .admin-table td {
+    border: 1px solid var(--background-primary);
+    padding: 10px 8px;
+    text-align: left;
+}
+
+.admin-table th {
+    background-color: var(--background-primary);
+    color: var(--header-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.admin-table tr:nth-child(even) {
+    background-color: var(--background-tertiary);
+}
+
+.admin-table .actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.admin-table .actions-cell button {
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+#admin-search-input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+
+/* ======================================= */
+/* --- RESPONSIVE DESIGN (Media Queries) --- */
+/* ======================================= */
+
+/* iPad and larger mobiles */
+@media (max-width: 900px) {
+    /* Cache les liens de la barre de navigation sur les petits écrans */
+    .top-bar-left nav {
+        display: none;
+    }
+    
+    /* Permet au contenu de la page de prendre plus de place */
+    .content {
+        padding: 16px;
+    }
+
+    /* Réduit la taille maximale des cartes pour les pages */
+    .card-box {
+        margin: 10px auto;
+        padding: 24px;
+        max-width: 100%; /* Prend toute la largeur disponible */
+    }
+
+    /* Le panneau d'administration doit prendre toute la largeur sans max-width */
+    #page-manage-keys .card-box {
+        max-width: 100%;
+        box-sizing: border-box; 
+    }
+
+    /* Sur mobile, la table admin devient scrollable horizontalement */
+    .admin-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap; 
+    }
+
+    /* Les boutons d'action dans le panneau admin sont empilés */
+    .admin-table .actions-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+/* Téléphones portables */
+@media (max-width: 500px) {
+    /* Réduit la taille des éléments de l'en-tête */
+    .top-bar {
+        padding: 0 10px;
+        height: 50px;
+    }
+
+    .header-logo {
+        width: 30px;
+        height: 30px;
+    }
+
+    #user-avatar {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Cache le nom de l'utilisateur pour gagner de la place */
+    #user-name {
+        display: none;
+    }
+    
+    /* Affiche le menu déroulant directement sous l'icône de profil */
+    .dropdown-content {
+        top: 45px; 
+    }
+
+    /* Pour les formulaires, comme la suggestion */
+    #suggestion-form input,
+    #suggestion-form textarea {
+        font-size: 14px;
+    }
+
+    /* Pour la clé générée, empile les éléments */
+    .key-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #generated-key-input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
