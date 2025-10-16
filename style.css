@@ -164,3 +164,83 @@ body {
 .admin-table th { color: var(--header-primary); }
 .admin-table .key-value { font-family: monospace; font-size: 14px; word-break: break-all; }
 .admin-table .actions-cell { display: flex; gap: 8px; }
+
+/* --- RESPONSIVE DESIGN (Media Queries) --- */
+
+@media (max-width: 900px) {
+    /* Cache les liens de la barre de navigation sur les petits écrans */
+    .top-bar-left nav {
+        display: none;
+    }
+    
+    /* Permet au contenu de la page de prendre plus de place */
+    .content {
+        padding: 16px;
+    }
+
+    /* Réduit la taille maximale des cartes pour les pages */
+    .card-box {
+        margin: 10px auto;
+        padding: 24px;
+        max-width: 100%; /* Prend toute la largeur disponible */
+    }
+
+    /* Le panneau d'administration doit prendre toute la largeur sans max-width */
+    #page-manage-keys .card-box {
+        max-width: 100%;
+        box-sizing: border-box; /* S'assure que le padding est inclus dans la largeur */
+    }
+
+    /* Sur mobile, la table admin devient scrollable horizontalement */
+    .admin-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap; /* Empêche les cellules de revenir à la ligne */
+    }
+
+    /* Les boutons d'action dans le panneau admin sont empilés */
+    .admin-table .actions-cell {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 500px) {
+    /* Réduit la taille des éléments de l'en-tête */
+    .top-bar {
+        padding: 0 10px;
+        height: 50px;
+    }
+
+    .header-logo {
+        width: 30px;
+        height: 30px;
+    }
+
+    #user-avatar {
+        width: 30px;
+        height: 30px;
+    }
+
+    /* Cache le nom de l'utilisateur pour gagner de la place */
+    #user-name {
+        display: none;
+    }
+    
+    /* Affiche le menu déroulant directement sous l'icône de profil */
+    .dropdown-content {
+        top: 45px; 
+    }
+
+    /* Pour les formulaires, comme la suggestion */
+    #suggestion-form input,
+    #suggestion-form textarea {
+        font-size: 14px;
+    }
+
+    /* Pour la clé générée */
+    .key-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
