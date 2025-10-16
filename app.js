@@ -395,12 +395,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const keyType = row.querySelector('td:nth-child(2)').textContent.trim(); 
         const currentExpires = row.dataset.expiresAt; 
         
+        // 1. Demande du nouveau HWID
         const newHwid = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid === 'Not Set' ? '' : currentHwid);
         
         if (newHwid !== null) {
             let newExpires = undefined; 
 
-            // Si c'est une clé temporaire, demande aussi la nouvelle expiration
+            // 2. Si c'est une clé temporaire, demande aussi la nouvelle expiration
             if (keyType === 'temp') {
                  // Format YYYY-MM-DDTHH:mm (ISO 8601 partiel)
                  const defaultExpire = currentExpires ? 
@@ -410,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
                  const promptText = 'Enter the new expiry date/time (e.g., YYYY-MM-DDTHH:mm, leave blank to keep current):\n\nIf you want to clear the expiry, press OK and leave the input empty.';
                  newExpires = prompt(promptText, defaultExpire);
                  
-                 if (newExpires === null) return; 
+                 if (newExpires === null) return; // Annuler si l'utilisateur annule le second prompt
             }
             
             try {
@@ -426,10 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (!response.ok) throw new Error('Failed to update.');
                 
-                // Mise à jour de l'affichage
+                // 3. Mise à jour de l'affichage
                 row.querySelector('.hwid-cell').textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
                 
-                // Si l'expiration a été gérée et n'est pas undefined 
                 if (keyType === 'temp' && newExpires !== undefined) {
                     const finalExpires = newExpires.trim() === '' ? '' : newExpires.trim();
                     
