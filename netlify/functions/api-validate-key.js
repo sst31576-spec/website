@@ -2,7 +2,7 @@
 const db = require('./db');
 const axios = require('axios');
 
-// ✅ Liste des jeux autorisés. La clé est le PlaceId de Roblox, la valeur est l'URL brute du script.
+// ✅ Liste des jeux autorisés
 const gameScripts = {
   '16656664443': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
   '15666650878': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
@@ -11,40 +11,53 @@ const gameScripts = {
   '76944637102068': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
   '12997619803': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
   '118396261129211': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
-  '9200384877': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
-  '14420847101': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD"
+  '110866861848433': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/22222222",
+  '136993633183001': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/22222222",
+  '94282122066477': "https://pastebin.com/raw/x8JTfbKZ",
+  '18642553859': "https://pastebin.com/raw/99cDESLz",
+  '18337464872': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/3333333"
 };
 
+// ✅ Fonction principale (toujours async !)
 exports.handler = async function (event, context) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+  try {
+    // 🧩 Support GET & POST
+    let bodyData;
+    if (event.httpMethod === 'GET') {
+      const params = event.queryStringParameters || {};
+      bodyData = {
+        key: params.key,
+        roblox_user_id: params.roblox_user_id,
+        place_id: params.place_id
+      };
+    } else if (event.httpMethod === 'POST') {
+      bodyData = JSON.parse(event.body);
+    } else {
+      return { statusCode: 405, body: 'Method Not Allowed' };
+    }
 
-  const { key, roblox_user_id, place_id } = JSON.parse(event.body);
+    const { key, roblox_user_id, place_id } = bodyData;
+    if (!key || !roblox_user_id || !place_id) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ success: false, message: 'Missing parameters.' })
+      };
+    }
 
-  if (!key || !roblox_user_id || !place_id) {
-    return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Missing key, roblox_user_id, or place_id.' }) };
-  }
+    // 🔎 Vérifie la clé dans la base
+    const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
+    if (rows.length === 0) {
+      return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
+    }
+    const keyData = rows[0];
 
-  // 🔍 Cherche la clé
-  const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
-
-  if (rows.length === 0) {
-    return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid key.' }) };
-  }
-
-  const keyData = rows[0];
-
-  // ⏱️ Vérifie l'expiration pour les clés temporaires
-  if (keyData.key_type === 'temp' && keyData.expires_at) {
-    const expiresAt = new Date(keyData.expires_at);
-    if (expiresAt < new Date()) {
-      // Clé expirée
+    // ⏳ Vérifie l’expiration
+    if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
       
-      // Suppression de la clé expirée de la base de données
+      // *** AJOUT DE LA SUPPRESSION DE CLÉ EXPIRÉE (Minimal Fix) ***
       try {
-        await db.query('DELETE FROM keys WHERE key_value = $1', [key]);
-        console.log(`Expired temporary key ${key} deleted from DB.`);
+        await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
+        console.log(`Expired key ${keyData.key_value} deleted from DB.`);
       } catch (deleteError) {
         // En cas d'échec de la connexion à la BDD pour le DELETE, on log l'erreur mais on ne bloque pas le client.
         console.error('Failed to delete expired key:', deleteError.message);
@@ -53,26 +66,23 @@ exports.handler = async function (event, context) {
 
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
-  }
 
-  // 🧩 Vérifie HWID (roblox_user_id)
-  if (keyData.roblox_user_id) {
-    if (keyData.roblox_user_id !== roblox_user_id.toString()) {
-      return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Please reset your HWID on the website.' }) };
+    // 🧩 Vérifie HWID
+    if (keyData.roblox_user_id) {
+      if (keyData.roblox_user_id !== roblox_user_id.toString()) {
+        return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Please reset your HWID on the website.' }) };
+      }
+    } else {
+      await db.query('UPDATE keys SET roblox_user_id = $1 WHERE key_value = $2', [roblox_user_id, keyData.key_value]);
     }
-  } else {
-    // Liaison de l'HWID à la clé. Conversion explicite en string pour la BDD.
-    await db.query('UPDATE keys SET roblox_user_id = $1 WHERE key_value = $2', [roblox_user_id.toString(), keyData.key_value]);
-  }
 
-  // 🎮 Vérifie le jeu
-  const scriptUrl = gameScripts[place_id.toString()];
-  if (!scriptUrl) {
-    return { statusCode: 200, body: JSON.stringify({ success: false, message: 'This game is not supported.' }) };
-  }
+    // 🎮 Vérifie le jeu
+    const scriptUrl = gameScripts[place_id.toString()];
+    if (!scriptUrl) {
+      return { statusCode: 200, body: JSON.stringify({ success: false, message: 'This game is not supported.' }) };
+    }
 
-  // 📜 Télécharge le script distant (Ajout d'un try/catch pour la robustesse)
-  try {
+    // 📜 Télécharge le script distant
     const scriptContentResponse = await axios.get(scriptUrl);
     const scriptContent = scriptContentResponse.data;
 
@@ -80,9 +90,12 @@ exports.handler = async function (event, context) {
       statusCode: 200,
       body: JSON.stringify({ success: true, script: scriptContent })
     };
-  } catch (axiosError) {
-    // Erreur lors du téléchargement du script (404, 500, erreur réseau)
-    console.error('Failed to fetch script from URL:', scriptUrl, axiosError.message);
-    return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Script source is temporarily unavailable.' }) };
+
+  } catch (error) {
+    console.error('Validation Error (Critical):', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ success: false, message: 'An internal error occurred.' })
+    };
   }
 };
