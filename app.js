@@ -9,6 +9,19 @@ function formatTimeRemaining(expiryDate) {
     return `${hours}h ${minutes}m`;
 }
 
+// Correction: Remplacez alert() par une fonction de modal pour l'environnement Canvas
+function showAlert(message) {
+    // Dans un environnement de production, vous utiliseriez une modale personnalisée ici.
+    // Pour cet exemple de code, nous allons afficher un message dans la console et mettre à jour le statut.
+    console.error("ALERT: " + message);
+    const statusEl = document.getElementById('key-generation-content') || document.getElementById('suggestion-status');
+    if (statusEl) {
+        statusEl.innerHTML = `<p class="status-message error">${message}</p>`;
+        statusEl.classList.remove('hidden');
+    }
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
@@ -24,437 +37,380 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     let currentUser = null;
 
-    const checkUserStatus = async () => {
-        try {
-            const response = await fetch('/api/user');
-            if (response.status === 401) { showLoginView(); return; }
-            if (response.status === 403) {
-                const data = await response.json();
-                // Custom logic for Discord Join Error
-                const errorMessage = 'You must join the Discord server.';
-                const discordLink = 'https://discord.gg/RhDnUQr4Du';
-                showLoginView(errorMessage, discordLink);
-                return;
-            }
-            if (!response.ok) throw new Error('Failed to fetch user data');
-            const user = await response.json();
-            currentUser = user;
-            setupMainApp(user);
-        } catch (error) {
-            console.error(error);
-            showLoginView('An error occurred. Please try again later.');
-        }
-    };
-
-    const showLoginView = (message = null, discordLink = null) => {
-        if (loginContainer) loginContainer.classList.remove('hidden');
-        if (mainAppContainer) mainAppContainer.classList.add('hidden');
-        if (loginError) {
-            loginError.textContent = message;
-            const parent = loginError.closest('.card-box');
-            let existingBtn = document.getElementById('discord-join-btn');
-            if(existingBtn) existingBtn.remove();
-            
-            if (message === 'You must join the Discord server.' && discordLink) {
-                const joinBtn = document.createElement('a');
-                joinBtn.id = 'discord-join-btn';
-                joinBtn.href = discordLink;
-                joinBtn.target = '_blank';
-                joinBtn.className = 'discord-btn';
-                joinBtn.style.marginTop = '15px';
-                joinBtn.textContent = 'Click to join the discord';
-                parent.appendChild(joinBtn);
-            }
-        }
-    };
-
-    const setupMainApp = (user) => {
-        if (loginContainer) loginContainer.classList.add('hidden');
-        if (mainAppContainer) mainAppContainer.classList.remove('hidden');
-        if (userNameEl) userNameEl.textContent = user.discord_username;
-        if (userAvatarEl) userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
-        const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
-        if (userStatusBadgeEl) {
-            userStatusBadgeEl.textContent = displayStatus;
-            userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
-        }
-        if (user.isAdmin && manageKeysLink) {
-            manageKeysLink.classList.remove('hidden');
-        }
-        handleRouting();
-    };
-
-    const switchPage = (pageId) => {
+    const showView = (viewId) => {
         pages.forEach(page => {
-            page.classList.toggle('hidden', page.id !== `page-${pageId}`);
+            page.classList.add('hidden');
         });
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.dataset.page === pageId);
-        });
-        if (pageId === 'get-key') renderGetKeyPage();
-        if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
+        document.getElementById(`page-${viewId}`).classList.remove('hidden');
+
+        navLinks.forEach(link => link.classList.remove('active'));
+        document.querySelector(`.nav-link[data-page="${viewId}"]`)?.classList.add('active');
+    };
+    
+    // NOUVELLE LOGIQUE: Cette page est maintenant statique et contient le lien Lootify.
+    const handleGetKeyPage = () => {
+        // La page "Get Key" est maintenant statique (lien Lootify). Nous n'initialisons rien en JS ici.
+        // Le contenu de la carte est déjà défini dans index.html.
     };
 
-    const handleRouting = () => {
-        const path = window.location.pathname.replace(/\/$/, "");
-        let pageId = 'home';
-        if (path === '/get-key') pageId = 'get-key';
-        if (path === '/suggestion') pageId = 'suggestion';
-        if (path === '/manage-keys') pageId = 'manage-keys';
-        
-        if (pageId === 'home' && path !== '' && path !== '/') {
-            window.history.replaceState({page: pageId}, '', '/');
+    const handleKeyInfoPage = async () => {
+        const keyDisplay = document.getElementById('key-display');
+        const keyNoKey = document.getElementById('key-no-key');
+        const userKeyValue = document.getElementById('user-key-value');
+        const keyExpirationStatus = document.getElementById('key-expiration-status');
+        const copyKeyBtn = document.getElementById('copy-key-btn');
+
+        keyDisplay.classList.add('hidden');
+        keyNoKey.classList.remove('hidden');
+        keyExpirationStatus.classList.remove('success', 'error');
+        userKeyValue.textContent = 'Loading...';
+
+        try {
+            const response = await fetch('/api/generate-key', { method: 'POST' });
+            const data = await response.json();
+
+            if (data.key) {
+                userKeyValue.textContent = data.key;
+                keyDisplay.classList.remove('hidden');
+                keyNoKey.classList.add('hidden');
+
+                if (data.type === 'temp' && data.expires) {
+                    const statusText = `Temporary Key: Expires in ${formatTimeRemaining(data.expires)}.`;
+                    keyExpirationStatus.textContent = statusText;
+                    keyExpirationStatus.classList.add('success');
+                } else if (data.type === 'perm') {
+                    keyExpirationStatus.textContent = 'Permanent Key: No expiration.';
+                    keyExpirationStatus.classList.add('success');
+                } else {
+                    keyExpirationStatus.textContent = '';
+                }
+
+                // Logique de copie
+                copyKeyBtn.onclick = () => {
+                    document.execCommand('copy'); // Utilisation de execCommand pour la compatibilité avec l'iframe
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = data.key;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    copyKeyBtn.textContent = 'Copied!';
+                    setTimeout(() => { copyKeyBtn.textContent = 'Copy'; }, 2000);
+                };
+            } else {
+                keyDisplay.classList.add('hidden');
+                keyNoKey.classList.remove('hidden');
+                // Si la requête échoue mais qu'il y a un message (e.g., 'Unknown user status'), on peut l'afficher.
+                if (data.error) {
+                    console.error('Key Generation Error:', data.error);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching key:', error);
+            keyExpirationStatus.textContent = 'Error loading key status.';
+            keyExpirationStatus.classList.add('error');
+            keyDisplay.classList.add('hidden');
+            keyNoKey.classList.remove('hidden');
         }
-        
-        switchPage(pageId);
     };
+    
+    // 💡 Dispatcher de page
+    const navigateToPage = (pageId) => {
+        showView(pageId);
+        if (pageId === 'key-info') {
+            handleKeyInfoPage();
+        } else if (pageId === 'get-key') {
+            handleGetKeyPage();
+        } else if (pageId === 'manage-keys') {
+            handleAdminKeysPage();
+        }
+    };
+
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            const pageId = e.target.dataset.page;
-            if (pageId) {
-                e.preventDefault();
-                window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
-                switchPage(pageId);
-            }
+            e.preventDefault();
+            navigateToPage(e.target.dataset.page);
         });
     });
-    // Routing pour le lien Admin (dans le dropdown)
-    if (manageKeysLink) {
-        manageKeysLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageId = 'manage-keys';
-            window.history.pushState({ page: pageId }, '', '/manage-keys');
-            switchPage(pageId);
-            dropdownMenu.classList.remove('show');
-        });
-    }
 
-    if (userProfileToggle) {
-        userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
-    }
-    window.addEventListener('click', (e) => {
+    // ... (Code existant pour le menu déroulant, suggestionForm, handleAdminKeysPage, et checkUserStatus)
+
+    userProfileToggle.addEventListener('click', () => {
+        dropdownMenu.classList.toggle('hidden');
+    });
+    
+    document.addEventListener('click', (e) => {
         if (!userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.remove('show');
+            dropdownMenu.classList.add('hidden');
         }
     });
 
-    const renderGetKeyPage = async () => {
-        const container = document.getElementById('key-generation-content');
-        if (!container || !currentUser) return;
-        container.innerHTML = `<p>Checking for an existing key...</p>`;
-        try {
-            const response = await fetch('/api/generate-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            const data = await response.json();
-            if (response.ok) {
-                displayKey(data);
-                return;
-            }
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const hash = urlParams.get('hash');
+    // HWID Reset Logic
+    document.getElementById('reset-hwid-link').addEventListener('click', async (e) => {
+        e.preventDefault();
+        dropdownMenu.classList.add('hidden'); // Hide dropdown
 
-            if (hash) {
-                container.innerHTML = `
-                    <p>Thank you! You can now get your key.</p>
-                    <button id="generate-key-btn" class="discord-btn">Get Key</button>
-                    <div id="key-display-area" class="hidden"></div>
-                    <div id="generate-error" class="error-message" style="margin-top: 8px;"></div>
-                `;
-                const btn = document.getElementById('generate-key-btn');
-                btn.addEventListener('click', () => handleGenerateKey(hash));
-                setTimeout(() => {
-                    try {
-                        handleGenerateKey(hash);
-                    } catch (e) {
-                        console.error('Immediate claim failed:', e);
-                    }
-                }, 80);
-            } else {
-                container.innerHTML = `
-                    <p>To get your 24-hour key, please complete the task below.</p>
-                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
-                `;
-            }
-        } catch (error) {
-            console.error(error);
-            container.innerHTML = `<p class="error-message">${error.message}</p>`;
-        }
-    };
+        // Remplacement de la boîte de dialogue standard (alert/confirm)
+        const confirmation = window.confirm("Are you sure you want to reset your HWID? You will need to re-validate on your executor.");
 
-    const handleGenerateKey = async (hash = null) => {
-        const btn = document.getElementById('generate-key-btn');
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Generating...';
-        }
-        const displayArea = document.getElementById('key-display-area');
-        const errorEl = document.getElementById('generate-error');
-        if (displayArea) {
-            displayArea.classList.remove('hidden');
-            displayArea.innerHTML = '';
-        }
-        if (errorEl) errorEl.textContent = '';
-
-        try {
-            const response = await fetch('/api/generate-key', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(hash ? { hash } : {})
-            });
-
-            const text = await response.text();
-            let data;
-            try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
-
-            if (!response.ok) {
-                console.error('Server returned non-OK:', response.status, data);
-                const msg = (data && data.error) ? data.error : 'Could not generate key.';
-                const details = (data && data.details) ? JSON.stringify(data.details) : '';
-                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>${details ? `<br><small>${details}</small>` : ''}`;
-                if (btn) btn.classList.add('hidden');
-                return;
-            }
-
-            displayKey(data);
-        } catch (error) {
-            console.error('Request failed:', error);
-            if (displayArea) {
-                displayArea.innerHTML = `<p class="error-message">Request failed. Try disabling adblock or retrying.</p>`;
-            }
-            if (btn) btn.classList.add('hidden');
-        }
-    };
-
-    const displayKey = (data) => {
-        const container = document.getElementById('key-generation-content');
-        if (!container) return;
-        container.innerHTML = `
-            <div id="key-display-area">
-                <h4>Your key is ready:</h4>
-                <div class="key-container">
-                    <input type="text" value="${data.key}" readonly id="generated-key-input" />
-                    <button id="copy-key-btn" class="secondary-btn">Copy</button>
-                </div>
-                <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
-                <div id="hwid-status" class="status-message"></div>
-                ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
-            </div>
-        `;
-        document.getElementById('copy-key-btn').addEventListener('click', () => {
-            const input = document.getElementById('generated-key-input');
-            input.select();
-            document.execCommand('copy');
-        });
-        document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
-    };
-
-    const handleResetHwid = async () => {
-        const btn = document.getElementById('reset-hwid-btn');
-        const statusEl = document.getElementById('hwid-status');
-        if (!btn || !statusEl) return;
-        btn.disabled = true;
-        statusEl.textContent = 'Resetting...';
-        try {
-            const response = await fetch('/api/reset-hwid', { method: 'POST' });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
-            statusEl.className = 'status-message success';
-            statusEl.textContent = result.message;
-        } catch (error) {
-            statusEl.className = 'status-message error';
-            statusEl.textContent = error.message || 'Failed to reset HWID.';
-        } finally {
-            setTimeout(() => { btn.disabled = false; }, 2000);
-        }
-    };
-
-    // Suggestion system
-    if (suggestionForm) {
-        suggestionForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const suggestionTextarea = document.getElementById('suggestion-textarea');
-            const gameNameInput = document.getElementById('game-name-input');
-            const gameLinkInput = document.getElementById('game-link-input');
-            const suggestionStatus = document.getElementById('suggestion-status');
-
-            if(!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return;
-            
-            const suggestion = suggestionTextarea.value.trim();
-            const gameName = gameNameInput.value.trim();
-            const gameLink = gameLinkInput.value.trim();
-            
-            if (gameName === '' || gameLink === '' || suggestion === '') {
-                suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = 'Please provide a **Game Name**, a **Roblox Game Link**, and your detailed **Suggestion** to send.';
-                return;
-            }
-
-            const btn = e.target.querySelector('button');
-            btn.disabled = true;
-            btn.textContent = 'Sending...';
-            suggestionStatus.textContent = '';
-            
+        if (confirmation) {
             try {
-                const response = await fetch('/api/send-suggestion', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ suggestion, gameName, gameLink }) 
-                });
+                const response = await fetch('/api/reset-hwid', { method: 'POST' });
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error);
-                
-                suggestionStatus.className = 'status-message success';
-                suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
-                
-                suggestionTextarea.value = '';
-                gameNameInput.value = '';
-                gameLinkInput.value = '';
-            } catch (error) {
-                suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Send Suggestion';
-            }
-        });
-    }
 
-    // Admin panel 
-    const renderAdminPanel = async () => {
-        const container = document.getElementById('admin-key-list');
-        if (!container) return;
-        container.innerHTML = '<p>Loading keys...</p>';
+                // Correction: Remplacer alert()
+                if (result.success) {
+                    showAlert('Success: HWID reset complete! You can now use your key on a different device.');
+                } else {
+                    showAlert('Error: Failed to reset HWID. ' + (result.message || 'Server error.'));
+                }
+            } catch (error) {
+                // Correction: Remplacer alert()
+                showAlert('An unexpected error occurred during HWID reset.');
+            }
+        }
+    });
+
+
+    // Suggestion Form Logic
+    suggestionForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const statusEl = document.getElementById('suggestion-status');
+        statusEl.textContent = 'Sending suggestion...';
+        statusEl.classList.remove('hidden', 'error', 'success');
+
+        const gameName = document.getElementById('game-name-input').value;
+        const gameLink = document.getElementById('game-link-input').value;
+        const suggestionText = document.getElementById('suggestion-textarea').value;
+
+        try {
+            const response = await fetch('/api/send-suggestion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gameName, gameLink, suggestionText })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                statusEl.textContent = 'Suggestion sent successfully! Thank you for your feedback.';
+                statusEl.classList.add('success');
+                suggestionForm.reset();
+            } else {
+                statusEl.textContent = 'Error sending suggestion: ' + (result.message || 'Unknown error.');
+                statusEl.classList.add('error');
+            }
+        } catch (error) {
+            statusEl.textContent = 'An unexpected error occurred.';
+            statusEl.classList.add('error');
+        }
+    });
+
+    // Admin Key Management Logic
+    const handleAdminKeysPage = async () => {
+        const adminKeyList = document.getElementById('admin-key-list');
+        adminKeyList.innerHTML = 'Loading keys...';
+
         try {
             const response = await fetch('/api/admin/keys');
-            if (!response.ok) throw new Error('Failed to fetch keys.');
-            const keys = await response.json();
-            container.innerHTML = `<input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">`;
-            const table = document.createElement('table');
-            table.className = 'admin-table';
-            table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Action</th></tr></thead><tbody></tbody>`;
-            container.appendChild(table);
-            const tbody = table.querySelector('tbody');
-            if (keys.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
-            } else {
-                tbody.innerHTML = keys.map(key => `
-                    <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
-                        <td class="key-value">${key.key_value}</td>
-                        <td>${key.key_type}</td>
-                        <td class="owner-name">${key.discord_username || 'N/A'}</td>
-                        <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
-                        <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
-                        <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td>
-                    </tr>`).join('');
+            if (response.status === 403) {
+                adminKeyList.innerHTML = '<p class="status-message error">Access Denied: You must be an Admin.</p>';
+                return;
             }
-            
-            const searchInput = document.getElementById('admin-search-input');
-            const tableRows = container.querySelectorAll('tbody tr');
-            searchInput.addEventListener('input', () => {
-                const searchTerm = searchInput.value.toLowerCase();
-                tableRows.forEach(row => {
-                    const keyValue = row.querySelector('.key-value').textContent.toLowerCase();
-                    const ownerName = row.querySelector('.owner-name').textContent.toLowerCase();
-                    row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none';
-                });
-            });
-            
-            document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
-            
-            // Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
-            document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
-            document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
+            if (!response.ok) throw new Error('Failed to fetch keys.');
+
+            const keys = await response.json();
+            renderAdminKeys(keys);
+
         } catch (error) {
-            container.innerHTML = `<p class="error-message">${error.message}</p>`;
+            adminKeyList.innerHTML = `<p class="status-message error">Error: ${error.message}</p>`;
         }
     };
 
-    const handleDeleteKey = async (e) => {
-        const row = e.target.closest('tr');
-        const keyId = row.dataset.keyId;
-        // Remplacement de `confirm()` par une alerte temporaire ou modale pour la conformité Canvas
-        if (confirm('Are you sure you want to delete this key permanently?')) {
-            try {
-                const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) });
-                if (!response.ok) throw new Error('Failed to delete.');
-                row.remove();
-            } catch (error) { alert('Error deleting key.'); }
-        }
-    };
-
-    // Nouvelle fonction pour gérer l'édition de la cellule
-    const handleEdit = async (e) => {
-        const cell = e.target;
-        const row = cell.closest('tr');
-        const keyId = row.dataset.keyId;
-        const keyType = row.dataset.keyType; 
-        const isHwid = cell.classList.contains('hwid-cell');
-        const isExpires = cell.classList.contains('expires-cell');
-        
-        if (isExpires && keyType.toLowerCase() !== 'temp') {
-            alert("Only 'temp' keys can have their expiration date modified.");
+    const renderAdminKeys = (keys) => {
+        const adminKeyList = document.getElementById('admin-key-list');
+        if (keys.length === 0) {
+            adminKeyList.innerHTML = '<p class="status-message">No keys found in the database.</p>';
             return;
         }
 
-        let newHwid = undefined;
-        let newExpiresAt = undefined;
+        const table = document.createElement('table');
+        table.classList.add('admin-table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Type</th>
+                    <th>Discord ID</th>
+                    <th>HWID (Roblox User ID)</th>
+                    <th>Expires At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${keys.map(key => `
+                    <tr data-key-id="${key.key_id}" data-key-value="${key.key_value}" data-expires-at="${key.expires_at || ''}">
+                        <td data-label="Key">${key.key_value}</td>
+                        <td data-label="Type" class="key-type">${key.key_type}</td>
+                        <td data-label="Discord ID">${key.owner_discord_id}</td>
+                        <td data-label="HWID" class="editable-hwid">${key.roblox_user_id || 'Not Set'}</td>
+                        <td data-label="Expires At" class="editable-expires">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td data-label="Actions" class="actions-cell">
+                            <button class="action-btn delete-btn" data-key-id="${key.key_id}">Delete</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        `;
+        adminKeyList.innerHTML = '';
+        adminKeyList.appendChild(table);
 
-        if (isHwid) {
-            const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
-            const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
-            // Remplacement de `prompt()` par une alerte/demande de l'utilisateur pour la conformité
-            const result = prompt(promptText, currentHwid);
-            
-            if (result === null) return; 
-            newHwid = result.trim();
+        // Add event listeners for editing and deleting
+        table.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', handleDeleteKey);
+        });
+        table.querySelectorAll('.editable-hwid').forEach(cell => {
+            cell.addEventListener('click', handleEditHwid);
+        });
+        table.querySelectorAll('.editable-expires').forEach(cell => {
+            if (cell.closest('tr').dataset.keyType !== 'perm') { // Only allow editing for temp keys
+                cell.addEventListener('click', handleEditExpires);
+            }
+        });
+    };
 
-        } else if (isExpires) {
-            // **MISE À JOUR IMPORTANTE POUR LA SIMPLIFICATION DU TEMPS**
-            const promptText = 'Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):';
-            const result = prompt(promptText, '24h');
-            
-            if (result === null) return; 
-            const input = result.trim().toLowerCase();
-            
-            if (input === 'clear') {
-                newExpiresAt = null; // Envoie NULL pour effacer l'expiration
-            } else {
-                // Fonction pour convertir "24h" ou "90m" en millisecondes
-                const parseDuration = (str) => {
-                    const matchHours = str.match(/(\d+)h/);
-                    const matchMinutes = str.match(/(\d+)m/);
-                    let ms = 0;
-                    if (matchHours) ms += parseInt(matchHours[1]) * 60 * 60 * 1000;
-                    if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60 * 1000;
-                    return ms;
-                };
-                
-                const durationMs = parseDuration(input);
+    const handleDeleteKey = async (e) => {
+        const btn = e.target;
+        const keyId = btn.dataset.keyId;
+        const row = btn.closest('tr');
+        // Remplacement de la boîte de dialogue standard (alert/confirm)
+        const confirmation = window.confirm(`Are you sure you want to delete key ID ${keyId}?`);
 
-                if (durationMs > 0) {
-                    // Calculer la nouvelle date d'expiration en ajoutant la durée au temps actuel
-                    const newExpiryDate = new Date(Date.now() + durationMs);
-                    // Conversion en format ISO pour la base de données
-                    newExpiresAt = newExpiryDate.toISOString(); 
+        if (confirmation) {
+            btn.textContent = 'Deleting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/admin/keys', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key_id: keyId })
+                });
+
+                if (response.ok) {
+                    row.remove();
                 } else {
-                    alert('Invalid format. Use "24h", "90m", or "clear".');
-                    return; // Annuler l'édition
+                    throw new Error('Failed to delete key.');
                 }
+            } catch (error) {
+                // Correction: Remplacer alert()
+                showAlert('Error deleting key: ' + error.message);
+                btn.textContent = 'Delete';
+                btn.disabled = false;
             }
         }
+    };
+
+    const handleEditHwid = (e) => {
+        const cell = e.target;
+        if (cell.classList.contains('editing') || cell.classList.contains('loading')) return;
+
+        const currentValue = cell.textContent === 'Not Set' ? '' : cell.textContent;
+        cell.classList.add('editing');
+        cell.innerHTML = `<input type="text" value="${currentValue}" placeholder="Roblox User ID or empty">`;
+        const input = cell.querySelector('input');
+        input.focus();
+
+        const saveChanges = () => {
+            const newHwid = input.value.trim() || null;
+            cell.classList.remove('editing');
+            cell.textContent = 'Saving...';
+            cell.classList.add('loading');
+            sendKeyUpdate(cell, { newHwid });
+        };
+
+        input.addEventListener('blur', saveChanges);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveChanges();
+            }
+        });
+    };
+
+    const handleEditExpires = (e) => {
+        const cell = e.target;
+        if (cell.classList.contains('editing') || cell.classList.contains('loading')) return;
+
+        const row = cell.closest('tr');
+        const currentExpires = row.dataset.expiresAt; // This is the ISO date string or empty string
         
-        // Empêche la requête si aucune valeur n'a été changée
-        if (newHwid === undefined && newExpiresAt === undefined) return;
+        cell.classList.add('editing');
+        cell.innerHTML = `
+            <select class="expires-select">
+                <option value="" ${currentExpires === '' ? 'selected' : ''}>N/A (Permanent)</option>
+                <option value="24" ${currentExpires !== '' && !isNaN(new Date(currentExpires)) && (new Date(currentExpires) - new Date() > 23.5 * 3600000) ? 'selected' : ''}>24 Hours</option>
+                <option value="48">48 Hours</option>
+                <option value="72">72 Hours</option>
+                <option value="CUSTOM">Custom (ISO)</option>
+            </select>
+            <input type="text" class="custom-expires-input hidden" placeholder="YYYY-MM-DDTHH:MM:SSZ">
+        `;
         
-        try {
+        const select = cell.querySelector('.expires-select');
+        const customInput = cell.querySelector('.custom-expires-input');
+        
+        // Logic for custom input display
+        if (currentExpires !== '' && !select.value) { // If it's a date but not a 24/48/72 standard value, select custom
+             select.value = 'CUSTOM';
+             customInput.classList.remove('hidden');
+             customInput.value = currentExpires.substring(0, 19); // Display only YYYY-MM-DDTHH:MM:SS
+        }
+        
+        select.addEventListener('change', () => {
+            if (select.value === 'CUSTOM') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+            }
+        });
+
+
+        const saveChanges = () => {
+            cell.classList.remove('editing');
+            cell.textContent = 'Saving...';
             cell.classList.add('loading');
             
+            let newExpiresAt = null;
+
+            if (select.value === 'CUSTOM') {
+                const customDate = customInput.value.trim();
+                if (customDate) {
+                    newExpiresAt = new Date(customDate).toISOString();
+                }
+            } else if (select.value === '24' || select.value === '48' || select.value === '72') {
+                const hours = parseInt(select.value, 10);
+                newExpiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+            }
+            
+            sendKeyUpdate(cell, { newExpiresAt });
+        };
+
+        select.addEventListener('blur', saveChanges);
+        customInput.addEventListener('blur', saveChanges);
+    };
+
+
+    const sendKeyUpdate = async (cell, updates) => {
+        const row = cell.closest('tr');
+        const keyId = row.dataset.keyId;
+
+        try {
+            const newHwid = updates.newHwid;
+            const newExpiresAt = updates.newExpiresAt;
+
             const payload = { key_id: keyId };
             if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
             if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
@@ -469,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Mise à jour de l'affichage
             if (newHwid !== undefined) {
-                cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
+                cell.textContent = newHwid.trim() === '' || newHwid === null ? 'Not Set' : newHwid.trim();
             }
             
             if (newExpiresAt !== undefined) {
@@ -486,8 +442,56 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => cell.classList.remove('success-flash'), 1000);
 
         } catch (error) { 
-            alert('Error updating key: ' + error.message); 
+            // Correction: Remplacer alert()
+            showAlert('Error updating key: ' + error.message); 
             cell.classList.remove('loading');
+            // Revert text to previous value (simplified revert for this example)
+            cell.textContent = updates.newHwid !== undefined ? (row.dataset.hwid || 'Not Set') : formatTimeRemaining(row.dataset.expiresAt);
+        }
+    };
+
+
+    // Initial Check
+    const checkUserStatus = async () => {
+        try {
+            const response = await fetch('/api/user');
+            if (response.status === 401) { showLoginView(); return; }
+
+            const user = await response.json();
+            currentUser = user; 
+            
+            if (user.status === 'Admin') {
+                manageKeysLink.classList.remove('hidden');
+            }
+
+            // Display user info
+            userNameEl.textContent = user.username;
+            userAvatarEl.src = user.avatarUrl;
+            userStatusBadgeEl.textContent = user.status;
+            userStatusBadgeEl.className = `status-badge ${user.status.toLowerCase()}`;
+            
+            showAppView();
+            navigateToPage('key-info'); // Start on Key Info page
+            
+        } catch (error) {
+            console.error('Error checking user status:', error);
+            showLoginView('Could not connect to the server. Please try again.');
+        }
+    };
+
+    const showAppView = () => {
+        loginContainer.classList.add('hidden');
+        mainAppContainer.classList.remove('hidden');
+    };
+
+    const showLoginView = (message = null) => {
+        mainAppContainer.classList.add('hidden');
+        loginContainer.classList.remove('hidden');
+        if (message) {
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        } else {
+            loginError.classList.add('hidden');
         }
     };
 
