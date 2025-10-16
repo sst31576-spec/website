@@ -2,7 +2,7 @@
 const db = require('./db');
 const axios = require('axios');
 
-// ✅ Liste des jeux autorisés
+// ✅ Liste des jeux autorisés (conserver votre liste)
 const gameScripts = {
   '16656664443': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
   '15666650878': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
