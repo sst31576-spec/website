@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Admin panel (unchanged)
+    // Admin panel 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         if (!container) return;
@@ -344,13 +344,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keys.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
             } else {
+                // MODIFICATION: Ajout de l'attribut data-expires-at sur la ligne, et classe 'expires-cell'
                 tbody.innerHTML = keys.map(key => `
-                    <tr data-key-id="${key.id}">
+                    <tr data-key-id="${key.id}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
                         <td>${key.key_type}</td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
                         <td class="hwid-cell">${key.roblox_user_id || 'Not Set'}</td>
-                        <td>${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td class="expires-cell">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
                         <td class="actions-cell">
                             <button class="edit-hwid-btn secondary-btn">Edit</button>
                             <button class="delete-key-btn secondary-btn-red">Delete</button>
@@ -386,17 +387,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // MODIFICATION: handleEditHwid pour gérer aussi l'expiration
     const handleEditHwid = async (e) => {
         const row = e.target.closest('tr');
         const keyId = row.dataset.keyId;
         const currentHwid = row.querySelector('.hwid-cell').textContent.trim();
+        const keyType = row.querySelector('td:nth-child(2)').textContent.trim(); // Récupère le type de clé
+        const currentExpires = row.dataset.expiresAt; // Récupère la date d'expiration actuelle (peut être vide)
+        
         const newHwid = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid === 'Not Set' ? '' : currentHwid);
+        
         if (newHwid !== null) {
+            let newExpires = undefined; // Undefined pour ne pas envoyer la propriété si non modifiée
+
+            // Si c'est une clé temporaire, demande aussi la nouvelle expiration
+            if (keyType === 'temp') {
+                 // Format YYYY-MM-DDTHH:mm (ISO 8601 partiel)
+                 const defaultExpire = currentExpires ? 
+                                       currentExpires.substring(0, 16) : 
+                                       new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 16);
+                                       
+                 const promptText = 'Enter the new expiry date/time (e.g., YYYY-MM-DDTHH:mm, leave blank to keep current):';
+                 newExpires = prompt(promptText, defaultExpire);
+                 
+                 // L'utilisateur peut laisser le champ du prompt vide ou annuler.
+                 if (newExpires === null) return; // Annulation du prompt d'expiration
+            }
+            
             try {
-                const response = await fetch('/api/admin/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId, new_roblox_user_id: newHwid }) });
+                const response = await fetch('/api/admin/keys', { 
+                    method: 'PUT', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        key_id: keyId, 
+                        new_roblox_user_id: newHwid,
+                        new_expires_at: newExpires // Envoi de la nouvelle expiration (peut être undefined ou null si clear/annulé)
+                    }) 
+                });
+                
                 if (!response.ok) throw new Error('Failed to update.');
+                
+                // Mise à jour de l'affichage
                 row.querySelector('.hwid-cell').textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
-            } catch (error) { alert('Error updating HWID.'); }
+                
+                // Si l'expiration a été gérée et n'est pas undefined (c'est-à-dire si keyType était 'temp' et non annulé)
+                if (keyType === 'temp' && newExpires !== undefined) {
+                    const finalExpires = newExpires.trim() === '' ? '' : newExpires.trim();
+                    
+                    row.dataset.expiresAt = finalExpires;
+                    row.querySelector('.expires-cell').textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
+                }
+
+            } catch (error) { alert('Error updating key: ' + error.message); }
         }
     };
 
