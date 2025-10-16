@@ -271,44 +271,53 @@ nav a.active {
     margin-bottom: 10px;
 }
 
+/* Cache par défaut le conteneur des liens mobiles sur grand écran */
+#mobile-nav-links {
+    display: none;
+}
+
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN (Media Queries) --- */
 /* ======================================= */
 
-/* iPad and larger mobiles */
 @media (max-width: 900px) {
-    /* Cache les liens de la barre de navigation sur les petits écrans */
+    /* Cache la navigation principale sur les écrans de moins de 900px */
     .top-bar-left nav {
         display: none;
     }
     
-    /* Permet au contenu de la page de prendre plus de place */
+    /* Le conteneur pour les liens mobiles dans le dropdown */
+    #mobile-nav-links {
+        display: block; /* Affiche le conteneur sur mobile */
+        border-bottom: 1px solid var(--background-primary); /* Ajoute un séparateur */
+        margin-bottom: 5px;
+        padding-bottom: 5px;
+    }
+
+    #mobile-nav-links a {
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    /* Styles généraux pour mobile (inchangés) */
     .content {
         padding: 16px;
     }
-
-    /* Réduit la taille maximale des cartes pour les pages */
     .card-box {
         margin: 10px auto;
         padding: 24px;
-        max-width: 100%; /* Prend toute la largeur disponible */
+        max-width: 100%;
     }
-
-    /* Le panneau d'administration doit prendre toute la largeur sans max-width */
     #page-manage-keys .card-box {
         max-width: 100%;
         box-sizing: border-box; 
     }
-
-    /* Sur mobile, la table admin devient scrollable horizontalement */
     .admin-table {
         display: block;
         overflow-x: auto;
         white-space: nowrap; 
     }
-
-    /* Les boutons d'action dans le panneau admin sont empilés */
     .admin-table .actions-cell {
         display: flex;
         flex-direction: column;
