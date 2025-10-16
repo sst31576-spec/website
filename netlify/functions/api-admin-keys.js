@@ -73,9 +73,9 @@ exports.handler = async function (event, context) {
             }
 
             // 2. Mise à jour de l'expiration (new_expires_at)
+            // Note: Le frontend envoie soit une date ISO valide, soit NULL (si l'admin a tapé 'clear')
             if (body.new_expires_at !== undefined) {
-                // Si la valeur est null, on met la colonne à NULL. Sinon, on la convertit en ISO
-                const finalExpiresAt = (body.new_expires_at === null) ? null : new Date(body.new_expires_at).toISOString();
+                const finalExpiresAt = (body.new_expires_at === null) ? null : new Date(body.new_expires_at);
                 updateParts.push(`expires_at = $${paramIndex++}`);
                 params.push(finalExpiresAt);
             }
