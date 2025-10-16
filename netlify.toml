@@ -30,13 +30,13 @@
   status = 200
 
 [[redirects]]
-  from = "/api/reset-hwid"
-  to = "/.netlify/functions/api-reset-hwid"
+  from = "/api/generate-trial-key"
+  to = "/.netlify/functions/api-generate-trial-key"
   status = 200
 
 [[redirects]]
-  from = "/api/generate-trial-key"
-  to = "/.netlify/functions/api-generate-trial-key"
+  from = "/api/reset-hwid"
+  to = "/.netlify/functions/api-reset-hwid"
   status = 200
 
 [[redirects]]
@@ -50,8 +50,6 @@
   status = 200
 
 # Règle "catch-all" pour les applications à page unique (SPA).
-# Ceci redirige toutes les URLs non trouvées (comme /get-key) vers index.html,
-# permettant au JavaScript de gérer l'affichage de la bonne page.
 [[redirects]]
   from = "/*"
   to = "/index.html"
