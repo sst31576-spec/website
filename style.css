@@ -35,97 +35,160 @@ body {
     margin: 20px auto;
 }
 
-.logo { width: 80px; height: 80px; margin-bottom: 16px; }
-.card-box h1, .card-box h2 { color: var(--header-primary); margin-top: 0; margin-bottom: 8px; }
-.card-box p { margin-bottom: 24px; }
+.logo { width: 80px; height: 80px; margin-bottom: 20px; }
+.card-box h1 { color: var(--header-primary); font-size: 24px; margin-bottom: 10px; }
+.card-box p { color: var(--text-normal); margin-bottom: 20px; }
 
+/* --- Buttons --- */
 .discord-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 24px;
     background-color: var(--brand-blue);
     color: white;
-    border: none;
+    padding: 12px 24px;
     border-radius: var(--border-radius);
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
     text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    gap: 8px;
 }
-.discord-btn:hover { background-color: #4752c4; }
-.discord-btn .icon { margin-right: 8px; }
+.discord-btn:hover { background-color: #4e5d94; }
+.discord-btn:active { transform: translateY(1px); }
 
-.error-message { color: var(--brand-red); margin-top: 16px; font-weight: 500; }
-
-/* --- Main App --- */
-#main-app { display: flex; flex-direction: column; }
+/* --- Top Bar & Navigation --- */
 .top-bar {
-    background-color: var(--background-tertiary);
-    padding: 0 24px;
-    height: 60px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background-color: var(--background-tertiary);
+    padding: 0 32px;
+    height: 60px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.top-bar-left, .top-bar-right, .user-profile { display: flex; align-items: center; gap: 16px; }
-.header-logo { width: 40px; height: 40px; }
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
 
-.nav-link {
+.header-logo {
+    width: 40px;
+    height: 40px;
+}
+
+nav a {
     color: var(--text-muted);
     text-decoration: none;
+    padding: 18px 12px;
+    transition: color 0.2s, background-color 0.2s;
     font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
 }
-.nav-link:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-normal); }
-.nav-link.active { background-color: rgba(255, 255, 255, 0.08); color: var(--header-primary); }
+nav a:hover {
+    color: var(--text-normal);
+}
+nav a.active {
+    color: var(--header-primary);
+    border-bottom: 3px solid var(--brand-blue);
+}
 
-.user-profile { cursor: pointer; padding: 6px; border-radius: var(--border-radius); transition: background-color 0.2s; }
-.user-profile:hover { background-color: rgba(255, 255, 255, 0.05); }
+/* --- User Profile & Dropdown --- */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative; /* Pour positionner le dropdown */
+}
 
-#user-avatar { width: 36px; height: 36px; border-radius: 50%; }
-#user-name { color: var(--header-primary); font-weight: 500; }
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.status-badge.admin { background-color: var(--brand-red); color: white; }
+.status-badge.perm { background-color: var(--brand-blue); color: white; }
+.status-badge.free { background-color: var(--text-muted); color: white; }
 
-.status-badge { padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: 700; color: white; }
-.status-badge.free { background-color: var(--text-muted); }
-.status-badge.perm { background-color: var(--brand-green); }
-.status-badge.admin { background-color: var(--brand-red); }
-
-.top-bar-right { position: relative; }
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    top: 55px;
-    background-color: var(--background-tertiary);
-    min-width: 160px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
     border-radius: var(--border-radius);
-    z-index: 1;
+    transition: background-color 0.2s;
+}
+.user-profile:hover {
+    background-color: var(--background-secondary);
+}
+#user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background-color: var(--background-secondary);
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: var(--border-radius);
+    z-index: 100;
+    display: none;
     overflow: hidden;
 }
-.dropdown-content a { color: var(--text-normal); padding: 12px 16px; text-decoration: none; display: block; }
-.dropdown-content a:hover { background-color: var(--brand-blue); color: white; }
 .dropdown-content.show { display: block; }
+.dropdown-content a {
+    color: var(--text-normal);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+.dropdown-content a:hover {
+    background-color: var(--background-primary);
+}
 
-.content { flex-grow: 1; padding: 24px; overflow-y: auto; }
-.page { width: 100%; }
+/* --- Main Content --- */
+.content {
+    padding: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
 
-/* --- Suggestion Form --- */
-#suggestion-form { display: flex; flex-direction: column; gap: 16px; }
+.page {
+    width: 100%;
+    /* Centering admin table for larger screens */
+    display: flex;
+    justify-content: center;
+}
+
+/* --- Forms & Inputs --- */
+#suggestion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+    margin-top: 16px;
+}
+#suggestion-form input,
 #suggestion-form textarea {
-    background-color: var(--background-tertiary);
-    border: 1px solid var(--background-primary);
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
     border-radius: var(--border-radius);
     color: var(--text-normal);
     font-family: 'Roboto', sans-serif;
     font-size: 16px;
     padding: 12px;
+}
+#suggestion-form textarea {
     min-height: 120px;
     resize: vertical;
 }
@@ -144,6 +207,7 @@ body {
     padding: 10px;
     border-radius: var(--border-radius);
     font-size: 16px;
+    text-align: center;
 }
 .secondary-btn {
     padding: 10px 16px;
@@ -157,16 +221,62 @@ body {
 }
 .secondary-btn:hover { filter: brightness(1.2); }
 .secondary-btn-red { background-color: var(--brand-red); }
+.secondary-btn-red:hover { filter: brightness(1.2); }
 
-/* --- Admin Panel --- */
-.admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; text-align: left; }
-.admin-table th, .admin-table td { padding: 12px; border-bottom: 1px solid var(--background-tertiary); }
-.admin-table th { color: var(--header-primary); }
-.admin-table .key-value { font-family: monospace; font-size: 14px; word-break: break-all; }
-.admin-table .actions-cell { display: flex; gap: 8px; }
+/* --- Admin Table --- */
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
 
+.admin-table th, .admin-table td {
+    border: 1px solid var(--background-primary);
+    padding: 10px 8px;
+    text-align: left;
+}
+
+.admin-table th {
+    background-color: var(--background-primary);
+    color: var(--header-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.admin-table tr:nth-child(even) {
+    background-color: var(--background-tertiary);
+}
+
+.admin-table .actions-cell {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.admin-table .actions-cell button {
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+#admin-search-input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+
+/* ======================================= */
 /* --- RESPONSIVE DESIGN (Media Queries) --- */
+/* ======================================= */
 
+/* iPad and larger mobiles */
 @media (max-width: 900px) {
     /* Cache les liens de la barre de navigation sur les petits écrans */
     .top-bar-left nav {
@@ -188,23 +298,25 @@ body {
     /* Le panneau d'administration doit prendre toute la largeur sans max-width */
     #page-manage-keys .card-box {
         max-width: 100%;
-        box-sizing: border-box; /* S'assure que le padding est inclus dans la largeur */
+        box-sizing: border-box; 
     }
 
     /* Sur mobile, la table admin devient scrollable horizontalement */
     .admin-table {
         display: block;
         overflow-x: auto;
-        white-space: nowrap; /* Empêche les cellules de revenir à la ligne */
+        white-space: nowrap; 
     }
 
     /* Les boutons d'action dans le panneau admin sont empilés */
     .admin-table .actions-cell {
+        display: flex;
         flex-direction: column;
         gap: 4px;
     }
 }
 
+/* Téléphones portables */
 @media (max-width: 500px) {
     /* Réduit la taille des éléments de l'en-tête */
     .top-bar {
@@ -238,9 +350,14 @@ body {
         font-size: 14px;
     }
 
-    /* Pour la clé générée */
+    /* Pour la clé générée, empile les éléments */
     .key-container {
         flex-direction: column;
         gap: 10px;
+    }
+    
+    #generated-key-input {
+        width: 100%;
+        box-sizing: border-box;
     }
 }
