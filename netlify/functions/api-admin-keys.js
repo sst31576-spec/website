@@ -54,7 +54,7 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
         }
 
-        // PUT: Update a key's HWID and/or expiration
+        // FIX: Mise à jour pour inclure la date d'expiration
         if (event.httpMethod === 'PUT') {
             const { key_id, new_roblox_user_id, new_expires_at } = JSON.parse(event.body);
             if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
@@ -65,9 +65,9 @@ exports.handler = async function (event, context) {
             let query = 'UPDATE keys SET roblox_user_id = $1';
             const params = [finalRobloxId];
             
-            // Si une nouvelle date d'expiration est fournie (et n'est pas undefined)
+            // new_expires_at doit être présent dans le body de la requête pour être traité
             if (new_expires_at !== undefined) {
-                // Si new_expires_at est une chaîne vide, on le met à NULL dans la DB. Sinon, on le parse.
+                // Si new_expires_at est une chaîne vide ou NULL, on le met à NULL dans la DB. Sinon, on le convertit en ISO
                 const finalExpiresAt = (new_expires_at && new_expires_at.trim() !== '') ? new Date(new_expires_at).toISOString() : null;
                 query += `, expires_at = $${params.length + 1}`;
                 params.push(finalExpiresAt);
