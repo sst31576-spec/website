@@ -14,7 +14,6 @@ exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
-
     const cookies = event.headers.cookie ? cookie.parse(event.headers.cookie) : {};
     const token = cookies.auth_token;
     if (!token) {
@@ -30,7 +29,7 @@ exports.handler = async function (event, context) {
             return { statusCode: 403, body: JSON.stringify({ error: 'This feature is only for Free users.' }) };
         }
 
-        // Anti-abus : Vérifie si une clé active (temp ou trial) existe déjà
+        // Anti-abus : Vérifie si une clé (24h ou 10min) est déjà active
         const { rows: existingKeyRows } = await db.query(
             'SELECT key_value FROM keys WHERE owner_discord_id = $1 AND expires_at > NOW()',
             [id]
@@ -39,22 +38,16 @@ exports.handler = async function (event, context) {
             return { statusCode: 429, body: JSON.stringify({ error: 'You already have an active key. Please wait for it to expire.' }) };
         }
 
-        // Aucune clé active trouvée, on génère une clé d'essai de 10 minutes
+        // Si aucune clé active, on génère une clé d'essai de 10 minutes
         const newKey = `KINGTRIAL-${generateRandomString(18)}`;
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-        const keyType = 'trial';
-
-        // Nettoie les anciennes clés de cet utilisateur avant d'insérer la nouvelle
-        await db.query("DELETE FROM keys WHERE owner_discord_id = $1 AND (key_type = 'temp' OR key_type = 'trial')", [id]);
         
-        await db.query(
-            'INSERT INTO keys (key_value, key_type, owner_discord_id, expires_at) VALUES ($1, $2, $3, $4)',
-            [newKey, keyType, id, expiresAt]
-        );
+        await db.query("DELETE FROM keys WHERE owner_discord_id = $1 AND (key_type = 'temp' OR key_type = 'trial')", [id]);
+        await db.query('INSERT INTO keys (key_value, key_type, owner_discord_id, expires_at) VALUES ($1, $2, $3, $4)', [newKey, 'trial', id, expiresAt]);
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ key: newKey, type: keyType, expires: expiresAt })
+            body: JSON.stringify({ key: newKey, type: 'trial', expires: expiresAt })
         };
 
     } catch (error) {
