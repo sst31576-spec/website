@@ -1,4 +1,4 @@
-# netlify.toml (Complet)
+# netlify.toml (Configuration complète)
 
 [build]
   functions = "netlify/functions"
@@ -29,6 +29,13 @@
   to = "/.netlify/functions/api-generate-key"
   status = 200
 
+# *** REDIRECTION CRUCIALE POUR LA VALIDATION DES CLÉS ***
+[[redirects]]
+  from = "/api/validate-key"
+  to = "/.netlify/functions/api-validate-key"
+  status = 200
+# ********************************************************
+
 [[redirects]]
   from = "/api/reset-hwid"
   to = "/.netlify/functions/api-reset-hwid"
@@ -44,13 +51,8 @@
   to = "/.netlify/functions/api-send-suggestion"
   status = 200
 
-# AJOUT CRUCIAL POUR LE WEBHOOK LOOTLABS
-[[redirects]]
-  from = "/api/lootlabs-webhook"
-  to = "/.netlify/functions/api-lootlabs-webhook"
-  status = 200
-  
 # Règle "catch-all" pour les applications à page unique (SPA)
+# Cette règle doit toujours être la dernière
 [[redirects]]
   from = "/*"
   to = "/index.html"
