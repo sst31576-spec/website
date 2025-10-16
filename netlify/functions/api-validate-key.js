@@ -41,17 +41,19 @@ exports.handler = async function (event, context) {
             const currentDate = new Date();
 
             if (expirationDate < currentDate) {
-                // *** CORRECTION : SUPPRESSION DE LA CLÉ EXPIRÉE ***
-                // La tentative de suppression est isolée.
-                // Si la suppression échoue, nous continuons de bloquer la clé (Key has expired).
+                
+                // *** NETTOYAGE (AJOUT SEULEMENT) ***
+                // La tentative de suppression est isolée. La fonction continue de bloquer la clé 
+                // même si la suppression échoue, pour éviter le "Could not connect to server".
                 try {
                     await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
                     console.log(`Expired key ${keyData.key_value} deleted from DB.`);
                 } catch (deleteError) {
-                    // Nous n'affichons pas d'erreur au client (Roblox) car la clé est bien expirée.
+                    // C'est l'erreur la plus fréquente dans les environnements Netlify/BDD.
+                    // Nous ignorons cette erreur ici pour ne pas bloquer le client Roblox.
                     console.error('Échec de la suppression de la clé expirée (Problème BDD):', deleteError.message);
                 }
-                // *** FIN DE CORRECTION ***
+                // *** FIN DU NETTOYAGE ***
                 
                 return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
             }
@@ -84,9 +86,8 @@ exports.handler = async function (event, context) {
 
     } catch (error) {
         // Ce bloc est exécuté si la première requête BDD (SELECT) ou la requête Axios échoue.
-        console.error('Validation FAILED (Erreur Critique):', error.message);
-        // Renvoie un code 500 (Internal Server Error) si l'erreur est critique.
-        // Cela correspond à l'erreur "Could not connect to server" côté client (Roblox).
+        // C'est la seule façon d'obtenir un statut 500 et l'erreur "Could not connect to server".
+        console.error('Validation FAILED (Erreur Critique - Problème BDD ou Axios):', error.message);
         return { 
             statusCode: 500, 
             body: JSON.stringify({ 
