@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/user');
             if (response.status === 401) { showLoginView(); return; }
             if (response.status === 403) {
+                const data = await response.json();
+                // Custom logic for Discord Join Error
                 const errorMessage = 'You must join the Discord server.';
                 const discordLink = 'https://discord.gg/RhDnUQr4Du';
                 showLoginView(errorMessage, discordLink);
@@ -117,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
+    // Routing pour le lien Admin (dans le dropdown)
     if (manageKeysLink) {
         manageKeysLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -132,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     }
     window.addEventListener('click', (e) => {
-        if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        if (!userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
         }
     });
@@ -175,55 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 container.innerHTML = `
                     <p>To get your 24-hour key, please complete the task below.</p>
-                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task (24 Hours)</a>
-                    <p class="text-muted" style="margin: 1rem 0;">OR</p>
-                    <button id="get-trial-key-btn" class="secondary-btn">Get a 10-Minute Trial Key</button>
-                    <div id="trial-status-message" class="status-message"></div>
-                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the main task, you will be redirected back here to claim your 24h key.</p>
+                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
+                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
                 `;
-                const trialBtn = document.getElementById('get-trial-key-btn');
-                if (trialBtn) {
-                    trialBtn.addEventListener('click', handleGenerateTrialKey);
-                }
             }
         } catch (error) {
             console.error(error);
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
-        }
-    };
-    
-    const handleGenerateTrialKey = async () => {
-        const trialBtn = document.getElementById('get-trial-key-btn');
-        const container = document.getElementById('key-generation-content');
-        if (!trialBtn || !container) return;
-    
-        trialBtn.disabled = true;
-        trialBtn.textContent = 'Generating Trial Key...';
-    
-        let statusEl = document.getElementById('trial-status-message');
-        if (!statusEl) {
-            statusEl = document.createElement('div');
-            statusEl.id = 'trial-status-message';
-            statusEl.className = 'status-message';
-            trialBtn.insertAdjacentElement('afterend', statusEl);
-        }
-        statusEl.textContent = '';
-    
-        try {
-            const response = await fetch('/api/generate-trial-key', { method: 'POST' });
-            const data = await response.json();
-    
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to generate trial key.');
-            }
-            
-            displayKey(data);
-    
-        } catch (error) {
-            statusEl.className = 'status-message error';
-            statusEl.textContent = error.message;
-            trialBtn.disabled = false;
-            trialBtn.textContent = 'Get a 10-Minute Trial Key';
         }
     };
 
@@ -253,14 +213,17 @@ document.addEventListener('DOMContentLoaded', () => {
             try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
 
             if (!response.ok) {
+                console.error('Server returned non-OK:', response.status, data);
                 const msg = (data && data.error) ? data.error : 'Could not generate key.';
-                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>`;
+                const details = (data && data.details) ? JSON.stringify(data.details) : '';
+                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>${details ? `<br><small>${details}</small>` : ''}`;
                 if (btn) btn.classList.add('hidden');
                 return;
             }
 
             displayKey(data);
         } catch (error) {
+            console.error('Request failed:', error);
             if (displayArea) {
                 displayArea.innerHTML = `<p class="error-message">Request failed. Try disabling adblock or retrying.</p>`;
             }
@@ -271,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
-        const isExpirable = data.type === 'temp' || data.type === 'trial';
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
@@ -281,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
                 <div id="hwid-status" class="status-message"></div>
-                ${isExpirable ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
+                ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
         document.getElementById('copy-key-btn').addEventListener('click', () => {
@@ -312,34 +274,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Suggestion system
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const suggestionTextarea = document.getElementById('suggestion-textarea');
+            const gameNameInput = document.getElementById('game-name-input');
+            const gameLinkInput = document.getElementById('game-link-input');
+            const suggestionStatus = document.getElementById('suggestion-status');
+
+            if(!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return;
+            
+            const suggestion = suggestionTextarea.value.trim();
+            const gameName = gameNameInput.value.trim();
+            const gameLink = gameLinkInput.value.trim();
+            
+            if (gameName === '' || gameLink === '' || suggestion === '') {
+                suggestionStatus.className = 'status-message error';
+                suggestionStatus.textContent = 'Please provide a **Game Name**, a **Roblox Game Link**, and your detailed **Suggestion** to send.';
+                return;
+            }
+
             const btn = e.target.querySelector('button');
-            const statusEl = document.getElementById('suggestion-status');
             btn.disabled = true;
             btn.textContent = 'Sending...';
-            statusEl.textContent = '';
+            suggestionStatus.textContent = '';
             
             try {
                 const response = await fetch('/api/send-suggestion', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ 
-                        suggestion: document.getElementById('suggestion-textarea').value,
-                        gameName: document.getElementById('game-name-input').value,
-                        gameLink: document.getElementById('game-link-input').value
-                    }) 
+                    body: JSON.stringify({ suggestion, gameName, gameLink }) 
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
                 
-                statusEl.className = 'status-message success';
-                statusEl.textContent = 'Suggestion sent successfully! Thank you.';
-                suggestionForm.reset();
+                suggestionStatus.className = 'status-message success';
+                suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
+                
+                suggestionTextarea.value = '';
+                gameNameInput.value = '';
+                gameLinkInput.value = '';
             } catch (error) {
-                statusEl.className = 'status-message error';
-                statusEl.textContent = error.message || 'Failed to send suggestion.';
+                suggestionStatus.className = 'status-message error';
+                suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Suggestion';
@@ -347,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Admin panel 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         if (!container) return;
@@ -367,14 +346,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = keys.map(key => `
                     <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
-                        <td class="key-type-cell">
-                            <span class="key-type-badge key-type-${key.key_type.toLowerCase()}">
-                                ${key.key_type}
-                            </span>
-                        </td>
+                        <td>${key.key_type}</td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
                         <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
-                        <td class="expires-cell editable">${key.key_type === 'temp' || key.key_type === 'trial' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
                         <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td>
                     </tr>`).join('');
             }
@@ -391,6 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
+            
+            // Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
             document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
             document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
         } catch (error) {
@@ -401,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleDeleteKey = async (e) => {
         const row = e.target.closest('tr');
         const keyId = row.dataset.keyId;
+        // Remplacement de `confirm()` par une alerte temporaire ou modale pour la conformité Canvas
         if (confirm('Are you sure you want to delete this key permanently?')) {
             try {
                 const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) });
@@ -410,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Nouvelle fonction pour gérer l'édition de la cellule
     const handleEdit = async (e) => {
         const cell = e.target;
         const row = cell.closest('tr');
@@ -418,9 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHwid = cell.classList.contains('hwid-cell');
         const isExpires = cell.classList.contains('expires-cell');
         
-        const isExpirable = keyType === 'temp' || keyType === 'trial';
-        if (isExpires && !isExpirable) {
-            alert("Only 'temp' or 'trial' keys can have their expiration date modified.");
+        if (isExpires && keyType.toLowerCase() !== 'temp') {
+            alert("Only 'temp' keys can have their expiration date modified.");
             return;
         }
 
@@ -429,17 +407,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isHwid) {
             const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
-            const result = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid);
+            const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
+            // Remplacement de `prompt()` par une alerte/demande de l'utilisateur pour la conformité
+            const result = prompt(promptText, currentHwid);
+            
             if (result === null) return; 
             newHwid = result.trim();
+
         } else if (isExpires) {
-            const result = prompt('Enter time to ADD (e.g., "24h", "90m"), or "clear" to remove expiry:', '24h');
+            // **MISE À JOUR IMPORTANTE POUR LA SIMPLIFICATION DU TEMPS**
+            const promptText = 'Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):';
+            const result = prompt(promptText, '24h');
+            
             if (result === null) return; 
             const input = result.trim().toLowerCase();
             
             if (input === 'clear') {
-                newExpiresAt = null;
+                newExpiresAt = null; // Envoie NULL pour effacer l'expiration
             } else {
+                // Fonction pour convertir "24h" ou "90m" en millisecondes
                 const parseDuration = (str) => {
                     const matchHours = str.match(/(\d+)h/);
                     const matchMinutes = str.match(/(\d+)m/);
@@ -448,19 +434,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60 * 1000;
                     return ms;
                 };
+                
                 const durationMs = parseDuration(input);
+
                 if (durationMs > 0) {
-                    newExpiresAt = new Date(Date.now() + durationMs).toISOString(); 
+                    // Calculer la nouvelle date d'expiration en ajoutant la durée au temps actuel
+                    const newExpiryDate = new Date(Date.now() + durationMs);
+                    // Conversion en format ISO pour la base de données
+                    newExpiresAt = newExpiryDate.toISOString(); 
                 } else {
                     alert('Invalid format. Use "24h", "90m", or "clear".');
-                    return;
+                    return; // Annuler l'édition
                 }
             }
         }
         
+        // Empêche la requête si aucune valeur n'a été changée
         if (newHwid === undefined && newExpiresAt === undefined) return;
         
         try {
+            cell.classList.add('loading');
+            
             const payload = { key_id: keyId };
             if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
             if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
@@ -470,18 +464,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(payload) 
             });
+            
             if (!response.ok) throw new Error('Failed to update.');
             
+            // Mise à jour de l'affichage
             if (newHwid !== undefined) {
-                cell.textContent = newHwid === '' ? 'Not Set' : newHwid;
+                cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
             }
+            
             if (newExpiresAt !== undefined) {
                 const finalExpires = newExpiresAt === null ? '' : newExpiresAt;
+                
+                // Mettre à jour l'attribut de données pour la prochaine édition
                 row.dataset.expiresAt = finalExpires;
+                // Mettre à jour l'affichage formaté (par exemple: 24h 0m)
                 cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
             }
+
+            cell.classList.remove('loading');
+            cell.classList.add('success-flash');
+            setTimeout(() => cell.classList.remove('success-flash'), 1000);
+
         } catch (error) { 
             alert('Error updating key: ' + error.message); 
+            cell.classList.remove('loading');
         }
     };
 
