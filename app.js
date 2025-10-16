@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 403) {
                 const data = await response.json();
                 // Custom logic for Discord Join Error
-                const errorMessage = 'You must join the Discord server';
+                const errorMessage = 'You must join the Discord server.';
                 const discordLink = 'https://discord.gg/RhDnUQr4Du';
                 showLoginView(errorMessage, discordLink);
                 return;
@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             userStatusBadgeEl.textContent = displayStatus;
             userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
         }
+        // Admin link visibility
         if (user.isAdmin && manageKeysLink) {
             manageKeysLink.classList.remove('hidden');
         }
@@ -91,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             page.classList.toggle('hidden', page.id !== `page-${pageId}`);
         });
         navLinks.forEach(link => {
+            // Uniquement les liens de la nav principale
             link.classList.toggle('active', link.dataset.page === pageId);
         });
         if (pageId === 'get-key') renderGetKeyPage();
@@ -112,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         switchPage(pageId);
     };
 
+    // Routing pour les liens de navigation (SPA)
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            // Only handle internal links for SPA routing
             const pageId = e.target.dataset.page;
             if (pageId) {
                 e.preventDefault();
@@ -123,6 +125,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    // Routing pour le lien Admin (dans le dropdown)
+    if (manageKeysLink) {
+        manageKeysLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = 'manage-keys';
+            window.history.pushState({ page: pageId }, '', '/manage-keys');
+            switchPage(pageId);
+            dropdownMenu.classList.remove('show');
+        });
+    }
 
     if (userProfileToggle) {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
@@ -132,8 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdownMenu.classList.remove('show');
         }
     });
+    // --- Fin de l'initialisation et du routage ---
 
-    // ===== get-key page logic (robust, POST call) =====
+    // ... (renderGetKeyPage, handleGenerateKey, displayKey, handleResetHwid, suggestionForm logic inchangée) ...
+
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
@@ -345,9 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keys.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
             } else {
-                // MODIFICATION: Ajout de l'attribut data-expires-at sur la ligne
                 tbody.innerHTML = keys.map(key => `
-                    <tr data-key-id="${key.id}" data-expires-at="${key.expires_at || ''}">
+                    <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
                         <td>${key.key_type}</td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
@@ -388,11 +401,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // FIX: Ajout de la modification du temps si la clé est temporaire
     const handleEditHwid = async (e) => {
         const row = e.target.closest('tr');
         const keyId = row.dataset.keyId;
         const currentHwid = row.querySelector('.hwid-cell').textContent.trim();
-        const keyType = row.querySelector('td:nth-child(2)').textContent.trim(); 
+        const keyType = row.dataset.keyType; // Nouvelle data-attribute
         const currentExpires = row.dataset.expiresAt; 
         
         // 1. Demande du nouveau HWID
@@ -403,15 +417,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Si c'est une clé temporaire, demande aussi la nouvelle expiration
             if (keyType === 'temp') {
-                 // Format YYYY-MM-DDTHH:mm (ISO 8601 partiel)
+                 // Format YYYY-MM-DDTHH:mm (ISO 8601 partiel pour input datetime-local)
                  const defaultExpire = currentExpires ? 
-                                       currentExpires.substring(0, 16) : 
-                                       new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 16);
+                                       new Date(currentExpires).toISOString().substring(0, 16) : 
+                                       ''; 
                                        
-                 const promptText = 'Enter the new expiry date/time (e.g., YYYY-MM-DDTHH:mm, leave blank to keep current):\n\nIf you want to clear the expiry, press OK and leave the input empty.';
+                 const promptText = 'Enter the new expiry date/time (Format: YYYY-MM-DDTHH:mm, e.g., 2025-12-31T23:59). Leave empty to keep current or enter "NULL" to clear:';
                  newExpires = prompt(promptText, defaultExpire);
                  
-                 if (newExpires === null) return; // Annuler si l'utilisateur annule le second prompt
+                 // Si l'utilisateur annule le deuxième prompt
+                 if (newExpires === null) return; 
+                 
+                 // Convertir "NULL" ou vide en une valeur que le backend peut comprendre
+                 newExpires = (newExpires.trim().toUpperCase() === 'NULL' || newExpires.trim() === '') ? '' : newExpires.trim();
             }
             
             try {
@@ -431,12 +449,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.querySelector('.hwid-cell').textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
                 
                 if (keyType === 'temp' && newExpires !== undefined) {
-                    const finalExpires = newExpires.trim() === '' ? '' : newExpires.trim();
+                    // Update the row's data-expires-at attribute and display cell
+                    const finalExpiresDate = newExpires.trim() === '' ? '' : new Date(newExpires).toISOString();
                     
-                    row.dataset.expiresAt = finalExpires;
-                    row.querySelector('.expires-cell').textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
+                    row.dataset.expiresAt = finalExpiresDate;
+                    row.querySelector('.expires-cell').textContent = finalExpiresDate === '' ? 'N/A' : formatTimeRemaining(finalExpiresDate);
                 }
 
+                alert('Key updated successfully!');
 
             } catch (error) { alert('Error updating key: ' + error.message); }
         }
