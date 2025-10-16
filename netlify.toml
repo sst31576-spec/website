@@ -35,6 +35,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/generate-trial-key"
+  to = "/.netlify/functions/api-generate-trial-key"
+  status = 200
+
+[[redirects]]
   from = "/api/admin/keys"
   to = "/.netlify/functions/api-admin-keys"
   status = 200
@@ -44,7 +49,6 @@
   to = "/.netlify/functions/api-send-suggestion"
   status = 200
 
-# ## CORRECTION CRUCIALE CI-DESSOUS ##
 # Règle "catch-all" pour les applications à page unique (SPA).
 # Ceci redirige toutes les URLs non trouvées (comme /get-key) vers index.html,
 # permettant au JavaScript de gérer l'affichage de la bonne page.
