@@ -315,44 +315,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const suggestionTextarea = document.getElementById('suggestion-textarea');
-            const gameNameInput = document.getElementById('game-name-input');
-            const gameLinkInput = document.getElementById('game-link-input');
-            const suggestionStatus = document.getElementById('suggestion-status');
-
-            if(!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return;
-            
-            const suggestion = suggestionTextarea.value.trim();
-            const gameName = gameNameInput.value.trim();
-            const gameLink = gameLinkInput.value.trim();
-            
-            if (gameName === '' || gameLink === '' || suggestion === '') {
-                suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = 'Please provide all fields.';
-                return;
-            }
-
             const btn = e.target.querySelector('button');
+            const statusEl = document.getElementById('suggestion-status');
             btn.disabled = true;
             btn.textContent = 'Sending...';
-            suggestionStatus.textContent = '';
+            statusEl.textContent = '';
             
             try {
                 const response = await fetch('/api/send-suggestion', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ suggestion, gameName, gameLink }) 
+                    body: JSON.stringify({ 
+                        suggestion: document.getElementById('suggestion-textarea').value,
+                        gameName: document.getElementById('game-name-input').value,
+                        gameLink: document.getElementById('game-link-input').value
+                    }) 
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
                 
-                suggestionStatus.className = 'status-message success';
-                suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
-                
+                statusEl.className = 'status-message success';
+                statusEl.textContent = 'Suggestion sent successfully! Thank you.';
                 suggestionForm.reset();
             } catch (error) {
-                suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
+                statusEl.className = 'status-message error';
+                statusEl.textContent = error.message || 'Failed to send suggestion.';
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Send Suggestion';
@@ -380,7 +367,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = keys.map(key => `
                     <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
-                        <td>${key.key_type}</td>
+                        <td class="key-type-cell">
+                            <span class="key-type-badge key-type-${key.key_type.toLowerCase()}">
+                                ${key.key_type}
+                            </span>
+                        </td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
                         <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
                         <td class="expires-cell editable">${key.key_type === 'temp' || key.key_type === 'trial' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
