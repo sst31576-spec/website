@@ -4,6 +4,7 @@ const cookie = require('cookie');
 const db = require('./db');
 const axios = require('axios');
 
+// Fonction utilitaire pour générer une chaîne aléatoire pour les clés
 const generateRandomString = (length) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
@@ -27,83 +28,45 @@ exports.handler = async function (event, context) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { id } = decoded;
 
-        // Verify user exists and get status
+        // Vérifie si l'utilisateur existe et récupère son statut
         const userRes = await db.query('SELECT user_status FROM users WHERE discord_id = $1', [id]);
         if (userRes.rows.length === 0) {
             return { statusCode: 404, body: JSON.stringify({ error: 'User not found' }) };
         }
         const userStatus = userRes.rows[0].user_status;
 
-        // Free user flow (temporary key)
+        // Flux utilisateur GRATUIT (clé temporaire de 24h)
         if (userStatus === 'Free') {
-            // If user already has active temp key, return it
-            const { rows: existingKeyRows } = await db.query(
-                'SELECT * FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
-                [id, 'temp']
+            // 1. Vérifie si une clé temporaire VALIDE existe déjà
+            const { rows: existingRows } = await db.query(
+                "SELECT key_value, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = 'temp' AND expires_at > NOW()",
+                [id]
             );
-            if (existingKeyRows.length > 0) {
+
+            if (existingRows.length > 0) {
+                // Clé valide existante trouvée, la retourne
+                const existingKey = existingRows[0].key_value;
+                const expires = existingRows[0].expires_at;
                 return {
                     statusCode: 200,
-                    body: JSON.stringify({
-                        key: existingKeyRows[0].key_value,
-                        type: 'temp',
-                        expires: existingKeyRows[0].expires_at
-                    })
+                    body: JSON.stringify({ key: existingKey, type: 'temp', expires: expires })
                 };
             }
 
-            // Parse request body
-            let body = {};
-            try { body = event.body ? JSON.parse(event.body) : {}; } catch (e) { body = {}; }
-
-            const { hash } = body;
-            if (!hash) {
-                return { statusCode: 400, body: JSON.stringify({ error: 'Verification hash is missing.' }) };
-            }
-
-            // Linkvertise Anti-Bypass verification (POST with token & hash as params)
-            const LV_TOKEN = process.env.LINKVERTISE_API_TOKEN; // <- bien lire la variable Netlify
-            if (!LV_TOKEN) {
-                return {
-                    statusCode: 500,
-                    body: JSON.stringify({
-                        error: 'Server misconfiguration: Linkvertise token not set. Please define LINKVERTISE_API_TOKEN in Netlify environment variables.'
-                    })
-                };
-            }
-
-            const verificationUrl = 'https://publisher.linkvertise.com/api/v1/anti_bypassing';
-            let lvResp;
-            try {
-                const resp = await axios.post(verificationUrl, null, {
-                    params: { token: LV_TOKEN, hash: hash },
-                    headers: { Accept: 'application/json' },
-                    validateStatus: () => true
-                });
-                lvResp = resp.data;
-            } catch (err) {
-                const details = err?.response?.data ?? err?.message ?? 'Unknown';
-                return { statusCode: 502, body: JSON.stringify({ error: 'Linkvertise verification request failed.', details }) };
-            }
-
-            const isValid =
-                lvResp === true ||
-                (typeof lvResp === 'string' && lvResp.trim().toLowerCase() === 'true') ||
-                (typeof lvResp === 'object' && (lvResp.status === true || lvResp.success === true));
-
-            if (!isValid) {
-                return {
-                    statusCode: 403,
-                    body: JSON.stringify({
-                        error: 'Linkvertise task not completed or invalid/expired hash.',
-                        details: lvResp
-                    })
-                };
-            }
-
-            // Generate and store new temporary key (24h)
-            const newKey = `KINGFREE-${generateRandomString(20)}`;
+            // 2. Aucune clé valide, génère une nouvelle clé
+            const newKey = `KINGFREE-${generateRandomString(16)}`;
             const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+            // *** MODIFICATION POUR LE NETTOYAGE DB ***
+            // Supprime toute ancienne clé temporaire de cet utilisateur avant d'en insérer une nouvelle.
+            // Ceci assure que l'utilisateur n'a qu'une seule clé temporaire à la fois et maintient la DB propre.
+            await db.query(
+                'DELETE FROM keys WHERE owner_discord_id = $1 AND key_type = $2',
+                [id, 'temp']
+            );
+            // *** FIN MODIFICATION ***
+            
+            // Insère la nouvelle clé temporaire (24h)
             await db.query(
                 'INSERT INTO keys (key_value, key_type, owner_discord_id, expires_at) VALUES ($1, $2, $3, $4)',
                 [newKey, 'temp', id, expiresAt]
@@ -115,16 +78,19 @@ exports.handler = async function (event, context) {
             };
         }
 
-        // Permanent user flow
+        // Flux utilisateur PERMANENT
         if (userStatus === 'Perm') {
+            // 1. Vérifie si une clé permanente existe déjà
             const { rows: existingRows } = await db.query(
                 'SELECT key_value FROM keys WHERE owner_discord_id = $1 AND key_type = $2',
                 [id, 'perm']
             );
             let newKey;
             if (existingRows.length > 0) {
+                // Clé permanente existante trouvée, la retourne (elle est fixe)
                 newKey = existingRows[0].key_value;
             } else {
+                // Aucune clé permanente trouvée, en génère une
                 newKey = `KINGPERM-${generateRandomString(16)}`;
                 await db.query(
                     'INSERT INTO keys (key_value, key_type, owner_discord_id) VALUES ($1, $2, $3)',
@@ -134,9 +100,11 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify({ key: newKey, type: 'perm' }) };
         }
 
-        // Unknown user status
+        // Statut utilisateur inconnu
         return { statusCode: 400, body: JSON.stringify({ error: 'Unknown user status.' }) };
+
     } catch (error) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate key.', details: error.message }) };
+        console.error('API Generate Key Error:', error.message);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) };
     }
 };
