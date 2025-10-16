@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KingGen Web</title>
-    <link rel="stylesheet" href="style.css">
+    <title>KingGen HUB</title>
+    <link rel="stylesheet" href="style.css"> 
     <link rel="icon" href="/assets/logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
@@ -16,50 +16,63 @@
             <h1>Welcome to KingGen HUB</h1>
             <p>Please connect with Discord to continue.</p>
             <a href="/auth/discord" class="discord-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M20.317 4.431c-1.457-.793-3.04-1.28-4.707-1.42-.14.417-.27.83-.393 1.243-1.84-.277-3.72-.277-5.552 0-.12-.413-.253-.826-.394-1.243-1.667.14-3.25.627-4.707 1.42C.802 11.233-.564 15.66.24 19.34c3.414 2.1 6.83 2.106 10.232 0 .804-3.68 5.707-8.107 9.845-14.909zM15.4 16.59c-.99.53-2.093.53-3.084 0-.113.394-.236.788-.367 1.182.88.2 1.76.2 2.64 0 .02-.417.153-.834.33-1.182zM12 17.65c-.88-.2-1.76-.2-2.64 0-.177.348-.307.765-.33 1.182.99.53 2.093.53 3.084 0 .12-.394.243-.788.367-1.182zM12 16.632c-1.84.34-3.68.34-5.52 0-.25-.806-.38-1.64-.38-2.51 0-3.37 2.92-6.102 6.5-6.102s6.5 2.73 6.5 6.102c0 .87-.13 1.704-.38 2.51-1.84.34-3.68.34-5.52 0zM12 7.74c1.155 0 2.097.94 2.097 2.097s-.94 2.097-2.097 2.097-2.097-.94-2.097-2.097.94-2.097 2.097-2.097z"/></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M20.317 4.431c-1.457-.793-3.04-1.28-4.707-1.42-.14.417-.27.83-.393 1.243-1.84-.277-3.72-.277-5.552 0-.12-.413-.253-.826-.394-1.243-1.667.14-3.25.627-4.707 1.42C2.96 6.307 2.056 8.583 2.056 11.235c0 6.007 3.585 1.57 3.585 1.57.18.237.408.385.67.43.087.017.173.027.26.027.29 0 .565-.11.777-.306 1.884-1.657 3.32-3.13 4.296-4.542.473-.687 1.054-1.373 1.636-2.07.61.8.877 1.764.79 2.723.23.23.47.47.72.71.077.07.15.14.23.21.09.07.18.13.28.19.46.28.98.43 1.5.43.09 0 .17-.01.26-.03.26-.04.49-.18.67-.43 0 0 3.585 4.437 3.585-1.57 0-2.652-.904-4.93-2.668-5.804z"/></svg>
                 Connect with Discord
             </a>
-            <p id="login-error-message" class="error-message"></p>
+            <p id="login-error-message" class="error-message hidden"></p>
         </div>
     </div>
 
     <div id="main-app" class="view-container hidden">
         <header class="top-bar">
-            <div class="top-bar-left">
+            <div class="logo-container">
                 <img src="/assets/logo.png" alt="Logo" class="header-logo">
-                <nav>
-                    <a href="/" class="nav-link active" data-page="home">Home</a>
-                    <a href="/get-key" class="nav-link" data-page="get-key">Get Key</a>
-                    <a href="/suggestion" class="nav-link" data-page="suggestion">Suggestion</a>
-                    <a href="https://www.roblox.com/game-pass/1538210043/Perm-key" class="nav-link" target="_blank">Buy Perm</a>
-                </nav>
+                <h1 class="app-title">KingGen HUB</h1>
             </div>
-            <div class="top-bar-right">
-                <span id="user-status-badge" class="status-badge free">Free</span>
-                <div class="user-profile" id="user-profile-toggle">
-                    <span id="user-name">User</span>
-                    <img id="user-avatar" src="/assets/logo.png" alt="Avatar">
-                </div>
+            
+            <nav class="nav-links">
+                <a href="#page-home" class="nav-link active" data-page="page-home">Home</a>
+                <a href="#page-get-key" class="nav-link" data-page="page-get-key">Get Key</a>
+                <a href="#page-suggestion" class="nav-link" data-page="page-suggestion">Suggestions</a>
+                <a href="#page-manage-keys" class="nav-link hidden" data-page="page-manage-keys" id="manage-keys-link">Admin</a>
+            </nav>
+
+            <div class="user-profile" id="user-profile-toggle">
+                <span id="user-name"></span>
+                <span id="user-status-badge" class="status-badge"></span>
+                <img id="user-avatar" src="" alt="Avatar" class="avatar">
                 <div class="dropdown-content" id="dropdown-menu">
-                    <a href="/manage-keys" id="manage-keys-link" class="hidden">Admin Panel</a>
-                    <a href="/auth/logout">Logout</a>
+                    <a href="#" id="logout-link">Logout</a>
                 </div>
             </div>
         </header>
 
-        <main class="content">
+        <main class="content-area">
+            
             <div id="page-home" class="page">
                 <div class="card-box">
-                    <h2>Welcome back, <span id="home-username"></span>!</h2>
-                    <p>This is your central hub for key generation and management.</p>
-                    <a href="/get-key" class="discord-btn" style="background-color: var(--brand-green);">Get Your Key Now</a>
+                    <h2>Welcome, <span id="home-username"></span>!</h2>
+                    <p>Your current status is: <span id="home-user-status" class="status-badge"></span></p>
+                    <p>Access the <a href="#page-get-key" class="nav-link">Get Key</a> page to obtain or check your key status.</p>
                 </div>
             </div>
 
             <div id="page-get-key" class="page hidden">
                 <div class="card-box">
                     <h2>Get Your Key</h2>
-                    <div id="key-generation-content"></div>
+                    <div id="key-generation-content">
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">
+                            Choose your method to obtain a free key (24h validity).
+                        </p>
+                        <button id="linkvertise-btn" class="discord-btn" style="background-color: var(--brand-blue); margin-bottom: 15px;">
+                            🔑 Get Key via Linkvertise
+                        </button>
+                        <button id="lootlabs-btn" class="discord-btn" style="background-color: var(--brand-red);">
+                            💰 Get Key via LootLabs
+                        </button>
+                        <div id="key-status-message" class="status-message" style="margin-top: 20px;"></div>
+                    </div>
+                    <div id="key-display-content"></div> 
                 </div>
             </div>
 
