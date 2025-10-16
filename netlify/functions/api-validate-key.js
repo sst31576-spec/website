@@ -1,5 +1,5 @@
 // netlify/functions/api-validate-key.js
-const db = require('./db'); // Assurez-vous que ce chemin est correct
+const db = require('./db');
 const axios = require('axios');
 
 // ✅ Liste des jeux autorisés (Veuillez vous assurer que cette liste est correcte et complète)
@@ -26,6 +26,7 @@ exports.handler = async function (event, context) {
         }
 
         // 🔑 Récupère les données de la clé
+        // Si cette requête échoue, elle sera capturée par le bloc catch principal
         const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
         if (rows.length === 0) {
             return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
@@ -34,19 +35,21 @@ exports.handler = async function (event, context) {
 
         // ⏳ Vérifie l’expiration et effectue le nettoyage si la clé est temporaire
         if (keyData.key_type === 'temp' && keyData.expires_at) {
-            const expiryTime = new Date(keyData.expires_at).getTime();
-            const nowTime = new Date().getTime();
+            
+            // NOTE IMPORTANTE: Comparaison par l'objet Date directement
+            const expirationDate = new Date(keyData.expires_at);
+            const currentDate = new Date();
 
-            if (expiryTime < nowTime) {
+            if (expirationDate < currentDate) {
                 // *** CORRECTION : SUPPRESSION DE LA CLÉ EXPIRÉE ***
-                // On met le delete dans un bloc try/catch séparé pour que l'erreur de BDD
-                // ne renvoie pas un 500 au client Roblox, mais seulement le message "Key has expired."
+                // La tentative de suppression est isolée.
+                // Si la suppression échoue, nous continuons de bloquer la clé (Key has expired).
                 try {
                     await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
                     console.log(`Expired key ${keyData.key_value} deleted from DB.`);
                 } catch (deleteError) {
-                    console.error('Échec de la suppression de la clé expirée:', deleteError.message);
-                    // Continue l'exécution: renvoie l'erreur d'expiration au client
+                    // Nous n'affichons pas d'erreur au client (Roblox) car la clé est bien expirée.
+                    console.error('Échec de la suppression de la clé expirée (Problème BDD):', deleteError.message);
                 }
                 // *** FIN DE CORRECTION ***
                 
@@ -80,8 +83,16 @@ exports.handler = async function (event, context) {
         };
 
     } catch (error) {
-        console.error('Validation FAILED (Probablement BDD ou Axios):', error.message);
-        // Renvoie une erreur de serveur si quelque chose d'autre que la suppression a échoué (SELECT, UPDATE, Axios)
-        return { statusCode: 500, body: JSON.stringify({ success: false, message: 'Internal Server Error.' }) };
+        // Ce bloc est exécuté si la première requête BDD (SELECT) ou la requête Axios échoue.
+        console.error('Validation FAILED (Erreur Critique):', error.message);
+        // Renvoie un code 500 (Internal Server Error) si l'erreur est critique.
+        // Cela correspond à l'erreur "Could not connect to server" côté client (Roblox).
+        return { 
+            statusCode: 500, 
+            body: JSON.stringify({ 
+                success: false, 
+                message: 'Internal Server Error (Check Netlify logs).' 
+            }) 
+        };
     }
 };
