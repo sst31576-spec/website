@@ -56,7 +56,6 @@ exports.handler = async function (event, context) {
 
         // PUT: Update a key's HWID and/or expiration
         if (event.httpMethod === 'PUT') {
-            // MODIFICATION: Ajout de new_expires_at
             const { key_id, new_roblox_user_id, new_expires_at } = JSON.parse(event.body);
             if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
 
