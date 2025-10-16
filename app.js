@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path === '/suggestion') pageId = 'suggestion';
         if (path === '/manage-keys') pageId = 'manage-keys';
         
-        if (pageId === 'home' && path !== '') {
+        // Correction 404/SPA: Si le chemin n'est pas reconnu, on revient à la racine
+        if (pageId === 'home' && path !== '' && path !== '/') {
             window.history.replaceState({page: pageId}, '', '/');
         }
         
@@ -273,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Suggestion system (MODIFIED)
+    // Suggestion system
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -344,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (keys.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>';
             } else {
-                // MODIFICATION: Ajout de l'attribut data-expires-at sur la ligne, et classe 'expires-cell'
+                // MODIFICATION: Ajout de l'attribut data-expires-at sur la ligne
                 tbody.innerHTML = keys.map(key => `
                     <tr data-key-id="${key.id}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
@@ -406,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                        currentExpires.substring(0, 16) : 
                                        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 16);
                                        
-                 const promptText = 'Enter the new expiry date/time (e.g., YYYY-MM-DDTHH:mm, leave blank to keep current):\n\nIf you want to clear the expiry (for a permanent key conversion), press OK and leave the input empty.';
+                 const promptText = 'Enter the new expiry date/time (e.g., YYYY-MM-DDTHH:mm, leave blank to keep current):\n\nIf you want to clear the expiry, press OK and leave the input empty.';
                  newExpires = prompt(promptText, defaultExpire);
                  
                  if (newExpires === null) return; 
@@ -432,11 +433,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (keyType === 'temp' && newExpires !== undefined) {
                     const finalExpires = newExpires.trim() === '' ? '' : newExpires.trim();
                     
-                    row.dataset.expiresAt = finalExpires;
-                    row.querySelector('.expires-cell').textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
-                } else if (keyType === 'perm' && newExpires !== undefined) {
-                    // Si on utilise cette fonction pour convertir une 'perm' en 'temp' ou ajuster l'expiration
-                    const finalExpires = newExpires.trim() === '' ? '' : newExpires.trim();
                     row.dataset.expiresAt = finalExpires;
                     row.querySelector('.expires-cell').textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
                 }
