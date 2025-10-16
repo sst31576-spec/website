@@ -24,13 +24,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     let currentUser = null;
 
+    /**
+     * Clone les liens de navigation principaux dans le menu déroulant
+     * pour l'affichage sur mobile.
+     */
+    const setupMobileNav = () => {
+        const mainNav = document.querySelector('.top-bar-left nav');
+        const mobileNavContainer = document.getElementById('mobile-nav-links');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+
+        if (!mainNav || !mobileNavContainer || !dropdownMenu) return;
+
+        // Vider le conteneur pour éviter les doublons
+        mobileNavContainer.innerHTML = '';
+
+        // Cloner chaque lien de la navigation principale
+        mainNav.querySelectorAll('a').forEach(link => {
+            const clone = link.cloneNode(true);
+            
+            // Ajouter un événement au clic pour fermer le dropdown
+            clone.addEventListener('click', (e) => {
+                // Si ce n'est pas un lien externe (comme Buy Perm)
+                if (clone.dataset.page) {
+                    e.preventDefault();
+                    // Utilise la logique de routing existante
+                    window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`);
+                    switchPage(clone.dataset.page);
+                }
+                // Ferme le menu déroulant après le clic
+                dropdownMenu.classList.remove('show');
+            });
+            
+            mobileNavContainer.appendChild(clone);
+        });
+    };
+    
+    // Appeler la fonction au chargement de la page
+    setupMobileNav();
+
     const checkUserStatus = async () => {
         try {
             const response = await fetch('/api/user');
             if (response.status === 401) { showLoginView(); return; }
             if (response.status === 403) {
                 const data = await response.json();
-                // Custom logic for Discord Join Error
                 const errorMessage = 'You must join the Discord server.';
                 const discordLink = 'https://discord.gg/RhDnUQr4Du';
                 showLoginView(errorMessage, discordLink);
@@ -119,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    // Routing pour le lien Admin (dans le dropdown)
+
     if (manageKeysLink) {
         manageKeysLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -134,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     }
     window.addEventListener('click', (e) => {
-        if (!userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
         }
     });
@@ -274,7 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Suggestion system
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -325,7 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Admin panel 
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         if (!container) return;
@@ -367,7 +402,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             
-            // Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
             document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
             document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
         } catch (error) {
@@ -378,7 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleDeleteKey = async (e) => {
         const row = e.target.closest('tr');
         const keyId = row.dataset.keyId;
-        // Remplacement de `confirm()` par une alerte temporaire ou modale pour la conformité Canvas
         if (confirm('Are you sure you want to delete this key permanently?')) {
             try {
                 const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) });
@@ -388,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Nouvelle fonction pour gérer l'édition de la cellule
     const handleEdit = async (e) => {
         const cell = e.target;
         const row = cell.closest('tr');
@@ -408,14 +440,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isHwid) {
             const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
             const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
-            // Remplacement de `prompt()` par une alerte/demande de l'utilisateur pour la conformité
             const result = prompt(promptText, currentHwid);
             
             if (result === null) return; 
             newHwid = result.trim();
 
         } else if (isExpires) {
-            // **MISE À JOUR IMPORTANTE POUR LA SIMPLIFICATION DU TEMPS**
             const promptText = 'Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):';
             const result = prompt(promptText, '24h');
             
@@ -423,9 +453,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = result.trim().toLowerCase();
             
             if (input === 'clear') {
-                newExpiresAt = null; // Envoie NULL pour effacer l'expiration
+                newExpiresAt = null;
             } else {
-                // Fonction pour convertir "24h" ou "90m" en millisecondes
                 const parseDuration = (str) => {
                     const matchHours = str.match(/(\d+)h/);
                     const matchMinutes = str.match(/(\d+)m/);
@@ -438,18 +467,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const durationMs = parseDuration(input);
 
                 if (durationMs > 0) {
-                    // Calculer la nouvelle date d'expiration en ajoutant la durée au temps actuel
                     const newExpiryDate = new Date(Date.now() + durationMs);
-                    // Conversion en format ISO pour la base de données
                     newExpiresAt = newExpiryDate.toISOString(); 
                 } else {
                     alert('Invalid format. Use "24h", "90m", or "clear".');
-                    return; // Annuler l'édition
+                    return;
                 }
             }
         }
         
-        // Empêche la requête si aucune valeur n'a été changée
         if (newHwid === undefined && newExpiresAt === undefined) return;
         
         try {
@@ -467,17 +493,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!response.ok) throw new Error('Failed to update.');
             
-            // Mise à jour de l'affichage
             if (newHwid !== undefined) {
                 cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
             }
             
             if (newExpiresAt !== undefined) {
                 const finalExpires = newExpiresAt === null ? '' : newExpiresAt;
-                
-                // Mettre à jour l'attribut de données pour la prochaine édition
                 row.dataset.expiresAt = finalExpires;
-                // Mettre à jour l'affichage formaté (par exemple: 24h 0m)
                 cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
             }
 
