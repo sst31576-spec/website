@@ -66,7 +66,7 @@ exports.handler = async function (event, context) {
             let query = 'UPDATE keys SET roblox_user_id = $1';
             const params = [finalRobloxId];
             
-            // Si une nouvelle date d'expiration est fournie, l'ajoute
+            // Si une nouvelle date d'expiration est fournie (et n'est pas undefined)
             if (new_expires_at !== undefined) {
                 // Si new_expires_at est une chaîne vide, on le met à NULL dans la DB. Sinon, on le parse.
                 const finalExpiresAt = (new_expires_at && new_expires_at.trim() !== '') ? new Date(new_expires_at).toISOString() : null;
