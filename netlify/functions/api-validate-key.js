@@ -53,7 +53,10 @@ exports.handler = async function (event, context) {
 
     // ⏳ Vérifie l’expiration
     if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
-      return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
+      // MODIFICATION: Supprime la clé expirée de la base de données
+      await db.query('DELETE FROM keys WHERE key_value = $1', [key]);
+      
+      return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired and has been removed from the database.' }) };
     }
 
     // 🧩 Vérifie HWID
