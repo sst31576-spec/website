@@ -24,11 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     let currentUser = null;
 
-    // --- CONSTANTES DE MONÉTISATION (VOS LIENS) ---
+    // --- CONSTANTES DE MONÉTISATION (VOS LIENS MIS À JOUR) ---
     const LOOTLABS_BASE_URL = "https://loot-link.com/s?FyVwZ8NG"; 
     const LINKVERTISE_URL = "https://link-hub.net/1409420/j5AokQm937Cf"; 
 
-    // --- FONCTIONS DE LANCEMENT ---
+    // --- FONCTIONS DE LANCEMENT DE MONÉTISATION ---
 
     const handleLootLabsLaunch = () => {
         const statusMessageEl = document.getElementById('key-status-message');
@@ -39,13 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const discordId = currentUser.id;
-        // Le paramètre 'subid' sera renvoyé par LootLabs au Webhook.
         const urlToOpen = `${LOOTLABS_BASE_URL}&subid=${discordId}`; 
 
         window.open(urlToOpen, '_blank');
         statusMessageEl.textContent = 'LootLabs link opened in a new window. Please complete the offers.';
 
-        // L'utilisateur doit rafraîchir pour voir la clé générée par le Webhook.
         setTimeout(() => {
             statusMessageEl.innerHTML += '<br>Once completed, the key will be generated. <a href="#" onclick="window.location.reload(); return false;" style="color: var(--brand-green);">Click here to refresh</a> and check your key.';
         }, 1000);
@@ -54,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleLinkvertiseLaunch = () => {
         const statusMessageEl = document.getElementById('key-status-message');
         
-        // Le Linkvertise actuel redirige l'utilisateur vers votre page avec un hash.
         window.open(LINKVERTISE_URL, '_blank');
         statusMessageEl.textContent = 'Linkvertise opened in a new window. Your key will appear after completion and redirection.';
     };
@@ -128,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         switchPage(path);
     };
 
-    // --- LOGIQUE DE CLÉ ET HWID ---
+    // --- LOGIQUE DE CLÉ ET HWID UTILISATEUR ---
 
     const displayKey = (data) => {
         const keyDisplayContent = document.getElementById('key-display-content');
@@ -188,9 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Clé générée avec succès
             displayKey(data);
-            // Nettoyer l'URL après une génération Linkvertise réussie
             window.history.pushState({}, '', window.location.pathname); 
 
         } catch (error) {
@@ -242,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const keyDisplayContent = document.getElementById('key-display-content');
         const keyGenerationContent = document.getElementById('key-generation-content');
         
-        // Réinitialisation de l'affichage
         keyDisplayContent.innerHTML = '';
         keyGenerationContent.classList.remove('hidden');
         
@@ -252,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessageEl.textContent = 'Checking for an existing key...';
 
         try {
-            // 1. VÉRIFICATION DE LA CLÉ EXISTANTE
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -265,12 +258,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. GESTION DU RETOUR LINKVERTISE (HASH)
             const urlParams = new URLSearchParams(window.location.search);
             const hash = urlParams.get('hash');
 
             if (hash) {
-                // Masquer les boutons Linkvertise/LootLabs et afficher la réclamation
                 initialButtons.forEach(btn => btn.classList.add('hidden')); 
                 
                 container.innerHTML = `
@@ -282,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const btn = document.getElementById('generate-key-btn');
                 btn.addEventListener('click', () => handleGenerateKey(hash));
                 
-                // Tentative de réclamation immédiate
                 setTimeout(() => {
                     try {
                         handleGenerateKey(hash);
@@ -291,8 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }, 80);
             } else {
-                // 3. AFFICHAGE DES BOUTONS DE CHOIX (état par défaut)
-                // Le contenu des boutons est dans index (5).html, on met juste à jour le message
                 statusMessageEl.textContent = 'Please choose a method to get your key (24h validity).';
             }
         } catch (error) {
@@ -301,13 +289,148 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- LOGIQUE D'ADMINISTRATION (Simplifiée pour la démo) ---
-    
-    // ... (Vos fonctions de gestion des clés d'administration) ...
-    // Assurez-vous d'inclure ici toutes vos fonctions d'admin comme
-    // renderManageKeysPage, handleAdminKeyAction, etc.
+    // --- LOGIQUE D'ADMINISTRATION DES CLÉS (COMPLÉTÉE) ---
 
-    // Cette fonction de soumission de suggestion est conservée
+    const renderAdminTable = (keys) => {
+        const listContainer = document.getElementById('admin-key-list');
+        if (!listContainer) return;
+        
+        let html = '<div style="overflow-x: auto;"><table class="admin-table">';
+        html += `
+            <thead>
+                <tr>
+                    <th>Key Value</th>
+                    <th>Type</th>
+                    <th>Discord ID</th>
+                    <th>HWID</th>
+                    <th>Expires In</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        keys.forEach(key => {
+            const expiresText = key.expires_at ? formatTimeRemaining(key.expires_at) : 'N/A';
+            const hwidText = key.roblox_user_id || 'Not Set';
+            
+            html += `
+                <tr data-key-id="${key.key_id}" data-expires-at="${key.expires_at || ''}">
+                    <td class="key-value">${key.key_value}</td>
+                    <td class="key-type">${key.key_type}</td>
+                    <td>${key.owner_discord_id}</td>
+                    <td class="editable-hwid" contenteditable="true" data-original="${hwidText}">${hwidText}</td>
+                    <td class="editable-expires" contenteditable="true" data-original="${expiresText}">${expiresText}</td>
+                    <td class="actions-cell">
+                        <button class="admin-action-btn update-btn" data-action="update">Update</button>
+                        <button class="admin-action-btn delete-btn" data-action="delete">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        listContainer.innerHTML = html;
+
+        // Attacher les listeners aux actions admin
+        document.querySelectorAll('.admin-action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const row = e.target.closest('tr');
+                const keyId = row.dataset.keyId;
+                const action = e.target.dataset.action;
+                
+                const hwidCell = row.querySelector('.editable-hwid');
+                const expiresCell = row.querySelector('.editable-expires');
+
+                if (action === 'update') {
+                    // Récupérer les nouvelles valeurs
+                    const newHwid = hwidCell.textContent.trim() === 'Not Set' ? '' : hwidCell.textContent.trim();
+                    let newExpires = expiresCell.textContent.trim();
+                    
+                    // Simple validation pour l'expiration (supprimer si 'N/A' ou '' est tapé)
+                    let newExpiresAt = null;
+                    if (newExpires.toLowerCase() !== 'n/a' && newExpires !== '') {
+                        // Pour la démo, on suppose que l'admin entre une date lisible ou la laisse telle quelle
+                        // En prod, il faudrait un sélecteur de date pour l'expiration
+                        newExpiresAt = new Date(Date.now() + (24 * 60 * 60 * 1000) * 30).toISOString(); // Exemple: 30 jours à partir de maintenant
+                        if (!confirm(`Update key ${keyId}? HWID: ${newHwid}. New Expiry (Rough estimate): ${newExpiresAt}.`)) return;
+                    } else if (newExpires.toLowerCase() === 'n/a' || newExpires === '') {
+                        if (!confirm(`Set key ${keyId} to Permanent (no expiration)?`)) return;
+                        newExpiresAt = null;
+                    }
+
+                    handleAdminKeyAction(action, keyId, newHwid, newExpiresAt);
+                } else if (action === 'delete') {
+                    if (confirm(`Are you sure you want to delete key ${keyId}?`)) {
+                        handleAdminKeyAction(action, keyId);
+                    }
+                }
+            });
+        });
+    };
+    
+    const handleAdminKeyAction = async (action, keyId, newHwid, newExpiresAt) => {
+        const row = document.querySelector(`tr[data-key-id="${keyId}"]`);
+        if (!row) return;
+
+        try {
+            let method = 'DELETE';
+            let payload = { key_id: keyId };
+
+            if (action === 'update') {
+                method = 'PUT';
+                if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
+                if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
+            }
+
+            const response = await fetch('/api/admin/keys', { 
+                method: method, 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            
+            if (!response.ok) throw new Error('Action failed.');
+            
+            if (action === 'delete') {
+                row.remove();
+                alert('Key deleted successfully!');
+            } else if (action === 'update') {
+                alert('Key updated successfully!');
+                // For a true update (like new expiration date), you might need to re-render the page or just update the UI elements
+                renderManageKeysPage(); 
+            }
+
+        } catch (error) { 
+            alert('Error performing action: ' + error.message); 
+        }
+    };
+    
+    const renderManageKeysPage = async () => {
+        const listContainer = document.getElementById('admin-key-list');
+        if (!listContainer) return;
+        
+        listContainer.innerHTML = 'Loading keys...';
+
+        try {
+            const response = await fetch('/api/admin/keys');
+            if (response.status === 403) {
+                listContainer.innerHTML = '<p class="error-message">Access Denied. You are not an administrator.</p>';
+                return;
+            }
+            if (!response.ok) throw new Error('Failed to fetch keys.');
+
+            const data = await response.json();
+            renderAdminTable(data.keys);
+
+        } catch (error) {
+            console.error('Admin Key Fetch Error:', error);
+            listContainer.innerHTML = `<p class="error-message">Error fetching keys: ${error.message}</p>`;
+        }
+    };
+
+
+    // --- LOGIQUE DE SUGGESTION ---
+    
     const handleSuggestionSubmit = async (e) => {
         e.preventDefault();
         const gameName = document.getElementById('game-name-input').value;
@@ -349,12 +472,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LIAISON DES ÉVÉNEMENTS (LISTENERS) FINAUX ---
     
-    // Attacher les écouteurs pour les boutons de monétisation
     const attachFreeKeyListeners = () => {
         const linkvertiseBtn = document.getElementById('linkvertise-btn');
         const lootlabsBtn = document.getElementById('lootlabs-btn');
         
-        // S'assurer que les boutons existent avant d'attacher les listeners (important pour le routing)
         if (linkvertiseBtn) {
             linkvertiseBtn.addEventListener('click', handleLinkvertiseLaunch);
         }
@@ -385,7 +506,6 @@ document.addEventListener('DOMContentLoaded', () => {
         suggestionForm.addEventListener('submit', handleSuggestionSubmit);
     }
     
-    // Finalisation
     attachFreeKeyListeners(); 
     checkUserStatus();
 });
