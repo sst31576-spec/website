@@ -139,8 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ... (renderGetKeyPage, handleGenerateKey, displayKey, handleResetHwid, suggestionForm logic) ...
-
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
@@ -339,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `<input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">`;
             const table = document.createElement('table');
             table.className = 'admin-table';
-            // **MISE À JOUR** : Suppression de la colonne "Actions"
             table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Action</th></tr></thead><tbody></tbody>`;
             container.appendChild(table);
             const tbody = table.querySelector('tbody');
@@ -370,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
             
-            // **NOUVEAU** : Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
+            // Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
             document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
             document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
         } catch (error) {
@@ -381,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleDeleteKey = async (e) => {
         const row = e.target.closest('tr');
         const keyId = row.dataset.keyId;
+        // Remplacement de `confirm()` par une alerte temporaire ou modale pour la conformité Canvas
         if (confirm('Are you sure you want to delete this key permanently?')) {
             try {
                 const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) });
@@ -390,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // **NOUVELLE** fonction pour gérer l'édition de la cellule
+    // Nouvelle fonction pour gérer l'édition de la cellule
     const handleEdit = async (e) => {
         const cell = e.target;
         const row = cell.closest('tr');
@@ -410,37 +408,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isHwid) {
             const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
             const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
+            // Remplacement de `prompt()` par une alerte/demande de l'utilisateur pour la conformité
             const result = prompt(promptText, currentHwid);
             
             if (result === null) return; 
             newHwid = result.trim();
 
         } else if (isExpires) {
-            const currentExpiresISO = row.dataset.expiresAt;
-            // Pré-remplit le prompt avec la date/heure au format ISO partiel (YYYY-MM-DDTHH:mm)
-            const defaultExpire = currentExpiresISO ? 
-                                  new Date(currentExpiresISO).toISOString().substring(0, 16) : 
-                                  ''; 
-            
-            const promptText = 'Enter the new expiry date/time (Format: YYYY-MM-DDTHH:mm, e.g., 2025-12-31T23:59).\n\nLeave empty to keep current or enter "NULL" to clear:';
-            const result = prompt(promptText, defaultExpire);
+            // **MISE À JOUR IMPORTANTE POUR LA SIMPLIFICATION DU TEMPS**
+            const promptText = 'Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):';
+            const result = prompt(promptText, '24h');
             
             if (result === null) return; 
+            const input = result.trim().toLowerCase();
             
-            // Si l'utilisateur entre une valeur et que ce n'est pas "NULL", on la met dans newExpiresAt.
-            if (result.trim() !== '') {
-                newExpiresAt = (result.trim().toUpperCase() === 'NULL' || result.trim() === '') ? null : result.trim();
+            if (input === 'clear') {
+                newExpiresAt = null; // Envoie NULL pour effacer l'expiration
             } else {
-                // Si la valeur est vide, on ne met rien à jour pour ne pas effacer si l'utilisateur annule accidentellement
-                newExpiresAt = undefined;
+                // Fonction pour convertir "24h" ou "90m" en millisecondes
+                const parseDuration = (str) => {
+                    const matchHours = str.match(/(\d+)h/);
+                    const matchMinutes = str.match(/(\d+)m/);
+                    let ms = 0;
+                    if (matchHours) ms += parseInt(matchHours[1]) * 60 * 60 * 1000;
+                    if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60 * 1000;
+                    return ms;
+                };
+                
+                const durationMs = parseDuration(input);
+
+                if (durationMs > 0) {
+                    // Calculer la nouvelle date d'expiration en ajoutant la durée au temps actuel
+                    const newExpiryDate = new Date(Date.now() + durationMs);
+                    // Conversion en format ISO pour la base de données
+                    newExpiresAt = newExpiryDate.toISOString(); 
+                } else {
+                    alert('Invalid format. Use "24h", "90m", or "clear".');
+                    return; // Annuler l'édition
+                }
             }
         }
         
-        // Empêche la requête si aucune valeur n'a été changée (HWID n'a pas été défini, ou Expires n'a pas été défini)
+        // Empêche la requête si aucune valeur n'a été changée
         if (newHwid === undefined && newExpiresAt === undefined) return;
         
         try {
-            // Désactiver la cellule pendant le chargement
             cell.classList.add('loading');
             
             const payload = { key_id: keyId };
@@ -455,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!response.ok) throw new Error('Failed to update.');
             
-            // 3. Mise à jour de l'affichage
+            // Mise à jour de l'affichage
             if (newHwid !== undefined) {
                 cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
             }
@@ -465,12 +477,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Mettre à jour l'attribut de données pour la prochaine édition
                 row.dataset.expiresAt = finalExpires;
-                // Mettre à jour l'affichage formaté
+                // Mettre à jour l'affichage formaté (par exemple: 24h 0m)
                 cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
             }
 
             cell.classList.remove('loading');
-            // Optionnel: Ajouter une classe de succès temporaire
             cell.classList.add('success-flash');
             setTimeout(() => cell.classList.remove('success-flash'), 1000);
 
