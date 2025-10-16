@@ -1,544 +1,91 @@
-/**
- * Helper function to format the remaining time until key expiry.
- * @param {string | null | undefined} expiryDate - The ISO string date of expiry.
- * @returns {string} - Formatted time remaining (e.g., "24h 5m") or status ("N/A", "Expired").
- */
-function formatTimeRemaining(expiryDate) {
-    if (!expiryDate) return 'N/A';
-    const expiry = new Date(expiryDate);
-    const now = new Date();
-    const diff = expiry - now;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KingGen Web</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="/assets/logo.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
-    if (diff <= 0) {
-        // Handle negative time differences, ensure it's not a future date wrongly parsed
-        if (expiry > now) {
-            // This case should ideally not happen but acts as a safeguard
-            return 'Processing...';
-        }
-        return 'Expired';
-    }
+    <div id="login-container" class="view-container">
+        <div class="card-box">
+            <img src="/assets/logo.png" alt="Logo" class="logo">
+            <h1>Welcome to KingGen HUB</h1>
+            <p>Please connect with Discord to continue.</p>
+            <a href="/auth/discord" class="discord-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M20.317 4.431c-1.457-.793-3.04-1.28-4.707-1.42-.14.417-.27.83-.393 1.243-1.84-.277-3.72-.277-5.552 0-.12-.413-.253-.826-.394-1.243-1.667.14-3.25.627-4.707 1.42C.802 11.233-.564 15.66.24 19.34c3.414 2.1 6.83 2.106 10.232 0 .804-3.68 5.707-8.107 9.845-14.909zM15.4 16.59c-.99.53-2.093.53-3.084 0-.113.394-.236.788-.367 1.182.88.2 1.76.2 2.64 0 .02-.417.153-.834.33-1.182zM12 17.65c-.88-.2-1.76-.2-2.64 0-.177.348-.307.765-.33 1.182.99.53 2.093.53 3.084 0 .12-.394.243-.788.367-1.182zM12 16.632c-1.84.34-3.68.34-5.52 0-.25-.806-.38-1.64-.38-2.51 0-3.37 2.92-6.102 6.5-6.102s6.5 2.73 6.5 6.102c0 .87-.13 1.704-.38 2.51-1.84.34-3.68.34-5.52 0zM12 7.74c1.155 0 2.097.94 2.097 2.097s-.94 2.097-2.097 2.097-2.097-.94-2.097-2.097.94-2.097 2.097-2.097z"/></svg>
+                Connect with Discord
+            </a>
+            <p id="login-error-message" class="error-message"></p>
+        </div>
+    </div>
 
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    // Handle expiry within the last minute as 0h 0m
-    if (hours === 0 && minutes === 0 && diff > 0) return '< 1m';
-
-    return `${hours}h ${minutes}m`;
-}
-
-// Function to handle showing user messages instead of forbidden alert()
-function displayInlineMessage(elementId, message, isError = false) {
-    const el = document.getElementById(elementId);
-    if (!el) return console.error(`Message element with ID ${elementId} not found.`);
-
-    el.textContent = message;
-    el.style.display = 'block';
-    el.style.color = isError ? 'var(--brand-red)' : 'var(--brand-green)';
-    setTimeout(() => {
-        el.style.display = 'none';
-        el.textContent = '';
-    }, 5000);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element Caching ---
-    const loginContainer = document.getElementById('login-container');
-    const mainAppContainer = document.getElementById('main-app');
-    const loginError = document.getElementById('login-error-message');
-    const userNameEl = document.getElementById('user-name');
-    const userAvatarEl = document.getElementById('user-avatar');
-    const userStatusBadgeEl = document.getElementById('user-status-badge');
-    const navLinks = document.querySelectorAll('.nav-link');
-    const pages = document.querySelectorAll('.page');
-    const userProfileToggle = document.getElementById('user-profile-toggle');
-    const dropdownMenu = document.getElementById('dropdown-menu');
-    const manageKeysLink = document.getElementById('manage-keys-link');
-    const suggestionForm = document.getElementById('suggestion-form');
-    const keyGenerationContent = document.getElementById('key-generation-content');
-    const adminKeyList = document.getElementById('admin-key-list');
-
-    let currentUser = null;
-
-    // --- View and Navigation Functions ---
-
-    function showLoginView(message = null) {
-        mainAppContainer.classList.add('hidden');
-        loginContainer.classList.remove('hidden');
-        if (message) {
-            loginError.textContent = message;
-            loginError.classList.remove('hidden');
-        } else {
-            loginError.classList.add('hidden');
-        }
-        dropdownMenu.classList.add('hidden'); // Close dropdown on view switch
-    }
-
-    function showAppView() {
-        loginContainer.classList.add('hidden');
-        mainAppContainer.classList.remove('hidden');
-    }
-
-    /**
-     * Handles single-page application navigation.
-     * @param {string} pageId - The ID of the page to navigate to (e.g., 'page-home').
-     */
-    async function navigateTo(pageId) {
-        pages.forEach(page => page.classList.add('hidden'));
-        navLinks.forEach(link => link.classList.remove('active'));
-
-        const targetPage = document.getElementById(pageId);
-        if (targetPage) {
-            targetPage.classList.remove('hidden');
-            const targetLink = document.querySelector(`.nav-link[data-page="${pageId}"]`);
-            if (targetLink) targetLink.classList.add('active');
-
-            // Special content rendering based on the page
-            if (pageId === 'page-get-key') {
-                renderKeyGeneration();
-            } else if (pageId === 'page-manage-keys' && currentUser && currentUser.user_status === 'Admin') {
-                await renderAdminKeys();
-            }
-        }
-        dropdownMenu.classList.add('hidden'); // Close dropdown after navigation
-    }
-
-    // --- Authentication and User Status ---
-
-    const checkUserStatus = async () => {
-        try {
-            const response = await fetch('/api/user');
-            if (response.status === 401) {
-                showLoginView();
-                return;
-            }
-
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Failed to fetch user data.');
-
-            currentUser = data;
-            showAppView();
-
-            // Update header info
-            userNameEl.textContent = currentUser.username;
-            userAvatarEl.src = currentUser.avatar_url;
-            userAvatarEl.alt = `${currentUser.username}'s Avatar`;
-
-            // Update status badge
-            userStatusBadgeEl.textContent = currentUser.user_status;
-            userStatusBadgeEl.className = 'status-badge'; // Reset classes
-            if (currentUser.user_status === 'Perm') {
-                userStatusBadgeEl.classList.add('badge-perm');
-            } else if (currentUser.user_status === 'Admin') {
-                userStatusBadgeEl.classList.add('badge-admin');
-            } else {
-                userStatusBadgeEl.classList.add('badge-temp');
-            }
-
-            // Show admin link if user is an admin
-            if (currentUser.user_status === 'Admin') {
-                manageKeysLink.classList.remove('hidden');
-            } else {
-                manageKeysLink.classList.add('hidden');
-            }
-
-            // Default navigation to home or key page
-            navigateTo('page-home');
-
-        } catch (error) {
-            console.error("Error checking user status:", error);
-            showLoginView(`Authentication failed: ${error.message}`);
-        }
-    };
-
-    // --- Key Generation Logic ---
-
-    async function renderKeyGeneration() {
-        keyGenerationContent.innerHTML = '<p class="status-message">Loading key status...</p>';
-
-        try {
-            const response = await fetch('/api/generate-key', { method: 'POST' });
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || 'Key generation failed.');
-
-            const { key, type, expires } = data;
-            let expiryText = '';
-            let keyTypeText = '';
-
-            if (type === 'temp') {
-                keyTypeText = 'Temporary Key (24 hours)';
-                expiryText = `Expires: ${new Date(expires).toLocaleString()} (${formatTimeRemaining(expires)} remaining)`;
-            } else if (type === 'perm') {
-                keyTypeText = 'Permanent Key';
-                expiryText = 'Never expires.';
-            }
-
-            const keyDisplayHTML = `
-                <div class="key-display">
-                    <h3>${keyTypeText}</h3>
-                    <div class="key-value-box">
-                        <input type="text" id="user-key-input" value="${key}" readonly>
-                        <button id="copy-key-btn" class="discord-btn small">Copy Key</button>
-                    </div>
-                    <p class="expiry-text">${expiryText}</p>
-                    <button id="reset-hwid-btn" class="secondary-btn">Reset HWID</button>
-                    <p id="key-status-message" class="status-message hidden"></p>
+    <div id="main-app" class="view-container hidden">
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <img src="/assets/logo.png" alt="Logo" class="header-logo">
+                <nav>
+                    <a href="/" class="nav-link active" data-page="home">Home</a>
+                    <a href="/get-key" class="nav-link" data-page="get-key">Get Key</a>
+                    <a href="/suggestion" class="nav-link" data-page="suggestion">Suggestion</a>
+                    <a href="https://www.roblox.com/game-pass/1538210043/Perm-key" class="nav-link" target="_blank">Buy Perm</a>
+                </nav>
+            </div>
+            <div class="top-bar-right">
+                <span id="user-status-badge" class="status-badge free">Free</span>
+                <div class="user-profile" id="user-profile-toggle">
+                    <span id="user-name">User</span>
+                    <img id="user-avatar" src="/assets/logo.png" alt="Avatar">
                 </div>
-            `;
-            keyGenerationContent.innerHTML = keyDisplayHTML;
-
-            // Add Event Listeners
-            document.getElementById('copy-key-btn').addEventListener('click', () => {
-                const keyInput = document.getElementById('user-key-input');
-                keyInput.select();
-                document.execCommand('copy');
-                displayInlineMessage('key-status-message', 'Key copied to clipboard!', false);
-            });
-
-            document.getElementById('reset-hwid-btn').addEventListener('click', async () => {
-                const statusEl = document.getElementById('key-status-message');
-                statusEl.textContent = 'Resetting HWID...';
-                statusEl.classList.remove('hidden');
-
-                try {
-                    const hwidResponse = await fetch('/api/reset-hwid', { method: 'POST' });
-                    const hwidData = await hwidResponse.json();
-
-                    if (!hwidResponse.ok) throw new Error(hwidData.error || 'HWID reset failed.');
-
-                    displayInlineMessage('key-status-message', hwidData.message || 'HWID successfully reset!', false);
-                } catch (error) {
-                    console.error("HWID Reset Error:", error);
-                    displayInlineMessage('key-status-message', `Error resetting HWID: ${error.message}`, true);
-                }
-            });
-
-        } catch (error) {
-            console.error("Key Generation Error:", error);
-            keyGenerationContent.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
-        }
-    }
-
-    // --- Admin Key Management Logic ---
-
-    async function renderAdminKeys() {
-        adminKeyList.innerHTML = '<p class="status-message">Loading administration data...</p>';
-
-        try {
-            const response = await fetch('/api/admin/keys');
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || 'Failed to fetch admin keys.');
-
-            if (data.keys.length === 0) {
-                adminKeyList.innerHTML = '<p>No keys found in the database.</p>';
-                return;
-            }
-
-            let tableHTML = `
-                <div class="admin-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Key</th>
-                                <th>Type</th>
-                                <th>Discord ID</th>
-                                <th>HWID</th>
-                                <th>Expires At</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            data.keys.forEach(key => {
-                const hwidDisplay = key.roblox_user_id || 'Not Set';
-                const expiresDate = key.expires_at || '';
-                const expiresDisplay = formatTimeRemaining(expiresDate);
-                const isPermanent = key.key_type === 'perm';
-
-                tableHTML += `
-                    <tr data-key-id="${key.key_id}" data-expires-at="${expiresDate}">
-                        <td class="key-cell">${key.key_value}</td>
-                        <td class="${isPermanent ? 'badge-perm' : 'badge-temp'} key-type-cell">${key.key_type.toUpperCase()}</td>
-                        <td>${key.owner_discord_id}</td>
-                        <td class="hwid-cell" data-editable="hwid">${hwidDisplay}</td>
-                        <td class="expires-cell" data-editable="expires">${expiresDisplay}</td>
-                        <td class="actions-cell">
-                            <button class="small-btn reset-hwid-btn" data-action="reset_hwid">Reset HWID</button>
-                            ${!isPermanent ? `<button class="small-btn set-temp-btn" data-action="set_temp">Set Temp 24h</button>` : ''}
-                            ${!isPermanent ? `<button class="small-btn set-perm-btn" data-action="set_perm">Set Perm</button>` : ''}
-                            <button class="small-btn delete-key-btn" data-action="delete">Delete</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            tableHTML += `
-                        </tbody>
-                    </table>
+                <div class="dropdown-content" id="dropdown-menu">
+                    <a href="/manage-keys" id="manage-keys-link" class="hidden">Admin Panel</a>
+                    <a href="/auth/logout">Logout</a>
                 </div>
-            `;
+            </div>
+        </header>
 
-            adminKeyList.innerHTML = tableHTML;
+        <main class="content">
+            <div id="page-home" class="page">
+                <div class="card-box">
+                    <h2>Welcome back, <span id="home-username"></span>!</h2>
+                    <p>This is your central hub for key generation and management.</p>
+                    <a href="/get-key" class="discord-btn" style="background-color: var(--brand-green);">Get Your Key Now</a>
+                </div>
+            </div>
 
-            // Attach event listeners to all action buttons in the new table
-            adminKeyList.querySelectorAll('.actions-cell button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const action = e.target.dataset.action;
-                    const row = e.target.closest('tr');
-                    const keyId = row.dataset.keyId;
-                    handleKeyAction(keyId, action, row);
-                });
-            });
+            <div id="page-get-key" class="page hidden">
+                <div class="card-box">
+                    <h2>Get Your Key</h2>
+                    <div id="key-generation-content"></div>
+                </div>
+            </div>
 
-            // Attach event listeners for inline editing (HWID)
-            adminKeyList.querySelectorAll('[data-editable="hwid"]').forEach(cell => {
-                cell.addEventListener('click', (e) => startInlineEdit(e.target, 'hwid'));
-            });
+            <div id="page-suggestion" class="page hidden">
+                <div class="card-box">
+                    <h2>Suggestions</h2>
+                    <p>Have an idea to improve our script? Let us know below!</p>
+                    <form id="suggestion-form">
+                        <input type="text" id="game-name-input" placeholder="Game Name (e.g., Blox Fruits)" required>
+                        <input type="url" id="game-link-input" placeholder="Roblox Game Link (e.g., https://www.roblox.com/games/...)" required>
+                        <textarea id="suggestion-textarea" placeholder="Type your detailed suggestion here..." required></textarea>
+                        <button type="submit" class="discord-btn">Send Suggestion</button>
+                        <div id="suggestion-status" class="status-message"></div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="page-manage-keys" class="page hidden">
+                <div class="card-box" style="max-width: 900px; text-align: left;">
+                    <h2>Manage Keys</h2>
+                    <div id="admin-key-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-        } catch (error) {
-            console.error("Admin Keys Error:", error);
-            adminKeyList.innerHTML = `<p class="error-message">Error loading key management: ${error.message}</p>`;
-        }
-    }
-
-    /**
-     * Handles key actions from the admin panel (Reset HWID, Update Expiry, Delete).
-     * @param {string} keyId - The ID of the key to modify.
-     * @param {string} action - The action to perform (e.g., 'reset_hwid', 'set_perm', 'delete').
-     * @param {HTMLTableRowElement} row - The table row element.
-     */
-    const handleKeyAction = async (keyId, action, row) => {
-        let payload = { key_id: keyId };
-        let method = 'PUT';
-        let hwidCell = row.querySelector('.hwid-cell');
-        let expiresCell = row.querySelector('.expires-cell');
-        let keyTypeCell = row.querySelector('.key-type-cell');
-        let actionCell = row.querySelector('.actions-cell');
-
-        // Simple Confirmation: Replaced standard alert/confirm with console logs for now
-        // A proper modal UI should be used in production
-        if (action === 'delete') {
-            if (!confirm("Are you sure you want to delete this key?")) return;
-            method = 'DELETE';
-            // No loading state needed since the row will be removed
-        } else if (action === 'reset_hwid') {
-            payload.new_roblox_user_id = ''; // Reset HWID to an empty string (Not Set)
-            hwidCell.classList.add('loading');
-        } else if (action === 'set_temp') {
-            // Set expiry to 24h from now
-            const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-            payload.new_expires_at = newExpiresAt;
-            expiresCell.classList.add('loading');
-        } else if (action === 'set_perm') {
-            // Set key type to perm (requires key_type update on the backend)
-            payload.new_key_type = 'perm';
-            expiresCell.classList.add('loading');
-        } else {
-            console.error('Unknown action:', action);
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/admin/keys', {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) throw new Error('Failed to execute action.');
-
-            if (action === 'delete') {
-                row.remove(); // Remove the row immediately on success
-                return;
-            }
-
-            const data = await response.json();
-
-            // --- Update Display Logic ---
-
-            if (action === 'reset_hwid') {
-                // Update HWID display
-                hwidCell.textContent = 'Not Set';
-                hwidCell.classList.remove('loading');
-                hwidCell.classList.add('success-flash');
-                setTimeout(() => hwidCell.classList.remove('success-flash'), 1000);
-            }
-
-            if (action === 'set_temp') {
-                // Update Expiry display
-                const finalExpires = payload.new_expires_at;
-                // Update the data attribute for the next edit/action
-                row.dataset.expiresAt = finalExpires;
-                // Update formatted display (e.g.: 24h 0m)
-                expiresCell.textContent = formatTimeRemaining(finalExpires);
-                expiresCell.classList.remove('loading');
-                expiresCell.classList.add('success-flash');
-                setTimeout(() => expiresCell.classList.remove('success-flash'), 1000);
-                // Also update key type badge if the response confirms a change
-                keyTypeCell.textContent = 'TEMP';
-                keyTypeCell.className = 'badge-temp key-type-cell';
-                // Re-render action buttons (optional, but good practice if setting temp from perm, although usually the button is hidden)
-            }
-
-            if (action === 'set_perm') {
-                // Update Expiry display
-                row.dataset.expiresAt = ''; // Permanent key has no expiry date
-                expiresCell.textContent = 'N/A';
-                expiresCell.classList.remove('loading');
-                expiresCell.classList.add('success-flash');
-                setTimeout(() => expiresCell.classList.remove('success-flash'), 1000);
-                // Update key type badge
-                keyTypeCell.textContent = 'PERM';
-                keyTypeCell.className = 'badge-perm key-type-cell';
-                // Remove Set Temp/Set Perm buttons as they are now permanent
-                actionCell.querySelectorAll('.set-temp-btn, .set-perm-btn').forEach(btn => btn.remove());
-            }
-
-        } catch (error) {
-            console.error('Error updating key:', error.message);
-            // Revert loading state on error
-            if (action === 'reset_hwid' && hwidCell) hwidCell.classList.remove('loading');
-            if ((action === 'set_temp' || action === 'set_perm') && expiresCell) expiresCell.classList.remove('loading');
-            // Notify user of error
-            alert('Error updating key: ' + error.message); // Using alert temporarily for critical admin feedback
-        }
-    };
-
-    /**
-     * Initializes the inline editing for HWID fields.
-     * @param {HTMLElement} cell - The table cell element (TD).
-     * @param {'hwid'} field - The field being edited.
-     */
-    function startInlineEdit(cell, field) {
-        if (cell.querySelector('input')) return; // Already editing
-
-        const originalValue = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
-        const row = cell.closest('tr');
-        const keyId = row.dataset.keyId;
-
-        cell.innerHTML = `
-            <input type="text" value="${originalValue}" class="inline-edit-input" placeholder="Enter Roblox User ID">
-            <button class="save-edit-btn">Save</button>
-        `;
-        const input = cell.querySelector('.inline-edit-input');
-        const saveBtn = cell.querySelector('.save-edit-btn');
-        input.focus();
-
-        const finishEdit = async () => {
-            const newHwid = input.value.trim();
-            cell.innerHTML = `<span class="loading-text">Saving...</span>`;
-            cell.classList.add('loading');
-
-            try {
-                const response = await fetch('/api/admin/keys', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key_id: keyId, new_roblox_user_id: newHwid })
-                });
-
-                if (!response.ok) throw new Error('Failed to update.');
-
-                // Update display
-                cell.textContent = newHwid === '' ? 'Not Set' : newHwid;
-                cell.classList.remove('loading');
-                cell.classList.add('success-flash');
-                setTimeout(() => cell.classList.remove('success-flash'), 1000);
-
-            } catch (error) {
-                console.error('Error updating HWID:', error.message);
-                // Revert to original display on error
-                cell.textContent = originalValue === '' ? 'Not Set' : originalValue;
-                cell.classList.remove('loading');
-                alert('Error updating HWID: ' + error.message); // Using alert temporarily for critical admin feedback
-            }
-        };
-
-        saveBtn.addEventListener('click', finishEdit);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                finishEdit();
-            }
-        });
-        input.addEventListener('blur', () => {
-            // Revert if blur occurs without saving (unless the click event is being processed)
-            if (cell.querySelector('.save-edit-btn')) {
-                cell.textContent = originalValue === '' ? 'Not Set' : originalValue;
-            }
-        });
-    }
-
-
-    // --- Suggestion Form Logic ---
-
-    const handleSuggestionForm = async (e) => {
-        e.preventDefault();
-        const statusEl = document.getElementById('suggestion-status');
-        statusEl.textContent = 'Sending suggestion...';
-        statusEl.style.color = 'var(--text-normal)';
-        statusEl.style.display = 'block';
-
-        const gameName = document.getElementById('game-name-input').value;
-        const gameLink = document.getElementById('game-link-input').value;
-        const suggestionText = document.getElementById('suggestion-textarea').value;
-        const submitButton = suggestionForm.querySelector('button');
-
-        submitButton.disabled = true;
-
-        try {
-            const response = await fetch('/api/send-suggestion', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ gameName, gameLink, suggestionText })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || 'Submission failed.');
-
-            displayInlineMessage('suggestion-status', 'Suggestion sent successfully! Thank you for your feedback.', false);
-            suggestionForm.reset();
-
-        } catch (error) {
-            console.error("Suggestion Submission Error:", error);
-            displayInlineMessage('suggestion-status', `Failed to send suggestion: ${error.message}`, true);
-        } finally {
-            submitButton.disabled = false;
-            setTimeout(() => statusEl.style.display = 'none', 5000);
-        }
-    };
-
-
-    // --- Event Listeners Setup ---
-
-    // Navigation links
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navigateTo(e.currentTarget.dataset.page);
-        });
-    });
-
-    // Dropdown toggle
-    userProfileToggle.addEventListener('click', () => {
-        dropdownMenu.classList.toggle('hidden');
-    });
-
-    // Close dropdown if user clicks outside
-    document.addEventListener('click', (e) => {
-        if (!userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.add('hidden');
-        }
-    });
-
-    // Suggestion Form handler
-    if (suggestionForm) {
-        suggestionForm.addEventListener('submit', handleSuggestionForm);
-    }
-
-    // --- Initial Load ---
-    checkUserStatus();
-});
+    <script src="app.js"></script>
+</body>
+</html>
