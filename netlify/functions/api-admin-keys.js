@@ -54,15 +54,33 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
         }
 
-        // PUT: Update a key's HWID
+        // PUT: Update a key's HWID and/or expiration
         if (event.httpMethod === 'PUT') {
-            const { key_id, new_roblox_user_id } = JSON.parse(event.body);
+            // MODIFICATION: Ajout de new_expires_at
+            const { key_id, new_roblox_user_id, new_expires_at } = JSON.parse(event.body);
             if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
 
             const finalRobloxId = (new_roblox_user_id && new_roblox_user_id.trim() !== '') ? new_roblox_user_id.trim() : null;
 
-            await db.query('UPDATE keys SET roblox_user_id = $1 WHERE id = $2', [finalRobloxId, key_id]);
-            return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key HWID updated.' }) };
+            // Construction dynamique de la requête de mise à jour
+            let query = 'UPDATE keys SET roblox_user_id = $1';
+            const params = [finalRobloxId];
+            
+            // Si une nouvelle date d'expiration est fournie, l'ajoute
+            if (new_expires_at !== undefined) {
+                // Si new_expires_at est une chaîne vide, on le met à NULL dans la DB. Sinon, on le parse.
+                const finalExpiresAt = (new_expires_at && new_expires_at.trim() !== '') ? new Date(new_expires_at).toISOString() : null;
+                query += `, expires_at = $${params.length + 1}`;
+                params.push(finalExpiresAt);
+            }
+
+            // Ajout de la clause WHERE key_id
+            query += ` WHERE id = $${params.length + 1}`;
+            params.push(key_id);
+            
+            await db.query(query, params);
+            
+            return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key updated.' }) };
         }
 
         return { statusCode: 405, body: 'Method Not Allowed' };
