@@ -53,6 +53,17 @@ exports.handler = async function (event, context) {
 
     // ⏳ Vérifie l’expiration
     if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
+      
+      // *** AJOUT DE LA SUPPRESSION DE CLÉ EXPIRÉE (Minimal Fix) ***
+      try {
+        await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
+        console.log(`Expired key ${keyData.key_value} deleted from DB.`);
+      } catch (deleteError) {
+        // En cas d'échec de la connexion à la BDD pour le DELETE, on log l'erreur mais on ne bloque pas le client.
+        console.error('Failed to delete expired key:', deleteError.message);
+      }
+      // *** FIN DE L'AJOUT ***
+
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
 
@@ -81,7 +92,7 @@ exports.handler = async function (event, context) {
     };
 
   } catch (error) {
-    console.error('Validation Error:', error);
+    console.error('Validation Error (Critical):', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ success: false, message: 'An internal error occurred.' })
