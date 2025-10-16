@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur 404 - Page Non Trouvée</title>
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* Styles spécifiques pour la page 404 */
+        body {
+            /* Assure-toi que le body a le bon fond si tu n'utilises pas un container */
+            background-color: #1a1a2e; 
+            color: #ffffff;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .error-container {
+            padding: 40px;
+            border-radius: 10px;
+            background-color: #0f0f1a; /* Couleur de la carte */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+        .error-container h1 {
+            font-size: 5em;
+            margin: 0;
+            color: #e94560; /* Couleur d'accentuation */
+        }
+        .error-container p {
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+        .home-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50; /* Vert pour le bouton */
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            display: inline-block;
+        }
+        .home-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="error-container">
+        <h1>404</h1>
+        <p>Oups! Le lien que vous avez suivi est invalide ou la page n'existe plus.</p>
+        <button id="return-home-btn" class="home-button">Retourner au Menu</button>
+    </div>
+
+    <script>
+        document.getElementById('return-home-btn').addEventListener('click', () => {
+            // Tente de vérifier si le cookie 'auth_token' est présent. 
+            // C'est une vérification simple côté client pour déterminer l'état de connexion.
+            const cookies = document.cookie.split(';').map(c => c.trim());
+            const authTokenExists = cookies.some(cookie => cookie.startsWith('auth_token='));
+            
+            if (authTokenExists) {
+                // Connecté : Renvoie à la racine pour que `app (4).js` charge la page Home
+                window.location.href = '/'; 
+            } else {
+                // Déconnecté : Renvoie à la page de connexion Discord (qui est généralement /login ou /)
+                // J'utilise '/' ici, car souvent la page d'accueil (index.html) redirige vers la connexion si l'utilisateur n'est pas authentifié.
+                window.location.href = '/'; 
+            }
+        });
+    </script>
+
+</body>
+</html>
