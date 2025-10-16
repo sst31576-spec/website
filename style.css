@@ -109,6 +109,9 @@ nav a.active {
     border-radius: 4px;
     font-size: 12px;
     font-weight: 700;
+    /* DÉBUT DE LA MODIFICATION POUR LA CASSE DES TEXTES "TEMP" ET "PERM" */
+    text-transform: uppercase;
+    /* FIN DE LA MODIFICATION */
 }
 .status-badge.admin { background-color: var(--brand-red); color: white; }
 .status-badge.perm { background-color: var(--brand-blue); color: white; }
@@ -213,15 +216,24 @@ nav a.active {
     padding: 10px 16px;
     border: none;
     background-color: var(--text-muted);
-    color: white;
-    border-radius: var(--border-radius);
+    color: white; /* ASSURE LE TEXTE BLANC */
+    border-radius: var(--border-radius); /* ASSURE LES COINS ARRONDIS */
     cursor: pointer;
     font-weight: 500;
-    transition: filter 0.2s;
+    transition: background-color 0.2s; /* UTILISE BACKGROUND-COLOR POUR UN MEILLEUR EFFET */
 }
-.secondary-btn:hover { filter: brightness(1.2); }
-.secondary-btn-red { background-color: var(--brand-red); }
-.secondary-btn-red:hover { filter: brightness(1.2); }
+.secondary-btn:hover { background-color: #63676d; }
+
+/* DÉBUT DE LA MODIFICATION DES BOUTONS DE SUPPRESSION (RED) */
+.secondary-btn-red { 
+    background-color: var(--brand-red); 
+    color: white; /* FIXE LE TEXTE EN BLANC */
+}
+.secondary-btn-red:hover { 
+    background-color: #d83d3d; /* COULEUR PLUS FONCÉE AU SURVOL */
+}
+/* FIN DE LA MODIFICATION */
+
 
 /* --- Admin Table --- */
 .admin-table {
