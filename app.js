@@ -51,12 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mainAppContainer) mainAppContainer.classList.add('hidden');
         if (loginError) {
             loginError.textContent = message;
-            // Clear any previous button/content
             const parent = loginError.closest('.card-box');
             let existingBtn = document.getElementById('discord-join-btn');
             if(existingBtn) existingBtn.remove();
             
-            // Add custom Discord join button if the specific error message is present
             if (message === 'You must join the Discord server.' && discordLink) {
                 const joinBtn = document.createElement('a');
                 joinBtn.id = 'discord-join-btn';
@@ -80,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
             userStatusBadgeEl.textContent = displayStatus;
             userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
         }
-        // Admin link visibility
         if (user.isAdmin && manageKeysLink) {
             manageKeysLink.classList.remove('hidden');
         }
@@ -92,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
             page.classList.toggle('hidden', page.id !== `page-${pageId}`);
         });
         navLinks.forEach(link => {
-            // Uniquement les liens de la nav principale
             link.classList.toggle('active', link.dataset.page === pageId);
         });
         if (pageId === 'get-key') renderGetKeyPage();
@@ -106,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path === '/suggestion') pageId = 'suggestion';
         if (path === '/manage-keys') pageId = 'manage-keys';
         
-        // Correction 404/SPA: Si le chemin n'est pas reconnu, on revient à la racine
         if (pageId === 'home' && path !== '' && path !== '/') {
             window.history.replaceState({page: pageId}, '', '/');
         }
@@ -114,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         switchPage(pageId);
     };
 
-    // Routing pour les liens de navigation (SPA)
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             const pageId = e.target.dataset.page;
@@ -144,16 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdownMenu.classList.remove('show');
         }
     });
-    // --- Fin de l'initialisation et du routage ---
 
-    // ... (renderGetKeyPage, handleGenerateKey, displayKey, handleResetHwid, suggestionForm logic inchangée) ...
+    // ... (renderGetKeyPage, handleGenerateKey, displayKey, handleResetHwid, suggestionForm logic) ...
 
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
         container.innerHTML = `<p>Checking for an existing key...</p>`;
         try {
-            // First: try to get existing key (empty body)
             const response = await fetch('/api/generate-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -165,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // No existing key — check for hash in URL
             const urlParams = new URLSearchParams(window.location.search);
             const hash = urlParams.get('hash');
 
@@ -178,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 const btn = document.getElementById('generate-key-btn');
                 btn.addEventListener('click', () => handleGenerateKey(hash));
-                // Auto-claim immediately to avoid the 10s expiry (but keep UI same)
                 setTimeout(() => {
                     try {
                         handleGenerateKey(hash);
@@ -220,14 +210,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(hash ? { hash } : {})
             });
 
-            // Try to parse JSON (even on non-2xx)
             const text = await response.text();
             let data;
             try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
 
             if (!response.ok) {
                 console.error('Server returned non-OK:', response.status, data);
-                // Show friendly message with optional details
                 const msg = (data && data.error) ? data.error : 'Could not generate key.';
                 const details = (data && data.details) ? JSON.stringify(data.details) : '';
                 if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>${details ? `<br><small>${details}</small>` : ''}`;
@@ -303,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const gameName = gameNameInput.value.trim();
             const gameLink = gameLinkInput.value.trim();
             
-            // Validation check
             if (gameName === '' || gameLink === '' || suggestion === '') {
                 suggestionStatus.className = 'status-message error';
                 suggestionStatus.textContent = 'Please provide a **Game Name**, a **Roblox Game Link**, and your detailed **Suggestion** to send.';
@@ -327,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 suggestionStatus.className = 'status-message success';
                 suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
                 
-                // Clear inputs on success
                 suggestionTextarea.value = '';
                 gameNameInput.value = '';
                 gameLinkInput.value = '';
@@ -353,7 +339,8 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `<input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">`;
             const table = document.createElement('table');
             table.className = 'admin-table';
-            table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Actions</th></tr></thead><tbody></tbody>`;
+            // **MISE À JOUR** : Suppression de la colonne "Actions"
+            table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Action</th></tr></thead><tbody></tbody>`;
             container.appendChild(table);
             const tbody = table.querySelector('tbody');
             if (keys.length === 0) {
@@ -364,14 +351,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td class="key-value">${key.key_value}</td>
                         <td>${key.key_type}</td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
-                        <td class="hwid-cell">${key.roblox_user_id || 'Not Set'}</td>
-                        <td class="expires-cell">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
-                        <td class="actions-cell">
-                            <button class="edit-hwid-btn secondary-btn">Edit</button>
-                            <button class="delete-key-btn secondary-btn-red">Delete</button>
-                        </td>
+                        <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
+                        <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td>
                     </tr>`).join('');
             }
+            
             const searchInput = document.getElementById('admin-search-input');
             const tableRows = container.querySelectorAll('tbody tr');
             searchInput.addEventListener('input', () => {
@@ -382,8 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none';
                 });
             });
+            
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
-            document.querySelectorAll('.edit-hwid-btn').forEach(btn => btn.addEventListener('click', handleEditHwid));
+            
+            // **NOUVEAU** : Ajout des écouteurs d'événements pour l'édition en cliquant sur la cellule
+            document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
+            document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
         } catch (error) {
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
@@ -401,64 +390,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // FIX: Ajout de la modification du temps si la clé est temporaire
-    const handleEditHwid = async (e) => {
-        const row = e.target.closest('tr');
+    // **NOUVELLE** fonction pour gérer l'édition de la cellule
+    const handleEdit = async (e) => {
+        const cell = e.target;
+        const row = cell.closest('tr');
         const keyId = row.dataset.keyId;
-        const currentHwid = row.querySelector('.hwid-cell').textContent.trim();
-        const keyType = row.dataset.keyType; // Nouvelle data-attribute
-        const currentExpires = row.dataset.expiresAt; 
+        const keyType = row.dataset.keyType; 
+        const isHwid = cell.classList.contains('hwid-cell');
+        const isExpires = cell.classList.contains('expires-cell');
         
-        // 1. Demande du nouveau HWID
-        const newHwid = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid === 'Not Set' ? '' : currentHwid);
-        
-        if (newHwid !== null) {
-            let newExpires = undefined; 
+        if (isExpires && keyType.toLowerCase() !== 'temp') {
+            alert("Only 'temp' keys can have their expiration date modified.");
+            return;
+        }
 
-            // 2. Si c'est une clé temporaire, demande aussi la nouvelle expiration
-            if (keyType === 'temp') {
-                 // Format YYYY-MM-DDTHH:mm (ISO 8601 partiel pour input datetime-local)
-                 const defaultExpire = currentExpires ? 
-                                       new Date(currentExpires).toISOString().substring(0, 16) : 
-                                       ''; 
-                                       
-                 const promptText = 'Enter the new expiry date/time (Format: YYYY-MM-DDTHH:mm, e.g., 2025-12-31T23:59). Leave empty to keep current or enter "NULL" to clear:';
-                 newExpires = prompt(promptText, defaultExpire);
-                 
-                 // Si l'utilisateur annule le deuxième prompt
-                 if (newExpires === null) return; 
-                 
-                 // Convertir "NULL" ou vide en une valeur que le backend peut comprendre
-                 newExpires = (newExpires.trim().toUpperCase() === 'NULL' || newExpires.trim() === '') ? '' : newExpires.trim();
+        let newHwid = undefined;
+        let newExpiresAt = undefined;
+
+        if (isHwid) {
+            const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
+            const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
+            const result = prompt(promptText, currentHwid);
+            
+            if (result === null) return; 
+            newHwid = result.trim();
+
+        } else if (isExpires) {
+            const currentExpiresISO = row.dataset.expiresAt;
+            // Pré-remplit le prompt avec la date/heure au format ISO partiel (YYYY-MM-DDTHH:mm)
+            const defaultExpire = currentExpiresISO ? 
+                                  new Date(currentExpiresISO).toISOString().substring(0, 16) : 
+                                  ''; 
+            
+            const promptText = 'Enter the new expiry date/time (Format: YYYY-MM-DDTHH:mm, e.g., 2025-12-31T23:59).\n\nLeave empty to keep current or enter "NULL" to clear:';
+            const result = prompt(promptText, defaultExpire);
+            
+            if (result === null) return; 
+            
+            // Si l'utilisateur entre une valeur et que ce n'est pas "NULL", on la met dans newExpiresAt.
+            if (result.trim() !== '') {
+                newExpiresAt = (result.trim().toUpperCase() === 'NULL' || result.trim() === '') ? null : result.trim();
+            } else {
+                // Si la valeur est vide, on ne met rien à jour pour ne pas effacer si l'utilisateur annule accidentellement
+                newExpiresAt = undefined;
+            }
+        }
+        
+        // Empêche la requête si aucune valeur n'a été changée (HWID n'a pas été défini, ou Expires n'a pas été défini)
+        if (newHwid === undefined && newExpiresAt === undefined) return;
+        
+        try {
+            // Désactiver la cellule pendant le chargement
+            cell.classList.add('loading');
+            
+            const payload = { key_id: keyId };
+            if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
+            if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
+
+            const response = await fetch('/api/admin/keys', { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            
+            if (!response.ok) throw new Error('Failed to update.');
+            
+            // 3. Mise à jour de l'affichage
+            if (newHwid !== undefined) {
+                cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
             }
             
-            try {
-                const response = await fetch('/api/admin/keys', { 
-                    method: 'PUT', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ 
-                        key_id: keyId, 
-                        new_roblox_user_id: newHwid,
-                        new_expires_at: newExpires // Envoi de la nouvelle expiration
-                    }) 
-                });
+            if (newExpiresAt !== undefined) {
+                const finalExpires = newExpiresAt === null ? '' : newExpiresAt;
                 
-                if (!response.ok) throw new Error('Failed to update.');
-                
-                // 3. Mise à jour de l'affichage
-                row.querySelector('.hwid-cell').textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
-                
-                if (keyType === 'temp' && newExpires !== undefined) {
-                    // Update the row's data-expires-at attribute and display cell
-                    const finalExpiresDate = newExpires.trim() === '' ? '' : new Date(newExpires).toISOString();
-                    
-                    row.dataset.expiresAt = finalExpiresDate;
-                    row.querySelector('.expires-cell').textContent = finalExpiresDate === '' ? 'N/A' : formatTimeRemaining(finalExpiresDate);
-                }
+                // Mettre à jour l'attribut de données pour la prochaine édition
+                row.dataset.expiresAt = finalExpires;
+                // Mettre à jour l'affichage formaté
+                cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
+            }
 
-                alert('Key updated successfully!');
+            cell.classList.remove('loading');
+            // Optionnel: Ajouter une classe de succès temporaire
+            cell.classList.add('success-flash');
+            setTimeout(() => cell.classList.remove('success-flash'), 1000);
 
-            } catch (error) { alert('Error updating key: ' + error.message); }
+        } catch (error) { 
+            alert('Error updating key: ' + error.message); 
+            cell.classList.remove('loading');
         }
     };
 
