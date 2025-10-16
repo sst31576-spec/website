@@ -18,10 +18,8 @@ const gameScripts = {
   '18337464872': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/3333333"
 };
 
-// ✅ Fonction principale (toujours async !)
 exports.handler = async function (event, context) {
   try {
-    // 🧩 Support GET & POST
     let bodyData;
     if (event.httpMethod === 'GET') {
       const params = event.queryStringParameters || {};
@@ -44,30 +42,24 @@ exports.handler = async function (event, context) {
       };
     }
 
-    // 🔎 Vérifie la clé dans la base
     const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
     if (rows.length === 0) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
     }
     const keyData = rows[0];
 
-    // ⏳ Vérifie l’expiration
-    if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
-      
-      // *** AJOUT DE LA SUPPRESSION DE CLÉ EXPIRÉE (Minimal Fix) ***
+    // MODIFICATION: Check expiration for 'temp' OR 'trial' keys
+    const isExpirable = keyData.key_type === 'temp' || keyData.key_type === 'trial';
+    if (isExpirable && new Date(keyData.expires_at) < new Date()) {
       try {
         await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
         console.log(`Expired key ${keyData.key_value} deleted from DB.`);
       } catch (deleteError) {
-        // En cas d'échec de la connexion à la BDD pour le DELETE, on log l'erreur mais on ne bloque pas le client.
         console.error('Failed to delete expired key:', deleteError.message);
       }
-      // *** FIN DE L'AJOUT ***
-
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
 
-    // 🧩 Vérifie HWID
     if (keyData.roblox_user_id) {
       if (keyData.roblox_user_id !== roblox_user_id.toString()) {
         return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Please reset your HWID on the website.' }) };
@@ -76,13 +68,11 @@ exports.handler = async function (event, context) {
       await db.query('UPDATE keys SET roblox_user_id = $1 WHERE key_value = $2', [roblox_user_id, keyData.key_value]);
     }
 
-    // 🎮 Vérifie le jeu
     const scriptUrl = gameScripts[place_id.toString()];
     if (!scriptUrl) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'This game is not supported.' }) };
     }
 
-    // 📜 Télécharge le script distant
     const scriptContentResponse = await axios.get(scriptUrl);
     const scriptContent = scriptContentResponse.data;
 
