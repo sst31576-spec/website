@@ -24,50 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     let currentUser = null;
 
-    /**
-     * Clone les liens de navigation principaux dans le menu déroulant
-     * pour l'affichage sur mobile.
-     */
-    const setupMobileNav = () => {
-        const mainNav = document.querySelector('.top-bar-left nav');
-        const mobileNavContainer = document.getElementById('mobile-nav-links');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-
-        if (!mainNav || !mobileNavContainer || !dropdownMenu) return;
-
-        // Vider le conteneur pour éviter les doublons
-        mobileNavContainer.innerHTML = '';
-
-        // Cloner chaque lien de la navigation principale
-        mainNav.querySelectorAll('a').forEach(link => {
-            const clone = link.cloneNode(true);
-            
-            // Ajouter un événement au clic pour fermer le dropdown
-            clone.addEventListener('click', (e) => {
-                // Si ce n'est pas un lien externe (comme Buy Perm)
-                if (clone.dataset.page) {
-                    e.preventDefault();
-                    // Utilise la logique de routing existante
-                    window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`);
-                    switchPage(clone.dataset.page);
-                }
-                // Ferme le menu déroulant après le clic
-                dropdownMenu.classList.remove('show');
-            });
-            
-            mobileNavContainer.appendChild(clone);
-        });
-    };
-    
-    // Appeler la fonction au chargement de la page
-    setupMobileNav();
-
     const checkUserStatus = async () => {
         try {
             const response = await fetch('/api/user');
             if (response.status === 401) { showLoginView(); return; }
             if (response.status === 403) {
-                const data = await response.json();
                 const errorMessage = 'You must join the Discord server.';
                 const discordLink = 'https://discord.gg/RhDnUQr4Du';
                 showLoginView(errorMessage, discordLink);
@@ -214,13 +175,55 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 container.innerHTML = `
                     <p>To get your 24-hour key, please complete the task below.</p>
-                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
-                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
+                    <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task (24 Hours)</a>
+                    <p class="text-muted" style="margin: 1rem 0;">OR</p>
+                    <button id="get-trial-key-btn" class="secondary-btn">Get a 10-Minute Trial Key</button>
+                    <div id="trial-status-message" class="status-message"></div>
+                    <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the main task, you will be redirected back here to claim your 24h key.</p>
                 `;
+                const trialBtn = document.getElementById('get-trial-key-btn');
+                if (trialBtn) {
+                    trialBtn.addEventListener('click', handleGenerateTrialKey);
+                }
             }
         } catch (error) {
             console.error(error);
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
+        }
+    };
+    
+    const handleGenerateTrialKey = async () => {
+        const trialBtn = document.getElementById('get-trial-key-btn');
+        const container = document.getElementById('key-generation-content');
+        if (!trialBtn || !container) return;
+    
+        trialBtn.disabled = true;
+        trialBtn.textContent = 'Generating Trial Key...';
+    
+        let statusEl = document.getElementById('trial-status-message');
+        if (!statusEl) {
+            statusEl = document.createElement('div');
+            statusEl.id = 'trial-status-message';
+            statusEl.className = 'status-message';
+            trialBtn.insertAdjacentElement('afterend', statusEl);
+        }
+        statusEl.textContent = '';
+    
+        try {
+            const response = await fetch('/api/generate-trial-key', { method: 'POST' });
+            const data = await response.json();
+    
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to generate trial key.');
+            }
+            
+            displayKey(data);
+    
+        } catch (error) {
+            statusEl.className = 'status-message error';
+            statusEl.textContent = error.message;
+            trialBtn.disabled = false;
+            trialBtn.textContent = 'Get a 10-Minute Trial Key';
         }
     };
 
@@ -250,17 +253,14 @@ document.addEventListener('DOMContentLoaded', () => {
             try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
 
             if (!response.ok) {
-                console.error('Server returned non-OK:', response.status, data);
                 const msg = (data && data.error) ? data.error : 'Could not generate key.';
-                const details = (data && data.details) ? JSON.stringify(data.details) : '';
-                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>${details ? `<br><small>${details}</small>` : ''}`;
+                if (errorEl) errorEl.innerHTML = `<strong>${msg}</strong>`;
                 if (btn) btn.classList.add('hidden');
                 return;
             }
 
             displayKey(data);
         } catch (error) {
-            console.error('Request failed:', error);
             if (displayArea) {
                 displayArea.innerHTML = `<p class="error-message">Request failed. Try disabling adblock or retrying.</p>`;
             }
@@ -271,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
+        const isExpirable = data.type === 'temp' || data.type === 'trial';
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
@@ -280,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
                 <div id="hwid-status" class="status-message"></div>
-                ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
+                ${isExpirable ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
         document.getElementById('copy-key-btn').addEventListener('click', () => {
@@ -327,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (gameName === '' || gameLink === '' || suggestion === '') {
                 suggestionStatus.className = 'status-message error';
-                suggestionStatus.textContent = 'Please provide a **Game Name**, a **Roblox Game Link**, and your detailed **Suggestion** to send.';
+                suggestionStatus.textContent = 'Please provide all fields.';
                 return;
             }
 
@@ -348,9 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 suggestionStatus.className = 'status-message success';
                 suggestionStatus.textContent = 'Suggestion sent successfully! Thank you.';
                 
-                suggestionTextarea.value = '';
-                gameNameInput.value = '';
-                gameLinkInput.value = '';
+                suggestionForm.reset();
             } catch (error) {
                 suggestionStatus.className = 'status-message error';
                 suggestionStatus.textContent = error.message || 'Failed to send suggestion.';
@@ -384,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${key.key_type}</td>
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
                         <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
-                        <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                        <td class="expires-cell editable">${key.key_type === 'temp' || key.key_type === 'trial' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
                         <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td>
                     </tr>`).join('');
             }
@@ -401,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             document.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
-            
             document.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
             document.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
         } catch (error) {
@@ -429,8 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isHwid = cell.classList.contains('hwid-cell');
         const isExpires = cell.classList.contains('expires-cell');
         
-        if (isExpires && keyType.toLowerCase() !== 'temp') {
-            alert("Only 'temp' keys can have their expiration date modified.");
+        const isExpirable = keyType === 'temp' || keyType === 'trial';
+        if (isExpires && !isExpirable) {
+            alert("Only 'temp' or 'trial' keys can have their expiration date modified.");
             return;
         }
 
@@ -439,16 +438,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isHwid) {
             const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
-            const promptText = 'Enter the new Roblox User ID (leave blank to clear HWID):';
-            const result = prompt(promptText, currentHwid);
-            
+            const result = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid);
             if (result === null) return; 
             newHwid = result.trim();
-
         } else if (isExpires) {
-            const promptText = 'Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):';
-            const result = prompt(promptText, '24h');
-            
+            const result = prompt('Enter time to ADD (e.g., "24h", "90m"), or "clear" to remove expiry:', '24h');
             if (result === null) return; 
             const input = result.trim().toLowerCase();
             
@@ -463,12 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60 * 1000;
                     return ms;
                 };
-                
                 const durationMs = parseDuration(input);
-
                 if (durationMs > 0) {
-                    const newExpiryDate = new Date(Date.now() + durationMs);
-                    newExpiresAt = newExpiryDate.toISOString(); 
+                    newExpiresAt = new Date(Date.now() + durationMs).toISOString(); 
                 } else {
                     alert('Invalid format. Use "24h", "90m", or "clear".');
                     return;
@@ -479,8 +470,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newHwid === undefined && newExpiresAt === undefined) return;
         
         try {
-            cell.classList.add('loading');
-            
             const payload = { key_id: keyId };
             if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
             if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
@@ -490,26 +479,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' }, 
                 body: JSON.stringify(payload) 
             });
-            
             if (!response.ok) throw new Error('Failed to update.');
             
             if (newHwid !== undefined) {
-                cell.textContent = newHwid.trim() === '' ? 'Not Set' : newHwid.trim();
+                cell.textContent = newHwid === '' ? 'Not Set' : newHwid;
             }
-            
             if (newExpiresAt !== undefined) {
                 const finalExpires = newExpiresAt === null ? '' : newExpiresAt;
                 row.dataset.expiresAt = finalExpires;
                 cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
             }
-
-            cell.classList.remove('loading');
-            cell.classList.add('success-flash');
-            setTimeout(() => cell.classList.remove('success-flash'), 1000);
-
         } catch (error) { 
             alert('Error updating key: ' + error.message); 
-            cell.classList.remove('loading');
         }
     };
 
