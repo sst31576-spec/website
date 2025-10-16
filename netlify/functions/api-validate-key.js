@@ -2,7 +2,6 @@
 const db = require('./db');
 const axios = require('axios');
 
-// ✅ Liste des jeux autorisés
 const gameScripts = {
   '16656664443': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
   '15666650878': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/SADSADSAD",
@@ -23,11 +22,7 @@ exports.handler = async function (event, context) {
     let bodyData;
     if (event.httpMethod === 'GET') {
       const params = event.queryStringParameters || {};
-      bodyData = {
-        key: params.key,
-        roblox_user_id: params.roblox_user_id,
-        place_id: params.place_id
-      };
+      bodyData = { key: params.key, roblox_user_id: params.roblox_user_id, place_id: params.place_id };
     } else if (event.httpMethod === 'POST') {
       bodyData = JSON.parse(event.body);
     } else {
@@ -36,10 +31,7 @@ exports.handler = async function (event, context) {
 
     const { key, roblox_user_id, place_id } = bodyData;
     if (!key || !roblox_user_id || !place_id) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ success: false, message: 'Missing parameters.' })
-      };
+      return { statusCode: 400, body: JSON.stringify({ success: false, message: 'Missing parameters.' }) };
     }
 
     const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
@@ -48,7 +40,7 @@ exports.handler = async function (event, context) {
     }
     const keyData = rows[0];
 
-    // MODIFICATION: Check expiration for 'temp' OR 'trial' keys
+    // CORRECTION : Vérifie l'expiration pour les clés 'temp' ET 'trial'
     const isExpirable = keyData.key_type === 'temp' || keyData.key_type === 'trial';
     if (isExpirable && new Date(keyData.expires_at) < new Date()) {
       try {
@@ -76,16 +68,9 @@ exports.handler = async function (event, context) {
     const scriptContentResponse = await axios.get(scriptUrl);
     const scriptContent = scriptContentResponse.data;
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true, script: scriptContent })
-    };
-
+    return { statusCode: 200, body: JSON.stringify({ success: true, script: scriptContent }) };
   } catch (error) {
     console.error('Validation Error (Critical):', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ success: false, message: 'An internal error occurred.' })
-    };
+    return { statusCode: 500, body: JSON.stringify({ success: false, message: 'An internal error occurred.' }) };
   }
 };
