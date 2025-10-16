@@ -12,7 +12,6 @@ function formatTimeRemaining(expiryDate) {
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
-    const loginError = document.getElementById('login-error-message');
     const userNameEl = document.getElementById('user-name');
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
@@ -24,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     let currentUser = null;
 
-    // --- CONSTANTES DE MONÉTISATION (VOS LIENS MIS À JOUR) ---
+    // --- CONSTANTES DE MONÉTISATION ---
     const LOOTLABS_BASE_URL = "https://loot-link.com/s?FyVwZ8NG"; 
     const LINKVERTISE_URL = "https://link-hub.net/1409420/j5AokQm937Cf"; 
 
@@ -61,23 +60,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkUserStatus = async () => {
         try {
             const response = await fetch('/api/user');
-            if (response.status === 401) { showLoginView(); return; }
+            if (response.status === 401) { 
+                showLoginView(); 
+                return; 
+            }
 
             const user = await response.json();
             currentUser = user;
             setupMainApp(user);
         } catch (error) {
             console.error('Error checking user status:', error);
+            // S'il y a une erreur réseau, on affiche la vue de connexion par défaut
             showLoginView();
         }
     };
 
     const showLoginView = () => {
         loginContainer.classList.remove('hidden');
-        mainAppContainer.classList.add('hidden');
+        if (mainAppContainer) mainAppContainer.classList.add('hidden');
     };
 
     const setupMainApp = (user) => {
+        if (!mainAppContainer) return;
+
         userNameEl.textContent = user.username;
         document.getElementById('home-username').textContent = user.username;
         userAvatarEl.src = user.avatarUrl;
@@ -145,12 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="reset-hwid-btn" class="discord-btn reset-btn">Reset HWID</button>
         `;
         
-        // Cacher le contenu de génération (boutons/messages)
         keyGenerationContent.classList.add('hidden');
         statusMessageEl.textContent = ''; 
 
-        // Attacher le listener pour le reset HWID
-        document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
+        const resetBtn = document.getElementById('reset-hwid-btn');
+        if (resetBtn) resetBtn.addEventListener('click', handleResetHwid);
     };
 
     window.copyKey = (key) => {
@@ -165,9 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('generate-key-btn');
         const errorEl = document.getElementById('generate-error');
         
+        if (!btn) return;
+        
         btn.disabled = true;
         btn.textContent = 'Generating...';
-        errorEl.textContent = '';
+        if (errorEl) errorEl.textContent = '';
 
         try {
             const response = await fetch('/api/generate-key', {
@@ -179,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
-                errorEl.textContent = data.error || 'Failed to generate key.';
+                if (errorEl) errorEl.textContent = data.error || 'Failed to generate key.';
                 btn.textContent = 'Claim Key';
                 btn.disabled = false;
                 return;
@@ -189,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.history.pushState({}, '', window.location.pathname); 
 
         } catch (error) {
-            errorEl.textContent = 'An unexpected error occurred.';
+            if (errorEl) errorEl.textContent = 'An unexpected error occurred.';
             btn.textContent = 'Claim Key';
             btn.disabled = false;
         }
@@ -201,6 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('reset-hwid-btn');
         const currentHwidEl = document.getElementById('current-hwid');
         const oldText = btn.textContent;
+        
+        if (!btn || !currentHwidEl) return;
         
         btn.disabled = true;
         btn.textContent = 'Resetting...';
@@ -227,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- RENDU DE LA PAGE GET KEY (LOGIQUE DE MONÉTISATION) ---
+    // --- RENDU DE LA PAGE GET KEY ---
 
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
@@ -240,6 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
         keyDisplayContent.innerHTML = '';
         keyGenerationContent.classList.remove('hidden');
         
+        // Réinitialise les listeners Linkvertise/LootLabs au cas où le HTML a été remplacé
+        attachFreeKeyListeners();
         const initialButtons = document.querySelectorAll('#key-generation-content button');
         initialButtons.forEach(btn => btn.classList.remove('hidden'));
 
@@ -289,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- LOGIQUE D'ADMINISTRATION DES CLÉS (COMPLÉTÉE) ---
+    // --- LOGIQUE D'ADMINISTRATION DES CLÉS ---
 
     const renderAdminTable = (keys) => {
         const listContainer = document.getElementById('admin-key-list');
@@ -315,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const hwidText = key.roblox_user_id || 'Not Set';
             
             html += `
-                <tr data-key-id="${key.key_id}" data-expires-at="${key.expires_at || ''}">
+                <tr data-key-id="${key.key_id}">
                     <td class="key-value">${key.key_value}</td>
                     <td class="key-type">${key.key_type}</td>
                     <td>${key.owner_discord_id}</td>
@@ -332,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
         html += '</tbody></table></div>';
         listContainer.innerHTML = html;
 
-        // Attacher les listeners aux actions admin
         document.querySelectorAll('.admin-action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const row = e.target.closest('tr');
@@ -343,23 +352,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const expiresCell = row.querySelector('.editable-expires');
 
                 if (action === 'update') {
-                    // Récupérer les nouvelles valeurs
-                    const newHwid = hwidCell.textContent.trim() === 'Not Set' ? '' : hwidCell.textContent.trim();
-                    let newExpires = expiresCell.textContent.trim();
+                    const newHwid = hwidCell.textContent.trim() === 'Not Set' ? null : hwidCell.textContent.trim();
+                    const newExpiresText = expiresCell.textContent.trim().toLowerCase();
                     
-                    // Simple validation pour l'expiration (supprimer si 'N/A' ou '' est tapé)
                     let newExpiresAt = null;
-                    if (newExpires.toLowerCase() !== 'n/a' && newExpires !== '') {
-                        // Pour la démo, on suppose que l'admin entre une date lisible ou la laisse telle quelle
-                        // En prod, il faudrait un sélecteur de date pour l'expiration
-                        newExpiresAt = new Date(Date.now() + (24 * 60 * 60 * 1000) * 30).toISOString(); // Exemple: 30 jours à partir de maintenant
-                        if (!confirm(`Update key ${keyId}? HWID: ${newHwid}. New Expiry (Rough estimate): ${newExpiresAt}.`)) return;
-                    } else if (newExpires.toLowerCase() === 'n/a' || newExpires === '') {
-                        if (!confirm(`Set key ${keyId} to Permanent (no expiration)?`)) return;
-                        newExpiresAt = null;
+                    if (newExpiresText === 'n/a' || newExpiresText === 'perm' || newExpiresText === '') {
+                        newExpiresAt = null; // Marque comme permanent dans la DB
+                    } else {
+                        // Pour la démo, on utilise un format simple comme un mois (à améliorer en prod)
+                        if (!confirm("Expiration non reconnue. Voulez-vous la définir à 30 jours?")) return;
+                        newExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
                     }
 
                     handleAdminKeyAction(action, keyId, newHwid, newExpiresAt);
+
                 } else if (action === 'delete') {
                     if (confirm(`Are you sure you want to delete key ${keyId}?`)) {
                         handleAdminKeyAction(action, keyId);
@@ -379,8 +385,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (action === 'update') {
                 method = 'PUT';
+                // N'inclut que les valeurs non nulles dans le payload
                 if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
-                if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
+                if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt; 
             }
 
             const response = await fetch('/api/admin/keys', { 
@@ -396,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Key deleted successfully!');
             } else if (action === 'update') {
                 alert('Key updated successfully!');
-                // For a true update (like new expiration date), you might need to re-render the page or just update the UI elements
+                // On recharge la page pour voir les changements formatés
                 renderManageKeysPage(); 
             }
 
@@ -476,14 +483,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const linkvertiseBtn = document.getElementById('linkvertise-btn');
         const lootlabsBtn = document.getElementById('lootlabs-btn');
         
+        // Retirez les anciens pour éviter les doublons si le code est exécuté plusieurs fois
         if (linkvertiseBtn) {
+            linkvertiseBtn.removeEventListener('click', handleLinkvertiseLaunch);
             linkvertiseBtn.addEventListener('click', handleLinkvertiseLaunch);
         }
         if (lootlabsBtn) {
+            lootlabsBtn.removeEventListener('click', handleLootLabsLaunch);
             lootlabsBtn.addEventListener('click', handleLootLabsLaunch);
         }
     };
 
+    // Listeners pour la navigation
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -493,19 +504,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    userProfileToggle.addEventListener('click', () => {
-        dropdownMenu.classList.toggle('active');
-    });
+    // Listener pour le dropdown du profil
+    if (userProfileToggle) {
+        userProfileToggle.addEventListener('click', () => {
+            dropdownMenu.classList.toggle('active');
+        });
+    }
 
-    document.getElementById('logout-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        window.location.href = '/auth/logout';
-    });
+    // Listener pour la déconnexion
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/auth/logout';
+        });
+    }
 
+    // Listener pour le formulaire de suggestion
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', handleSuggestionSubmit);
     }
     
+    // Initialisation
     attachFreeKeyListeners(); 
     checkUserStatus();
 });
