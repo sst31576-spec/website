@@ -381,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = keys.map(key => `
                     <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
                         <td class="key-value">${key.key_value}</td>
-                        <td>${key.key_type}</td>
+                        <td><span class="key-badge ${key.key_type}">${key.key_type}</span></td> 
                         <td class="owner-name">${key.discord_username || 'N/A'}</td>
                         <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
                         <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
