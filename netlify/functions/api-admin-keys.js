@@ -54,32 +54,43 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
         }
 
-        // FIX: Mise à jour pour inclure la date d'expiration
+        // PUT: Update key properties (HWID and/or Expiration)
         if (event.httpMethod === 'PUT') {
-            const { key_id, new_roblox_user_id, new_expires_at } = JSON.parse(event.body);
+            const body = JSON.parse(event.body);
+            const { key_id } = body;
+            
             if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
 
-            const finalRobloxId = (new_roblox_user_id && new_roblox_user_id.trim() !== '') ? new_roblox_user_id.trim() : null;
-
-            // Construction dynamique de la requête de mise à jour
-            let query = 'UPDATE keys SET roblox_user_id = $1';
-            const params = [finalRobloxId];
+            let updateParts = [];
+            let params = [];
+            let paramIndex = 1;
             
-            // new_expires_at doit être présent dans le body de la requête pour être traité
-            if (new_expires_at !== undefined) {
-                // Si new_expires_at est une chaîne vide ou NULL, on le met à NULL dans la DB. Sinon, on le convertit en ISO
-                const finalExpiresAt = (new_expires_at && new_expires_at.trim() !== '') ? new Date(new_expires_at).toISOString() : null;
-                query += `, expires_at = $${params.length + 1}`;
+            // 1. Mise à jour de HWID (new_roblox_user_id)
+            if (body.new_roblox_user_id !== undefined) {
+                const finalRobloxId = (body.new_roblox_user_id && body.new_roblox_user_id.trim() !== '') ? body.new_roblox_user_id.trim() : null;
+                updateParts.push(`roblox_user_id = $${paramIndex++}`);
+                params.push(finalRobloxId);
+            }
+
+            // 2. Mise à jour de l'expiration (new_expires_at)
+            if (body.new_expires_at !== undefined) {
+                // Si la valeur est null, on met la colonne à NULL. Sinon, on la convertit en ISO
+                const finalExpiresAt = (body.new_expires_at === null) ? null : new Date(body.new_expires_at).toISOString();
+                updateParts.push(`expires_at = $${paramIndex++}`);
                 params.push(finalExpiresAt);
             }
 
-            // Ajout de la clause WHERE key_id
-            query += ` WHERE id = $${params.length + 1}`;
+            if (updateParts.length === 0) {
+                 return { statusCode: 400, body: JSON.stringify({ error: 'No fields provided for update.' }) };
+            }
+
+            // Construction de la requête finale
+            const updateQuery = `UPDATE keys SET ${updateParts.join(', ')} WHERE id = $${paramIndex}`;
             params.push(key_id);
             
-            await db.query(query, params);
+            await db.query(updateQuery, params);
             
-            return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key updated.' }) };
+            return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key updated successfully.' }) };
         }
 
         return { statusCode: 405, body: 'Method Not Allowed' };
