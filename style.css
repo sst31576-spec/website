@@ -271,6 +271,26 @@ nav a.active {
     margin-bottom: 10px;
 }
 
+/* --- Admin Table Badges (NOUVEAU STYLE) --- */
+.key-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.key-badge.temp {
+    background-color: var(--brand-red);
+    color: white;
+}
+
+.key-badge.perm {
+    background-color: var(--brand-green);
+    color: white;
+}
+
 /* Cache par défaut le conteneur des liens mobiles sur grand écran */
 #mobile-nav-links {
     display: none;
