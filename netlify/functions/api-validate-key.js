@@ -1,5 +1,5 @@
 // netlify/functions/api-validate-key.js
-const db = require('./db');
+const db = require('./db'); // Assurez-vous que ce chemin est correct
 const axios = require('axios');
 
 // ✅ Liste des jeux autorisés (Veuillez vous assurer que cette liste est correcte et complète)
@@ -32,16 +32,21 @@ exports.handler = async function (event, context) {
         }
         const keyData = rows[0];
 
-        // ⏳ Vérifie l’expiration et effectue le nettoyage (CLEANUP) si nécessaire
+        // ⏳ Vérifie l’expiration et effectue le nettoyage si la clé est temporaire
         if (keyData.key_type === 'temp' && keyData.expires_at) {
-            if (new Date(keyData.expires_at) < new Date()) {
+            const expiryTime = new Date(keyData.expires_at).getTime();
+            const nowTime = new Date().getTime();
+
+            if (expiryTime < nowTime) {
                 // *** CORRECTION : SUPPRESSION DE LA CLÉ EXPIRÉE ***
+                // On met le delete dans un bloc try/catch séparé pour que l'erreur de BDD
+                // ne renvoie pas un 500 au client Roblox, mais seulement le message "Key has expired."
                 try {
                     await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
                     console.log(`Expired key ${keyData.key_value} deleted from DB.`);
                 } catch (deleteError) {
-                    console.error('Failed to delete expired key:', deleteError);
-                    // L'erreur de suppression est ignorée, on continue à renvoyer 'Expired'
+                    console.error('Échec de la suppression de la clé expirée:', deleteError.message);
+                    // Continue l'exécution: renvoie l'erreur d'expiration au client
                 }
                 // *** FIN DE CORRECTION ***
                 
@@ -75,7 +80,8 @@ exports.handler = async function (event, context) {
         };
 
     } catch (error) {
-        console.error('Validation Error:', error);
+        console.error('Validation FAILED (Probablement BDD ou Axios):', error.message);
+        // Renvoie une erreur de serveur si quelque chose d'autre que la suppression a échoué (SELECT, UPDATE, Axios)
         return { statusCode: 500, body: JSON.stringify({ success: false, message: 'Internal Server Error.' }) };
     }
 };
