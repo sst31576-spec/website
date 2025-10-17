@@ -45,11 +45,25 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify(rows) };
         }
 
-        // DELETE: Remove a key
+        // DELETE: Remove a key OR all expired keys
         if (event.httpMethod === 'DELETE') {
-            const { key_id } = JSON.parse(event.body);
-            if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
+            const body = JSON.parse(event.body);
 
+            // NOUVELLE LOGIQUE: Supprimer toutes les clés expirées
+            if (body.action === 'delete_expired') {
+                const result = await db.query("DELETE FROM keys WHERE key_type = 'temp' AND expires_at < NOW()");
+                return { 
+                    statusCode: 200, 
+                    body: JSON.stringify({ 
+                        success: true, 
+                        message: `${result.rowCount} expired key(s) deleted.` 
+                    }) 
+                };
+            }
+
+            // ANCIENNE LOGIQUE: Supprimer une seule clé
+            const { key_id } = body;
+            if (!key_id) return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id' }) };
             await db.query('DELETE FROM keys WHERE id = $1', [key_id]);
             return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
         }
@@ -65,15 +79,12 @@ exports.handler = async function (event, context) {
             let params = [];
             let paramIndex = 1;
             
-            // 1. Mise à jour de HWID (new_roblox_user_id)
             if (body.new_roblox_user_id !== undefined) {
                 const finalRobloxId = (body.new_roblox_user_id && body.new_roblox_user_id.trim() !== '') ? body.new_roblox_user_id.trim() : null;
                 updateParts.push(`roblox_user_id = $${paramIndex++}`);
                 params.push(finalRobloxId);
             }
 
-            // 2. Mise à jour de l'expiration (new_expires_at)
-            // Note: Le frontend envoie soit une date ISO valide, soit NULL (si l'admin a tapé 'clear')
             if (body.new_expires_at !== undefined) {
                 const finalExpiresAt = (body.new_expires_at === null) ? null : new Date(body.new_expires_at);
                 updateParts.push(`expires_at = $${paramIndex++}`);
@@ -84,7 +95,6 @@ exports.handler = async function (event, context) {
                  return { statusCode: 400, body: JSON.stringify({ error: 'No fields provided for update.' }) };
             }
 
-            // Construction de la requête finale
             const updateQuery = `UPDATE keys SET ${updateParts.join(', ')} WHERE id = $${paramIndex}`;
             params.push(key_id);
             
