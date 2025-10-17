@@ -4,7 +4,7 @@ const cookie = require('cookie');
 const db = require('./db');
 const axios = require('axios');
 
-const ADMIN_ROLES = ['869611811962511451', '877989445725483009'];
+const ADMIN_ROLES = ['869611811962511451', '1428730376519553186'];
 
 // Middleware function to verify if the user is an admin
 const verifyAdmin = async (event) => {
