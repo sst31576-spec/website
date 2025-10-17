@@ -109,7 +109,9 @@ nav a.active {
     border-radius: 4px;
     font-size: 12px;
     font-weight: 700;
+    /* DÉBUT DE LA MODIFICATION POUR LA CASSE DES TEXTES "TEMP" ET "PERM" */
     text-transform: uppercase;
+    /* FIN DE LA MODIFICATION */
 }
 .status-badge.admin { background-color: var(--brand-red); color: white; }
 .status-badge.perm { background-color: var(--brand-blue); color: white; }
@@ -166,6 +168,7 @@ nav a.active {
 
 .page {
     width: 100%;
+    /* Centering admin table for larger screens */
     display: flex;
     justify-content: center;
 }
@@ -213,52 +216,30 @@ nav a.active {
     padding: 10px 16px;
     border: none;
     background-color: var(--text-muted);
-    color: white;
-    border-radius: var(--border-radius);
+    color: white; /* ASSURE LE TEXTE BLANC */
+    border-radius: var(--border-radius); /* ASSURE LES COINS ARRONDIS */
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s; /* UTILISE BACKGROUND-COLOR POUR UN MEILLEUR EFFET */
 }
 .secondary-btn:hover { background-color: #63676d; }
 
+/* DÉBUT DE LA MODIFICATION DES BOUTONS DE SUPPRESSION (RED) */
 .secondary-btn-red { 
     background-color: var(--brand-red); 
-    color: white;
-    /* Copie des styles de secondary-btn pour la cohérence */
-    padding: 10px 16px;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s;
+    color: white; /* FIXE LE TEXTE EN BLANC */
 }
 .secondary-btn-red:hover { 
-    background-color: #d83d3d;
+    background-color: #d83d3d; /* COULEUR PLUS FONCÉE AU SURVOL */
 }
+/* FIN DE LA MODIFICATION */
 
-/* --- NOUVEAUX STYLES POUR LES CONTRÔLES ADMIN --- */
-.admin-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    align-items: center;
-}
-
-#admin-search-input {
-    flex-grow: 1; /* Permet à la recherche de prendre l'espace disponible */
-    padding: 10px;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-tertiary);
-    border-radius: var(--border-radius);
-    color: var(--text-normal);
-    font-size: 16px;
-    box-sizing: border-box;
-}
 
 /* --- Admin Table --- */
 .admin-table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px;
     font-size: 14px;
 }
 
@@ -290,6 +271,19 @@ nav a.active {
     white-space: nowrap;
 }
 
+#admin-search-input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+/* --- Admin Table Badges (NOUVEAU STYLE) --- */
 .key-badge {
     padding: 4px 8px;
     border-radius: 4px;
@@ -309,22 +303,26 @@ nav a.active {
     color: white;
 }
 
+/* Cache par défaut le conteneur des liens mobiles sur grand écran */
 #mobile-nav-links {
     display: none;
 }
+
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN (Media Queries) --- */
 /* ======================================= */
 
 @media (max-width: 900px) {
+    /* Cache la navigation principale sur les écrans de moins de 900px */
     .top-bar-left nav {
         display: none;
     }
     
+    /* Le conteneur pour les liens mobiles dans le dropdown */
     #mobile-nav-links {
-        display: block;
-        border-bottom: 1px solid var(--background-primary);
+        display: block; /* Affiche le conteneur sur mobile */
+        border-bottom: 1px solid var(--background-primary); /* Ajoute un séparateur */
         margin-bottom: 5px;
         padding-bottom: 5px;
     }
@@ -334,6 +332,7 @@ nav a.active {
         font-weight: 500;
     }
 
+    /* Styles généraux pour mobile (inchangés) */
     .content {
         padding: 16px;
     }
@@ -358,7 +357,9 @@ nav a.active {
     }
 }
 
+/* Téléphones portables */
 @media (max-width: 500px) {
+    /* Réduit la taille des éléments de l'en-tête */
     .top-bar {
         padding: 0 10px;
         height: 50px;
@@ -374,25 +375,23 @@ nav a.active {
         height: 30px;
     }
 
+    /* Cache le nom de l'utilisateur pour gagner de la place */
     #user-name {
         display: none;
     }
     
+    /* Affiche le menu déroulant directement sous l'icône de profil */
     .dropdown-content {
         top: 45px; 
     }
-    
-    /* NOUVEAU: Empile les contrôles admin sur mobile */
-    .admin-controls {
-        flex-direction: column;
-        align-items: stretch; /* Les éléments prennent toute la largeur */
-    }
 
+    /* Pour les formulaires, comme la suggestion */
     #suggestion-form input,
     #suggestion-form textarea {
         font-size: 14px;
     }
 
+    /* Pour la clé générée, empile les éléments */
     .key-container {
         flex-direction: column;
         gap: 10px;
