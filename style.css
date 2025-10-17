@@ -163,7 +163,10 @@ nav a.active {
     padding: 32px;
     display: flex;
     justify-content: center;
-    align-items: flex-start;
+    /* FIX: Centrage vertical appliqué ici */
+    align-items: center; 
+    /* AJOUT: S'assure que .content prend l'espace vertical restant pour que le centrage fonctionne */
+    min-height: calc(100vh - 60px); 
 }
 
 .page {
