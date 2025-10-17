@@ -45,32 +45,37 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify(rows) };
         }
 
-        // DELETE: Remove a key OR all expired keys (LOGIQUE CORRIGÉE)
+        // ## DÉBUT DE LA MODIFICATION ##
+        // DELETE: Gère la suppression individuelle ET la suppression de toutes les clés expirées
         if (event.httpMethod === 'DELETE') {
             const body = JSON.parse(event.body);
 
-            // Cas 1 : Supprimer toutes les clés expirées
-            if (body.action === 'delete_expired') {
+            // Cas 1: La requête demande de supprimer toutes les clés expirées
+            if (body.action && body.action === 'delete_expired') {
                 const result = await db.query("DELETE FROM keys WHERE key_type = 'temp' AND expires_at < NOW()");
-                return { 
-                    statusCode: 200, 
-                    body: JSON.stringify({ 
-                        success: true, 
-                        message: `${result.rowCount} expired key(s) deleted.` 
-                    }) 
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        success: true,
+                        message: `${result.rowCount} expired key(s) deleted.`
+                    })
                 };
-            } 
-            // Cas 2 : Supprimer une seule clé (avec un else if pour bien séparer)
+            }
+            // Cas 2: La requête demande de supprimer une seule clé par son ID (comportement original)
             else if (body.key_id) {
-                const { key_id } = body;
-                await db.query('DELETE FROM keys WHERE id = $1', [key_id]);
-                return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
-            } 
-            // Cas d'erreur si aucune action valide n'est trouvée
+                await db.query('DELETE FROM keys WHERE id = $1', [body.key_id]);
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({ success: true, message: 'Key deleted.' })
+                };
+            }
+            // Cas 3: La requête est invalide
             else {
-                return { statusCode: 400, body: JSON.stringify({ error: 'Missing key_id or a valid action.' }) };
+                return { statusCode: 400, body: JSON.stringify({ error: 'Request must contain a key_id or a valid action.' }) };
             }
         }
+        // ## FIN DE LA MODIFICATION ##
+
 
         // PUT: Update key properties (HWID and/or Expiration)
         if (event.httpMethod === 'PUT') {
