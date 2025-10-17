@@ -109,9 +109,7 @@ nav a.active {
     border-radius: 4px;
     font-size: 12px;
     font-weight: 700;
-    /* DÉBUT DE LA MODIFICATION POUR LA CASSE DES TEXTES "TEMP" ET "PERM" */
     text-transform: uppercase;
-    /* FIN DE LA MODIFICATION */
 }
 .status-badge.admin { background-color: var(--brand-red); color: white; }
 .status-badge.perm { background-color: var(--brand-blue); color: white; }
@@ -163,7 +161,7 @@ nav a.active {
     padding: 32px;
     display: flex;
     justify-content: center;
-    /* FIX: Centrage vertical appliqué ici */
+    /* FIX 1: Centrage vertical */
     align-items: center; 
     /* AJOUT: S'assure que .content prend l'espace vertical restant pour que le centrage fonctionne */
     min-height: calc(100vh - 60px); 
@@ -215,27 +213,33 @@ nav a.active {
     font-size: 16px;
     text-align: center;
 }
+
+/* FIX 2: Centrage du bouton Generate Key */
+#generate-key-btn {
+    display: block; 
+    margin: 20px auto 0 auto; /* Centre le bouton horizontalement et lui donne une marge supérieure */
+    /* Assurez-vous que les styles .discord-btn ou équivalents sont appliqués en HTML */
+}
+
 .secondary-btn {
     padding: 10px 16px;
     border: none;
     background-color: var(--text-muted);
-    color: white; /* ASSURE LE TEXTE BLANC */
-    border-radius: var(--border-radius); /* ASSURE LES COINS ARRONDIS */
+    color: white; 
+    border-radius: var(--border-radius); 
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s; /* UTILISE BACKGROUND-COLOR POUR UN MEILLEUR EFFET */
+    transition: background-color 0.2s; 
 }
 .secondary-btn:hover { background-color: #63676d; }
 
-/* DÉBUT DE LA MODIFICATION DES BOUTONS DE SUPPRESSION (RED) */
 .secondary-btn-red { 
     background-color: var(--brand-red); 
-    color: white; /* FIXE LE TEXTE EN BLANC */
+    color: white; 
 }
 .secondary-btn-red:hover { 
-    background-color: #d83d3d; /* COULEUR PLUS FONCÉE AU SURVOL */
+    background-color: #d83d3d; 
 }
-/* FIN DE LA MODIFICATION */
 
 
 /* --- Admin Table --- */
