@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('generate-key-btn').addEventListener('click', () => handleGenerateKey(hash));
             } else {
                 container.innerHTML = `
-                    <p>To get your 24-hour key, please complete the task below.</p>
+                    <p>To get your 12-hour key, please complete the task below.</p>
                     <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a>
                     <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p>
                 `;
@@ -339,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result === null) return; 
             newHwid = result.trim();
         } else if (isExpires) {
-            const result = prompt('Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):', '24h');
+            const result = prompt('Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):', '12h');
             if (result === null) return; 
             const input = result.trim().toLowerCase();
             
