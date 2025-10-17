@@ -101,9 +101,9 @@ exports.handler = async function (event, context) {
                 };
             }
 
-            // Generate and store new temporary key (24h)
+            // Generate and store new temporary key (12h)
             const newKey = `KINGFREE-${generateRandomString(20)}`;
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
             await db.query(
                 'INSERT INTO keys (key_value, key_type, owner_discord_id, expires_at) VALUES ($1, $2, $3, $4)',
                 [newKey, 'temp', id, expiresAt]
