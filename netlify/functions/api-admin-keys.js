@@ -45,37 +45,31 @@ exports.handler = async function (event, context) {
             return { statusCode: 200, body: JSON.stringify(rows) };
         }
 
-        // ## DÉBUT DE LA MODIFICATION ##
-        // DELETE: Gère la suppression individuelle ET la suppression de toutes les clés expirées
+        // DELETE: Handles both single key deletion and mass expired key deletion
         if (event.httpMethod === 'DELETE') {
             const body = JSON.parse(event.body);
 
-            // Cas 1: La requête demande de supprimer toutes les clés expirées
+            // Case 1: Mass delete expired keys
             if (body.action && body.action === 'delete_expired') {
                 const result = await db.query("DELETE FROM keys WHERE key_type = 'temp' AND expires_at < NOW()");
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify({
-                        success: true,
-                        message: `${result.rowCount} expired key(s) deleted.`
-                    })
+                return { 
+                    statusCode: 200, 
+                    body: JSON.stringify({ 
+                        success: true, 
+                        message: `${result.rowCount} expired key(s) deleted.` 
+                    }) 
                 };
-            }
-            // Cas 2: La requête demande de supprimer une seule clé par son ID (comportement original)
+            } 
+            // Case 2: Delete a single key by its ID
             else if (body.key_id) {
                 await db.query('DELETE FROM keys WHERE id = $1', [body.key_id]);
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify({ success: true, message: 'Key deleted.' })
-                };
-            }
-            // Cas 3: La requête est invalide
+                return { statusCode: 200, body: JSON.stringify({ success: true, message: 'Key deleted.' }) };
+            } 
+            // Case 3: Invalid request
             else {
                 return { statusCode: 400, body: JSON.stringify({ error: 'Request must contain a key_id or a valid action.' }) };
             }
         }
-        // ## FIN DE LA MODIFICATION ##
-
 
         // PUT: Update key properties (HWID and/or Expiration)
         if (event.httpMethod === 'PUT') {
