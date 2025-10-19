@@ -18,20 +18,10 @@ const gameScripts = {
   '18337464872': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/3333333"
 };
 
-// --- NOUVELLES CONSTANTES ---
-const TESTER_SCRIPT_URL = "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/tester";
-const TESTER_ROLE_IDS = [
-    '1421439929052954674', // Tester
-    '1428730376519553186', // K-Manager
-    '869611811962511451'  // Owner
-];
-const TESTER_PREFIX = 'TESTER_';
-// --- FIN DES NOUVELLES CONSTANTES ---
-
-
-// ✅ Fonction principale
+// ✅ Fonction principale (toujours async !)
 exports.handler = async function (event, context) {
   try {
+    // 🧩 Support GET & POST
     let bodyData;
     if (event.httpMethod === 'GET') {
       const params = event.queryStringParameters || {};
@@ -46,7 +36,7 @@ exports.handler = async function (event, context) {
       return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    let { key, roblox_user_id, place_id } = bodyData;
+    const { key, roblox_user_id, place_id } = bodyData;
     if (!key || !roblox_user_id || !place_id) {
       return {
         statusCode: 400,
@@ -54,54 +44,26 @@ exports.handler = async function (event, context) {
       };
     }
 
-    // --- NOUVELLE LOGIQUE: GESTION DU PRÉFIXE TESTEUR ---
-    const isTesterMode = key.startsWith(TESTER_PREFIX);
-    let actualKey = key;
-    if (isTesterMode) {
-        actualKey = key.substring(TESTER_PREFIX.length);
-    }
-    // --- FIN DE LA LOGIQUE DU PRÉFIXE ---
-
-    // 🔎 Vérifie la clé (la vraie clé, sans le préfixe)
-    const { rows: keyRows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [actualKey]);
-    if (keyRows.length === 0) {
+    // 🔎 Vérifie la clé dans la base
+    const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
+    if (rows.length === 0) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
     }
-    const keyData = keyRows[0];
+    const keyData = rows[0];
 
-    // --- LOGIQUE SPÉCIFIQUE AU MODE TESTEUR ---
-    if (isTesterMode) {
-        if (!keyData.discord_id) {
-            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Tester mode requires a key linked to Discord.' }) };
-        }
-
-        const { rows: userRows } = await db.query('SELECT roles FROM users WHERE discord_id = $1', [keyData.discord_id]);
-        if (userRows.length === 0) {
-            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'User not found for this key.' }) };
-        }
-        
-        const userRoles = userRows[0].roles || [];
-        const isAllowedTester = userRoles.some(roleId => TESTER_ROLE_IDS.includes(roleId));
-
-        if (!isAllowedTester) {
-            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'You do not have permission to use tester mode.' }) };
-        }
-        
-        const scriptContentResponse = await axios.get(TESTER_SCRIPT_URL);
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ success: true, script: scriptContentResponse.data })
-        };
-    }
-    // --- FIN DE LA LOGIQUE TESTEUR ---
-
-    // ⏳ Si ce n'est pas le mode testeur, on continue normalement
+    // ⏳ Vérifie l’expiration
     if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
+      
+      // *** AJOUT DE LA SUPPRESSION DE CLÉ EXPIRÉE (Minimal Fix) ***
       try {
         await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
+        console.log(`Expired key ${keyData.key_value} deleted from DB.`);
       } catch (deleteError) {
+        // En cas d'échec de la connexion à la BDD pour le DELETE, on log l'erreur mais on ne bloque pas le client.
         console.error('Failed to delete expired key:', deleteError.message);
       }
+      // *** FIN DE L'AJOUT ***
+
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
 
@@ -122,10 +84,11 @@ exports.handler = async function (event, context) {
 
     // 📜 Télécharge le script distant
     const scriptContentResponse = await axios.get(scriptUrl);
-    
+    const scriptContent = scriptContentResponse.data;
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, script: scriptContentResponse.data })
+      body: JSON.stringify({ success: true, script: scriptContent })
     };
 
   } catch (error) {
