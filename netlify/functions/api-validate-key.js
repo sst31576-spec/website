@@ -18,7 +18,17 @@ const gameScripts = {
   '18337464872': "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/3333333"
 };
 
-// ✅ Fonction principale (toujours async !)
+// --- NOUVELLES CONSTANTES ---
+const TESTER_SCRIPT_URL = "https://raw.githubusercontent.com/sst31576-spec/ASDSDASSADSA/refs/heads/main/tester";
+const TESTER_ROLE_IDS = [
+    '1421439929052954674', // Tester
+    '1428730376519553186', // K-Manager
+    '869611811962511451'  // Owner
+];
+// --- FIN DES NOUVELLES CONSTANTES ---
+
+
+// ✅ Fonction principale
 exports.handler = async function (event, context) {
   try {
     // 🧩 Support GET & POST
@@ -28,7 +38,8 @@ exports.handler = async function (event, context) {
       bodyData = {
         key: params.key,
         roblox_user_id: params.roblox_user_id,
-        place_id: params.place_id
+        place_id: params.place_id,
+        is_tester_mode: params.is_tester_mode === 'true' // Convertir en booléen
       };
     } else if (event.httpMethod === 'POST') {
       bodyData = JSON.parse(event.body);
@@ -36,7 +47,8 @@ exports.handler = async function (event, context) {
       return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const { key, roblox_user_id, place_id } = bodyData;
+    // --- MODIFICATION: Ajout de 'is_tester_mode' ---
+    const { key, roblox_user_id, place_id, is_tester_mode } = bodyData;
     if (!key || !roblox_user_id || !place_id) {
       return {
         statusCode: 400,
@@ -45,29 +57,52 @@ exports.handler = async function (event, context) {
     }
 
     // 🔎 Vérifie la clé dans la base
-    const { rows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
-    if (rows.length === 0) {
+    const { rows: keyRows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
+    if (keyRows.length === 0) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
     }
-    const keyData = rows[0];
+    const keyData = keyRows[0];
 
-    // ⏳ Vérifie l’expiration
+    // --- NOUVELLE LOGIQUE: GESTION DU MODE TESTEUR ---
+    if (is_tester_mode) {
+        if (!keyData.discord_id) {
+            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Tester mode requires a key linked to a Discord account.' }) };
+        }
+
+        // Récupérer les rôles de l'utilisateur
+        const { rows: userRows } = await db.query('SELECT roles FROM users WHERE discord_id = $1', [keyData.discord_id]);
+        if (userRows.length === 0) {
+            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'User not found for this key.' }) };
+        }
+        
+        const userRoles = userRows[0].roles || [];
+        const isTester = userRoles.some(roleId => TESTER_ROLE_IDS.includes(roleId));
+
+        if (!isTester) {
+            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'You do not have permission to use tester mode.' }) };
+        }
+        
+        // Si c'est un testeur, on envoie le script de test
+        const scriptContentResponse = await axios.get(TESTER_SCRIPT_URL);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ success: true, script: scriptContentResponse.data })
+        };
+    }
+    // --- FIN DE LA LOGIQUE TESTEUR ---
+
+
+    // ⏳ Vérifie l’expiration (logique normale)
     if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
-      
-      // *** AJOUT DE LA SUPPRESSION DE CLÉ EXPIRÉE (Minimal Fix) ***
       try {
         await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
-        console.log(`Expired key ${keyData.key_value} deleted from DB.`);
       } catch (deleteError) {
-        // En cas d'échec de la connexion à la BDD pour le DELETE, on log l'erreur mais on ne bloque pas le client.
         console.error('Failed to delete expired key:', deleteError.message);
       }
-      // *** FIN DE L'AJOUT ***
-
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
 
-    // 🧩 Vérifie HWID
+    // 🧩 Vérifie HWID (logique normale)
     if (keyData.roblox_user_id) {
       if (keyData.roblox_user_id !== roblox_user_id.toString()) {
         return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Please reset your HWID on the website.' }) };
@@ -76,19 +111,18 @@ exports.handler = async function (event, context) {
       await db.query('UPDATE keys SET roblox_user_id = $1 WHERE key_value = $2', [roblox_user_id, keyData.key_value]);
     }
 
-    // 🎮 Vérifie le jeu
+    // 🎮 Vérifie le jeu (logique normale)
     const scriptUrl = gameScripts[place_id.toString()];
     if (!scriptUrl) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'This game is not supported.' }) };
     }
 
-    // 📜 Télécharge le script distant
+    // 📜 Télécharge le script distant (logique normale)
     const scriptContentResponse = await axios.get(scriptUrl);
-    const scriptContent = scriptContentResponse.data;
-
+    
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, script: scriptContent })
+      body: JSON.stringify({ success: true, script: scriptContentResponse.data })
     };
 
   } catch (error) {
