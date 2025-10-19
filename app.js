@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (pageId === 'get-key') renderGetKeyPage();
         if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
-        // LIGNE MODIFIÉE
         if (pageId === 'earn-time') renderEarnTimePage();
     };
 
@@ -121,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path === '/get-key') pageId = 'get-key';
         if (path === '/suggestion') pageId = 'suggestion';
         if (path === '/manage-keys') pageId = 'manage-keys';
-        // LIGNE AJOUTÉE
         if (path === '/earn-time') pageId = 'earn-time';
         
         if (pageId === 'home' && path !== '' && path !== '/') {
@@ -267,22 +265,57 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // NOUVELLE FONCTION AJOUTÉE
     const renderEarnTimePage = async () => {
         const container = document.getElementById('earn-time-content');
         if (!container || !currentUser) return;
 
-        // Pour l'instant, on met un message temporaire.
-        // Plus tard, on appellera l'API ici pour obtenir le temps restant de l'utilisateur.
-        container.innerHTML = `
-            <p style="color: var(--text-muted);">This is where the casino games will be.</p>
-            <p>You must have a temporary key to play.</p>
-        `;
-        
-        // On ajoutera ici la logique pour :
-        // 1. Vérifier si l'utilisateur a une clé 'temp'.
-        // 2. Afficher son temps restant.
-        // 3. Afficher les jeux (Blackjack, Coin Flip, etc.).
+        container.innerHTML = '<p>Loading your key information...</p>';
+
+        try {
+            const response = await fetch('/api/earn-time');
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Could not fetch key data.');
+            }
+            const data = await response.json();
+            
+            container.innerHTML = `
+                <div class="time-display">
+                    <h3>Your Remaining Time</h3>
+                    <p>${formatTimeRemaining(data.expires_at)}</p>
+                </div>
+                
+                <div class="games-grid">
+                    <div class="game-card">
+                        <h4>Blackjack</h4>
+                        <p>Win 2x your bet. The closer you get to 21 without going over, the better. Bet up to 2 hours.</p>
+                        <button class="discord-btn" disabled>Soon</button>
+                    </div>
+                    <div class="game-card">
+                        <h4>Coin Flip</h4>
+                        <p>A 50/50 chance to double your bet or lose it all. The more you win, the riskier it gets. Bet up to 2 hours.</p>
+                        <button class="discord-btn" disabled>Soon</button>
+                    </div>
+                    <div class="game-card">
+                        <h4>Dino Game</h4>
+                        <p>Bet 1 hour to play. The further you run, the more minutes you earn back. Survive 60 meters to profit!</p>
+                        <button class="discord-btn" disabled>Soon</button>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; border-top: 1px solid var(--background-primary); padding-top: 20px;">
+                    <h4>Send Time to a Friend</h4>
+                    <p style="color: var(--text-muted);">This feature is coming soon.</p>
+                </div>
+            `;
+
+        } catch (error) {
+            container.innerHTML = `
+                <p class="error-message" style="font-size: 1.1rem;">${error.message}</p>
+                <p>Only users with an active 'Free' key can access the games.</p>
+                <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>
+            `;
+        }
     };
 
     const renderAdminPanel = async () => {
