@@ -2,41 +2,61 @@
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const db = require('./db');
-const axios = require('axios');
 
-const PERM_ROLES = ['869611811962511451', '1428730376519553186',  '1426871180282822757', '869611883836104734', '877989445725483009', '869612027897839666', '1421439929052954674', '1426774369711165501', '1422640196020867113', '877904473983447101', '1428725197803884545'];
-const ADMIN_ROLES = ['869611811962511451', '1428730376519553186'];
+const { JWT_SECRET } = process.env;
 
-exports.handler = async function (event, context) {
+exports.handler = async function(event, context) {
     const cookies = event.headers.cookie ? cookie.parse(event.headers.cookie) : {};
-    const token = cookies.auth_token;
-    if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
+    const token = cookies.session_token;
+
+    if (!token) {
+        return { statusCode: 401, body: 'Not authenticated' };
+    }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const { id } = decoded;
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const { discord_id } = decoded;
 
-        const memberResponse = await axios.get(`https://discord.com/api/v10/guilds/${process.env.GUILD_ID}/members/${id}`, { headers: { 'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}` } });
-        const member = memberResponse.data;
+        // Récupère les données de l'utilisateur, Y COMPRIS les rôles, depuis la base de données
+        const { rows } = await db.query(
+            `SELECT
+                u.discord_id,
+                u.discord_username,
+                u.discord_avatar,
+                u.roles, -- On ajoute cette ligne pour récupérer les rôles
+                CASE
+                    WHEN EXISTS (SELECT 1 FROM keys k WHERE k.discord_id = u.discord_id AND k.key_type = 'perm') THEN 'perm'
+                    ELSE 'free'
+                END as user_status,
+                COALESCE(u.is_admin, false) as "isAdmin"
+             FROM users u
+             WHERE u.discord_id = $1`,
+            [discord_id]
+        );
 
-        const hasAdminRole = member.roles.some(roleId => ADMIN_ROLES.includes(roleId));
-        const hasPermRole = member.roles.some(roleId => PERM_ROLES.includes(roleId));
-        const userStatus = hasPermRole ? 'Perm' : 'Free';
-
-        const { rows } = await db.query('SELECT * FROM users WHERE discord_id = $1', [id]);
-        if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'User not found in DB. Please re-log.' }) };
-        
-        let user = rows[0];
-        if (user.user_status !== userStatus) {
-            await db.query('UPDATE users SET user_status = $1 WHERE discord_id = $2', [userStatus, id]);
-            user.user_status = userStatus;
+        if (rows.length === 0) {
+            return { statusCode: 404, body: 'User not found' };
         }
 
-        const finalUserObject = { ...user, isAdmin: hasAdminRole };
-        return { statusCode: 200, body: JSON.stringify(finalUserObject) };
+        return {
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rows[0]),
+        };
     } catch (error) {
-        if (error.response && error.response.status === 404) return { statusCode: 403, body: JSON.stringify({ error: 'You must join the Discord server.' }) };
-        console.error('API User Error:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Internal error.' }) };
+        console.error('API User Error:', error.message);
+        // Si le jeton est invalide ou a expiré, on supprime le cookie
+        const clearCookie = cookie.serialize('session_token', '', {
+            httpOnly: true,
+            secure: true,
+            path: '/',
+            sameSite: 'lax',
+            expires: new Date(0) // Expire immédiatement
+        });
+        return {
+            statusCode: 401,
+            headers: { 'Set-Cookie': clearCookie },
+            body: 'Invalid or expired token'
+        };
     }
 };
