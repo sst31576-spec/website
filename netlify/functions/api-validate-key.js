@@ -25,21 +25,20 @@ const TESTER_ROLE_IDS = [
     '1428730376519553186', // K-Manager
     '869611811962511451'  // Owner
 ];
+const TESTER_PREFIX = 'TESTER_';
 // --- FIN DES NOUVELLES CONSTANTES ---
 
 
 // ✅ Fonction principale
 exports.handler = async function (event, context) {
   try {
-    // 🧩 Support GET & POST
     let bodyData;
     if (event.httpMethod === 'GET') {
       const params = event.queryStringParameters || {};
       bodyData = {
         key: params.key,
         roblox_user_id: params.roblox_user_id,
-        place_id: params.place_id,
-        is_tester_mode: params.is_tester_mode === 'true' // Convertir en booléen
+        place_id: params.place_id
       };
     } else if (event.httpMethod === 'POST') {
       bodyData = JSON.parse(event.body);
@@ -47,8 +46,7 @@ exports.handler = async function (event, context) {
       return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    // --- MODIFICATION: Ajout de 'is_tester_mode' ---
-    const { key, roblox_user_id, place_id, is_tester_mode } = bodyData;
+    let { key, roblox_user_id, place_id } = bodyData;
     if (!key || !roblox_user_id || !place_id) {
       return {
         statusCode: 400,
@@ -56,33 +54,39 @@ exports.handler = async function (event, context) {
       };
     }
 
-    // 🔎 Vérifie la clé dans la base
-    const { rows: keyRows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [key]);
+    // --- NOUVELLE LOGIQUE: GESTION DU PRÉFIXE TESTEUR ---
+    const isTesterMode = key.startsWith(TESTER_PREFIX);
+    let actualKey = key;
+    if (isTesterMode) {
+        actualKey = key.substring(TESTER_PREFIX.length);
+    }
+    // --- FIN DE LA LOGIQUE DU PRÉFIXE ---
+
+    // 🔎 Vérifie la clé (la vraie clé, sans le préfixe)
+    const { rows: keyRows } = await db.query('SELECT * FROM keys WHERE key_value = $1', [actualKey]);
     if (keyRows.length === 0) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Invalid Key.' }) };
     }
     const keyData = keyRows[0];
 
-    // --- NOUVELLE LOGIQUE: GESTION DU MODE TESTEUR ---
-    if (is_tester_mode) {
+    // --- LOGIQUE SPÉCIFIQUE AU MODE TESTEUR ---
+    if (isTesterMode) {
         if (!keyData.discord_id) {
-            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Tester mode requires a key linked to a Discord account.' }) };
+            return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Tester mode requires a key linked to Discord.' }) };
         }
 
-        // Récupérer les rôles de l'utilisateur
         const { rows: userRows } = await db.query('SELECT roles FROM users WHERE discord_id = $1', [keyData.discord_id]);
         if (userRows.length === 0) {
             return { statusCode: 200, body: JSON.stringify({ success: false, message: 'User not found for this key.' }) };
         }
         
         const userRoles = userRows[0].roles || [];
-        const isTester = userRoles.some(roleId => TESTER_ROLE_IDS.includes(roleId));
+        const isAllowedTester = userRoles.some(roleId => TESTER_ROLE_IDS.includes(roleId));
 
-        if (!isTester) {
+        if (!isAllowedTester) {
             return { statusCode: 200, body: JSON.stringify({ success: false, message: 'You do not have permission to use tester mode.' }) };
         }
         
-        // Si c'est un testeur, on envoie le script de test
         const scriptContentResponse = await axios.get(TESTER_SCRIPT_URL);
         return {
             statusCode: 200,
@@ -91,8 +95,7 @@ exports.handler = async function (event, context) {
     }
     // --- FIN DE LA LOGIQUE TESTEUR ---
 
-
-    // ⏳ Vérifie l’expiration (logique normale)
+    // ⏳ Si ce n'est pas le mode testeur, on continue normalement
     if (keyData.key_type === 'temp' && new Date(keyData.expires_at) < new Date()) {
       try {
         await db.query('DELETE FROM keys WHERE id = $1', [keyData.id]);
@@ -102,7 +105,7 @@ exports.handler = async function (event, context) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Key has expired.' }) };
     }
 
-    // 🧩 Vérifie HWID (logique normale)
+    // 🧩 Vérifie HWID
     if (keyData.roblox_user_id) {
       if (keyData.roblox_user_id !== roblox_user_id.toString()) {
         return { statusCode: 200, body: JSON.stringify({ success: false, message: 'Please reset your HWID on the website.' }) };
@@ -111,13 +114,13 @@ exports.handler = async function (event, context) {
       await db.query('UPDATE keys SET roblox_user_id = $1 WHERE key_value = $2', [roblox_user_id, keyData.key_value]);
     }
 
-    // 🎮 Vérifie le jeu (logique normale)
+    // 🎮 Vérifie le jeu
     const scriptUrl = gameScripts[place_id.toString()];
     if (!scriptUrl) {
       return { statusCode: 200, body: JSON.stringify({ success: false, message: 'This game is not supported.' }) };
     }
 
-    // 📜 Télécharge le script distant (logique normale)
+    // 📜 Télécharge le script distant
     const scriptContentResponse = await axios.get(scriptUrl);
     
     return {
