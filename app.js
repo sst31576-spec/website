@@ -1,3 +1,4 @@
+// --- Helper Functions ---
 function formatTimeRemaining(expiryDate) {
     if (!expiryDate) return 'N/A';
     const expiry = new Date(expiryDate);
@@ -10,6 +11,8 @@ function formatTimeRemaining(expiryDate) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // This is the main entry point of the script.
+    
     // --- DOM Element Selection ---
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
@@ -26,41 +29,48 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let kingGameInterval = null;
 
+    // --- Core Application Logic ---
+
     const setupDropdown = () => {
+        const existingProfileLink = dropdownMenu.querySelector('a[data-page="profile"]');
+        if (existingProfileLink) return;
+
         const profileLink = document.createElement('a');
-        profileLink.href = '/profile';
+        profileLink.href = '#';
         profileLink.dataset.page = 'profile';
         profileLink.textContent = 'Profile';
+        
         profileLink.addEventListener('click', (e) => {
             e.preventDefault();
             window.history.pushState({ page: 'profile' }, '', '/profile');
             switchPage('profile');
             dropdownMenu.classList.remove('show');
         });
-        // Add Profile link before the Admin Panel link
+        
         if (manageKeysLink) {
             dropdownMenu.insertBefore(profileLink, manageKeysLink);
         } else {
             dropdownMenu.appendChild(profileLink);
         }
     };
-    
-    const checkUserStatus = async () => {
-        try {
-            const response = await fetch('/api/user');
-            if (response.status === 401) { showLoginView(); return; }
-            if (response.status === 403) {
-                showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du');
-                return;
-            }
-            if (!response.ok) throw new Error('Failed to fetch user data');
-            const user = await response.json();
-            currentUser = user;
-            setupMainApp(user);
-        } catch (error) {
-            console.error(error);
-            showLoginView('An error occurred. Please try again later.');
+
+    const setupMainApp = (user) => {
+        loginContainer.classList.add('hidden');
+        mainAppContainer.classList.remove('hidden');
+        
+        userNameEl.textContent = user.discord_username;
+        if (homeUserNameEl) homeUserNameEl.textContent = user.discord_username;
+        userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
+        const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
+        userStatusBadgeEl.textContent = displayStatus;
+        userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
+        
+        if (user.isAdmin) {
+            manageKeysLink.classList.remove('hidden');
         }
+        
+        setupEventListeners();
+        handleRouting();
     };
 
     const showLoginView = (message = null, discordLink = null) => {
@@ -85,36 +95,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const setupMainApp = (user) => {
-        loginContainer.classList.add('hidden');
-        mainAppContainer.classList.remove('hidden');
-        userNameEl.textContent = user.discord_username;
-        if (homeUserNameEl) homeUserNameEl.textContent = user.discord_username;
-        userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
-        const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
-        userStatusBadgeEl.textContent = displayStatus;
-        userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
-        if (user.isAdmin) {
-            manageKeysLink.classList.remove('hidden');
-        }
-        handleRouting();
-    };
-
     const switchPage = (pageId) => {
         if (kingGameInterval) {
             clearInterval(kingGameInterval);
             kingGameInterval = null;
         }
+
         pages.forEach(page => {
             page.classList.toggle('hidden', page.id !== `page-${pageId}`);
         });
         navLinks.forEach(link => {
             link.classList.toggle('active', link.dataset.page === pageId);
         });
+
         if (pageId === 'get-key') renderGetKeyPage();
-        if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
+        if (pageId === 'manage-keys' && currentUser?.isAdmin) renderAdminPanel();
         if (pageId === 'earn-time') renderEarnTimePage();
         if (pageId === 'profile') renderProfilePage();
+        if (pageId === 'suggestion') renderSuggestionPage();
     };
 
     const handleRouting = () => {
@@ -127,199 +125,117 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path === '/profile') pageId = 'profile';
         
         if (pageId === 'home' && path !== '' && path !== '/') {
-            window.history.replaceState({page: pageId}, '', '/');
+            window.history.replaceState({ page: 'home' }, '', '/');
         }
         switchPage(pageId);
     };
-
-    const renderGetKeyPage = async () => { /* ... (code unchanged) ... */ };
-    const handleGenerateKey = async (hash = null) => { /* ... (code unchanged) ... */ };
-    const displayKey = (data) => { /* ... (code unchanged) ... */ };
-    const handleResetHwid = async () => { /* ... (code unchanged) ... */ };
     
-    // --- "Earn Time" Game Logic ---
+    // --- Page Rendering Functions ---
+    
+    const renderGetKeyPage = async () => { /* ... (Your existing code for this function will go here) ... */ };
+    const renderSuggestionPage = () => { /* ... (This is now handled by setupEventListeners) ... */ };
+    const renderAdminPanel = async () => { /* ... (Your existing code for this function will go here) ... */ };
+    const renderProfilePage = async () => { /* ... (Code for this new function will go here) ... */ };
+    const renderEarnTimePage = async () => { /* ... (The big function for games will go here) ... */ };
+    
+    // ... (All other game logic and page rendering functions will be defined in the final script) ...
+    
+    // --- Event Listener Setup ---
 
-    const handleCoinFlip = async () => {
-        const flipBtn = document.getElementById('coinflip-btn');
-        const coin = document.querySelector('.coin');
-        const resultEl = document.getElementById('coinflip-result');
-        if (!flipBtn || !coin || !resultEl) return;
-
-        flipBtn.disabled = true;
-        resultEl.textContent = '';
-        coin.classList.add('flipping');
-
-        try {
-            const bet = document.getElementById('coinflip-bet').value;
-            const response = await fetch('/api/earn-time', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ game: 'coinflip', bet })
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
-
-            setTimeout(() => {
-                coin.classList.remove('flipping');
-                if (data.win) {
-                    resultEl.className = 'game-result win';
-                    resultEl.textContent = `You won! Streak: ${data.new_streak}.`;
-                } else {
-                    resultEl.className = 'game-result loss';
-                    resultEl.textContent = 'You lost! Streak reset.';
+    const setupEventListeners = () => {
+        // Navigation links
+        navLinks.forEach(link => {
+            if (link.dataset.listenerAttached) return;
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const pageId = e.target.dataset.page;
+                if (pageId) {
+                    window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
+                    switchPage(pageId);
                 }
-                updateTimeDisplay();
-            }, 1200); // Wait for animation to mostly finish
-        } catch (error) {
-            coin.classList.remove('flipping');
-            resultEl.className = 'game-result loss';
-            resultEl.textContent = `Error: ${error.message}`;
-        } finally {
-            setTimeout(() => { flipBtn.disabled = false; }, 1500);
-        }
-    };
-    
-    const createCardElement = (isHidden = false) => {
-        const container = document.createElement('div');
-        container.className = 'card-container';
-        
-        const card = document.createElement('div');
-        card.className = 'card';
-        
-        const front = document.createElement('div');
-        front.className = 'card-face card-front';
-        
-        const back = document.createElement('div');
-        back.className = 'card-face card-back';
-        
-        card.appendChild(front);
-        card.appendChild(back);
-        container.appendChild(card);
-        
-        if (!isHidden) {
-            setTimeout(() => card.classList.add('is-flipping'), 100);
-        }
-        
-        return container;
-    };
-
-    const updateCardElement = (cardContainer, cardData) => {
-        const cardFront = cardContainer.querySelector('.card-front');
-        cardFront.innerHTML = `<span>${cardData.rank}</span><span>${cardData.suit}</span>`;
-        cardFront.classList.toggle('red', ['♥', '♦'].includes(cardData.suit));
-    };
-    
-    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => {
-        hand.forEach((cardData, index) => {
-            setTimeout(() => {
-                const isHidden = !revealLastCard && index === hand.length - 1;
-                const cardEl = createCardElement(isHidden);
-                handEl.appendChild(cardEl);
-                if (!isHidden) {
-                    updateCardElement(cardEl, cardData);
-                }
-            }, index * 300); // Stagger the animation
-        });
-    };
-    
-    const handleBlackjackAction = async (action, bet = null) => { /* ... (logic remains similar, but now calls updateTimeDisplay() on success) ... */ };
-    const renderBlackjackInterface = (gameState = null) => { /* ... (logic now uses dealCardsAnimated) ... */ };
-    
-    let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1 };
-    const updateKingGameUI = () => { /* ... (code unchanged) ... */ };
-    const handleKingGameAction = async (action, params = {}) => { /* ... (logic remains similar, but calls updateTimeDisplay() on convert) ... */ };
-
-    const handleRecipientSearch = async (e) => {
-        const query = e.target.value;
-        const suggestionsEl = document.getElementById('recipient-suggestions');
-        if (query.length < 2) {
-            suggestionsEl.innerHTML = '';
-            return;
-        }
-        const response = await fetch('/api/earn-time', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'search_users', query })
-        });
-        const users = await response.json();
-        suggestionsEl.innerHTML = users.map(user => `<div class="suggestion-item">${user}</div>`).join('');
-        suggestionsEl.querySelectorAll('.suggestion-item').forEach(item => {
-            item.addEventListener('click', () => {
-                document.getElementById('send-time-recipient').value = item.textContent;
-                suggestionsEl.innerHTML = '';
             });
+            link.dataset.listenerAttached = 'true';
         });
-    };
 
-    const handleSendTime = async () => { /* ... (logic unchanged, but calls updateTimeDisplay() on success) ... */ };
-
-    const updateTimeDisplay = async () => {
-        const timeDisplayEl = document.querySelector('.time-display p');
-        if (!timeDisplayEl) return;
-        const response = await fetch('/api/earn-time');
-        const keyData = await response.json();
-        if (keyData.key_type === 'perm') {
-            const ms = parseInt(keyData.playable_time_ms);
-            const hours = Math.floor(ms / 3600000);
-            const minutes = Math.floor((ms % 3600000) / 60000);
-            timeDisplayEl.textContent = `${hours}h ${minutes}m`;
-        } else {
-            timeDisplayEl.textContent = formatTimeRemaining(keyData.expires_at);
+        // Dropdown menu
+        if (userProfileToggle && !userProfileToggle.dataset.listenerAttached) {
+            userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+            userProfileToggle.dataset.listenerAttached = 'true';
         }
-    };
-    
-    const renderKingGameView = () => { /* ... (code unchanged) ... */ };
+        window.addEventListener('click', (e) => {
+            if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
 
-    const renderCoinFlipView = () => {
-        const container = document.getElementById('earn-time-content');
-        container.innerHTML = `
-            <div class="game-view">
-                <div class="game-view-header">...</div>
-                <div class="coin-flipper"><div class="coin"><div class="coin-face coin-front">👑</div><div class="coin-face coin-back">☠️</div></div></div>
-                <div class="game-interface">...</div>
-            </div>`;
-        document.querySelector('.back-to-menu-btn').addEventListener('click', renderEarnTimePage);
-        document.getElementById('coinflip-btn').addEventListener('click', handleCoinFlip);
-    };
-
-    const renderBlackjackView = () => { /* ... (code unchanged) ... */ };
-    
-    const renderEarnTimePage = async () => {
-        // ... (This function now correctly handles the 'perm' key case and displays the 'send time' form)
-    };
-
-    const renderProfilePage = async () => {
-        const container = document.getElementById('page-profile').querySelector('.card-box');
-        container.innerHTML = '<h2>Profile</h2><p>Loading profile data...</p>';
-        
-        try {
-            const response = await fetch('/api/profile');
-            if (!response.ok) throw new Error('Failed to load profile.');
-            const data = await response.json();
+        // Suggestion Form
+        const suggestionForm = document.getElementById('suggestion-form');
+        if (suggestionForm && !suggestionForm.dataset.listenerAttached) {
+            suggestionForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const suggestionTextarea = document.getElementById('suggestion-textarea');
+                const gameNameInput = document.getElementById('game-name-input');
+                const gameLinkInput = document.getElementById('game-link-input');
+                const suggestionStatus = document.getElementById('suggestion-status');
+                if (!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return;
             
-            const timeEarnedMs = parseInt(data.total_time_earned);
-            const timeEarnedHours = (timeEarnedMs / 3600000).toFixed(1);
+                const suggestion = suggestionTextarea.value.trim();
+                const gameName = gameNameInput.value.trim();
+                const gameLink = gameLinkInput.value.trim();
+                if (gameName === '' || gameLink === '' || suggestion === '') {
+                    suggestionStatus.className = 'status-message error';
+                    suggestionStatus.textContent = 'Please fill all fields.';
+                    return;
+                }
 
-            container.innerHTML = `
-                <h2>${data.discord_username}'s Profile</h2>
-                <ul class="profile-stats">
-                    <li><span>Key Type</span><span>${data.key_type === 'perm' ? 'Permanent' : 'Temporary'}</span></li>
-                    <li><span>Script Executions</span><span>${data.script_executions}</span></li>
-                    <li><span>King Game Coins</span><span>${formatKingGameNumber(data.king_game_coins)}</span></li>
-                    <li><span>Total Time Earned/Received</span><span>${timeEarnedHours} hours</span></li>
-                </ul>
-            `;
+                const btn = e.target.querySelector('button');
+                btn.disabled = true;
+                btn.textContent = 'Sending...';
+                suggestionStatus.textContent = '';
+            
+                try {
+                    const response = await fetch('/api/send-suggestion', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ suggestion, gameName, gameLink }) 
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error);
+                
+                    suggestionStatus.className = 'status-message success';
+                    suggestionStatus.textContent = 'Suggestion sent!';
+                    suggestionForm.reset();
+                } catch (error) {
+                    suggestionStatus.className = 'status-message error';
+                    suggestionStatus.textContent = error.message || 'Failed to send.';
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Send Suggestion';
+                }
+            });
+            suggestionForm.dataset.listenerAttached = 'true';
+        }
+    };
+    
+    // --- Initialization ---
+
+    const initialize = async () => {
+        try {
+            const response = await fetch('/api/user');
+            if (!response.ok) {
+                if (response.status === 401) showLoginView();
+                else if (response.status === 403) showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du');
+                else throw new Error('Failed to fetch user data');
+                return;
+            }
+            currentUser = await response.json();
+            setupDropdown();
+            setupMainApp(currentUser);
         } catch (error) {
-            container.innerHTML = `<h2>Profile</h2><p class="error-message">${error.message}</p>`;
+            console.error('Initialization Error:', error);
+            showLoginView('An error occurred during startup. Please try again later.');
         }
     };
 
-    const renderAdminPanel = async () => { /* ... (code unchanged) ... */ };
-    
-    // --- Event Listeners & Initialization ---
-    // ... (code unchanged)
-
-    // Initial setup
-    setupDropdown();
-    checkUserStatus();
+    initialize();
 });
