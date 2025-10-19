@@ -8,8 +8,7 @@ const {
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
     REDIRECT_URI,
-    JWT_SECRET,
-    GUILD_ID
+    JWT_SECRET
 } = process.env;
 
 exports.handler = async function (event, context) {
@@ -38,41 +37,19 @@ exports.handler = async function (event, context) {
         });
         const discordUser = userResponse.data;
 
-        // Récupérer les rôles de l'utilisateur
-        let userRoles = [];
-        try {
-            const guildMemberResponse = await axios.get(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
-                headers: { 'Authorization': `Bearer ${access_token}` }
-            });
-            userRoles = guildMemberResponse.data.roles || [];
-        } catch (guildError) {
-            if (guildError.response && guildError.response.status === 404) {
-                 return {
-                    statusCode: 403,
-                    body: 'Access Denied: You must be a member of the Discord server.'
-                };
-            }
-            console.error('Error fetching guild member info:', guildError.message);
-        }
-
         const { id, username, avatar } = discordUser;
         const avatarUrl = avatar ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : null;
 
-        // --- CORRECTION CRUCIALE ICI ---
-        // On convertit le tableau de rôles en chaîne de caractères JSON avant de le sauvegarder
-        const rolesAsJsonString = JSON.stringify(userRoles);
-
-        // Met à jour ou insère l'utilisateur dans la base de données
+        // Met à jour ou insère l'utilisateur dans la base de données SANS les rôles
         await db.query(
-            `INSERT INTO users (discord_id, discord_username, discord_avatar, last_login, roles)
-             VALUES ($1, $2, $3, NOW(), $4)
+            `INSERT INTO users (discord_id, discord_username, discord_avatar, last_login)
+             VALUES ($1, $2, $3, NOW())
              ON CONFLICT (discord_id)
              DO UPDATE SET
                 discord_username = EXCLUDED.discord_username,
                 discord_avatar = EXCLUDED.discord_avatar,
-                last_login = NOW(),
-                roles = EXCLUDED.roles;`,
-            [id, username, avatarUrl, rolesAsJsonString] // On utilise la chaîne de caractères ici
+                last_login = NOW();`,
+            [id, username, avatarUrl]
         );
 
         // Crée le JWT
