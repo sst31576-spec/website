@@ -265,6 +265,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    const handleCoinFlip = async () => {
+        const betSelect = document.getElementById('coinflip-bet');
+        const flipBtn = document.getElementById('coinflip-btn');
+        const resultEl = document.getElementById('coinflip-result');
+        
+        if (!betSelect || !flipBtn || !resultEl) return;
+
+        flipBtn.disabled = true;
+        flipBtn.textContent = 'Flipping...';
+        resultEl.textContent = '';
+        resultEl.className = 'game-result';
+        
+        try {
+            const response = await fetch('/api/earn-time', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game: 'coinflip', bet: betSelect.value })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'An unknown error occurred.');
+            
+            // Met à jour l'affichage du temps restant
+            const timeDisplay = document.querySelector('#earn-time-content .time-display p');
+            if (timeDisplay) {
+                timeDisplay.textContent = formatTimeRemaining(data.new_expires_at);
+            }
+            
+            if (data.win) {
+                resultEl.className = 'game-result win';
+                resultEl.textContent = `You won! You now have a win streak of ${data.new_streak}.`;
+            } else {
+                resultEl.className = 'game-result loss';
+                resultEl.textContent = `You lost! Your streak has been reset.`;
+            }
+            
+        } catch (error) {
+            resultEl.className = 'game-result loss';
+            resultEl.textContent = `Error: ${error.message}`;
+        } finally {
+            flipBtn.disabled = false;
+            flipBtn.textContent = 'Flip the Coin';
+        }
+    };
+
     const renderEarnTimePage = async () => {
         const container = document.getElementById('earn-time-content');
         if (!container || !currentUser) return;
@@ -287,27 +331,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 <div class="games-grid">
                     <div class="game-card">
-                        <h4>Blackjack</h4>
-                        <p>Win 2x your bet. The closer you get to 21 without going over, the better. Bet up to 2 hours.</p>
-                        <button class="discord-btn" disabled>Soon</button>
-                    </div>
-                    <div class="game-card">
                         <h4>Coin Flip</h4>
-                        <p>A 50/50 chance to double your bet or lose it all. The more you win, the riskier it gets. Bet up to 2 hours.</p>
-                        <button class="discord-btn" disabled>Soon</button>
-                    </div>
-                    <div class="game-card">
-                        <h4>Dino Game</h4>
-                        <p>Bet 1 hour to play. The further you run, the more minutes you earn back. Survive 60 meters to profit!</p>
-                        <button class="discord-btn" disabled>Soon</button>
+                        <p>A chance to double your bet or lose it all. The more you win in a row, the harder it gets.</p>
+                        <div class="game-interface">
+                            <div class="bet-controls">
+                                <label for="coinflip-bet">Bet:</label>
+                                <select id="coinflip-bet">
+                                    <option value="10m">10 Minutes</option>
+                                    <option value="30m">30 Minutes</option>
+                                    <option value="1h">1 Hour</option>
+                                    <option value="2h">2 Hours</option>
+                                </select>
+                            </div>
+                            <button id="coinflip-btn" class="discord-btn">Flip the Coin</button>
+                            <div id="coinflip-result" class="game-result"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div style="margin-top: 30px; border-top: 1px solid var(--background-primary); padding-top: 20px;">
-                    <h4>Send Time to a Friend</h4>
-                    <p style="color: var(--text-muted);">This feature is coming soon.</p>
+                    <h4>More Games Coming Soon</h4>
+                    <p style="color: var(--text-muted);">Blackjack & Dino Game are in development.</p>
                 </div>
             `;
+            // Attache l'écouteur d'événement après avoir créé le bouton
+            document.getElementById('coinflip-btn').addEventListener('click', handleCoinFlip);
 
         } catch (error) {
             container.innerHTML = `
