@@ -124,6 +124,11 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 /* --- GAME SPECIFIC STYLES --- */
 /* ======================================= */
 
+#page-earn-time .card-box {
+    max-width: 1200px;
+    text-align: left; /* Override card-box center for game content */
+}
+
 .game-tabs {
     display: flex;
     border-bottom: 1px solid var(--background-tertiary);
@@ -147,10 +152,17 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 }
 .tab-content {
     display: none;
-    min-height: 500px; /* Ensures content area is visible */
+    min-height: 500px;
 }
 .tab-content.active {
     display: block;
+}
+
+/* --- Base Layout --- */
+.game-layout {
+    display: grid;
+    gap: 20px;
+    text-align: left;
 }
 
 /* --- Economy Tab Layout --- */
@@ -187,7 +199,7 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 /* Send Coins */
 .send-coins-container { padding: 15px; }
 .user-select-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
-#kg-recipient-search { padding: 10px; border-radius: var(--border-radius); width: 100%; box-sizing: border-box; }
+#kg-recipient-search { padding: 10px; border-radius: var(--border-radius); width: 100%; box-sizing: border-box; background-color: var(--background-primary); color: var(--text-normal); border: 1px solid var(--background-tertiary); }
 .user-dropdown-content {
     display: none;
     position: absolute;
@@ -201,7 +213,7 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 }
 .user-dropdown-content a { color: var(--text-normal); padding: 8px 12px; text-decoration: none; display: block; font-size: 14px; }
 .user-dropdown-content a:hover { background-color: var(--background-primary); }
-#kg-send-amount { padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; }
+#kg-send-amount { padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; background-color: var(--background-primary); color: var(--text-normal); border: 1px solid var(--background-tertiary); }
 #kg-send-btn { width: 100%; }
 
 /* Rebirth & Boosts */
@@ -223,6 +235,8 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+.my-army-panel, .training-panel { background-color: var(--background-tertiary); padding: 15px; border-radius: var(--border-radius); }
+.my-army-panel h4, .training-panel h4 { text-align: left; }
 .troop-list { max-height: 500px; overflow-y: auto; padding-right: 10px; }
 .troop-item { 
     background-color: var(--background-primary); 
@@ -237,6 +251,7 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 .troop-stats h5 { margin: 0 0 5px 0; color: var(--brand-gold); font-size: 16px; }
 .troop-stats p { margin: 0; font-size: 12px; color: var(--text-muted); }
 .troop-stats strong { color: var(--header-primary); }
+.troop-stats .level-info { color: var(--brand-blue); font-weight: bold; }
 
 .troop-actions { display: flex; flex-direction: column; gap: 8px; }
 .troop-actions input { padding: 8px; background-color: var(--background-secondary); border: 1px solid var(--background-primary); color: var(--text-normal); border-radius: var(--border-radius); text-align: center; }
@@ -253,6 +268,7 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
+.leaderboard-panel, .reports-panel { background-color: var(--background-tertiary); padding: 15px; border-radius: var(--border-radius); }
 .leaderboard-list { max-height: 450px; overflow-y: auto; }
 .leaderboard-item { display: flex; justify-content: space-between; padding: 10px; border-radius: 4px; transition: background-color 0.1s; }
 .leaderboard-item:nth-child(odd) { background-color: var(--background-primary); }
@@ -260,9 +276,12 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 .leaderboard-item .rank { font-weight: bold; min-width: 25px; }
 .leaderboard-item .name { font-weight: 500; }
 .leaderboard-item .power { color: var(--text-muted); }
-.title-king { color: var(--brand-gold); font-weight: bold; }
-.title-queen { color: #c37cf2; font-weight: bold; }
-.title-general { color: #6e8ef7; font-weight: bold; }
+
+/* Titles */
+.player-title { font-weight: bold; font-size: 18px; margin-left: 10px; }
+.title-king { color: var(--brand-gold); }
+.title-queen { color: #c37cf2; }
+.title-general { color: #6e8ef7; }
 
 .attack-panel { padding: 15px; }
 .attack-panel input { width: 100%; box-sizing: border-box; }
@@ -272,7 +291,6 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 .attack-actions { display: flex; gap: 10px; margin-top: 15px; }
 .attack-actions button { flex-grow: 1; }
 
-.reports-panel { margin-top: 20px; }
 .battle-reports-list { max-height: 300px; overflow-y: auto; }
 .report-item { background: var(--background-primary); padding: 10px; border-radius: var(--border-radius); margin-bottom: 5px; font-size: 14px; text-align: left; }
 .report-item.win { border-left: 3px solid var(--brand-green); }
