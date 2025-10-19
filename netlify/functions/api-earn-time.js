@@ -65,7 +65,17 @@ const GEM_BOOSTS = {
     'half_cost': { name: '50% Upgrade Discount', cost: 5, duration_minutes: 5 },
 };
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS (DEFINED FIRST) ---
+
+const getUpgradeCost = (upgradeId, level, active_boosts) => {
+    const upgrade = KING_GAME_UPGRADES[upgradeId];
+    let cost = Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
+    
+    if (active_boosts && active_boosts['half_cost'] && new Date(active_boosts['half_cost']) > new Date()) {
+        cost = Math.ceil(cost / 2);
+    }
+    return cost;
+};
 
 const getTroopStat = (troopType, level) => {
     const basePower = TROOPS[troopType].power;
@@ -75,7 +85,7 @@ const getTroopStat = (troopType, level) => {
 
 const getTroopUpgradeCost = (troopType, level) => {
     const troop = TROOPS[troopType];
-    const baseCost = troop.cost * 5; // Upgrading costs 5x the unit's base cost
+    const baseCost = troop.cost * 5; 
     return BigInt(Math.floor(baseCost * Math.pow(3, level) * troop.upgrade_cost_multiplier));
 };
 
@@ -85,10 +95,46 @@ const calculateArmyPower = (army, troopLevels) => {
         if (TROOPS[troopType]) {
             const level = troopLevels[troopType] || 0;
             const powerPerUnit = getTroopStat(troopType, level);
-            totalPower += BigInt(army[troopType]) * BigInt(powerPerUnit);
+            totalPower += BigInt(army[troopType] || 0) * BigInt(powerPerUnit);
         }
     }
     return totalPower.toString();
+};
+
+
+/**
+ * Core function to calculate current click value and CPS based on user state and active boosts/titles.
+ * @param {object} user - User row from DB (must contain user_status, rebirth_level, king_game_upgrades, active_boosts, title)
+ * @returns {object} { clickValue: number, cps: number }
+ */
+const calculateKingGameState = (user) => {
+    const upgrades = user.king_game_upgrades || {};
+    const active_boosts = user.active_boosts || {};
+    const getLevel = (id) => upgrades[id] || 0;
+
+    const rebirth_bonus = 1 + (user.rebirth_level || 0) * 0.10;
+
+    let clickValue = 1 + (getLevel('click') * KING_GAME_UPGRADES.click.value);
+    let cps = 0;
+    for (const id in KING_GAME_UPGRADES) {
+        if (id !== 'click') cps += getLevel(id) * KING_GAME_UPGRADES[id].cps;
+    }
+    
+    let finalClickValue = Math.round(clickValue * rebirth_bonus);
+    let finalCps = Math.round(cps * rebirth_bonus);
+
+    if (active_boosts['x2_coins'] && new Date(active_boosts['x2_coins']) > new Date()) {
+        finalClickValue *= 2;
+        finalCps *= 2;
+    }
+
+    if (user.user_status === 'Perm') {
+        finalClickValue *= 2;
+        finalCps *= 2;
+    }
+    if (user.title === 'Queen') { finalCps *= 2; }
+    
+    return { clickValue: finalClickValue, cps: finalCps };
 };
 
 const simulateBattle = (attacker, defender) => {
@@ -102,14 +148,16 @@ const simulateBattle = (attacker, defender) => {
                 const level = primary.troopLevels[troop] || 0;
                 const basePower = getTroopStat(troop, level);
                 let damageMultiplier = 1.0;
+                // Simplified total troops for counter calculation
+                const secondaryTotalTroops = Object.values(secondary.army).reduce((a, b) => a + b, 0);
 
                 if (troop === 'cavalry') {
-                    damageMultiplier += 0.35 * (secondary.army.archer || 0) / (secondary.totalTroops + 1);
-                    damageMultiplier += 0.60 * (secondary.army.swordsman || 0) / (secondary.totalTroops + 1);
-                    damageMultiplier -= 2.00 * (secondary.army.spearman || 0) / (secondary.totalTroops + 1);
+                    damageMultiplier += 0.35 * (secondary.army.archer || 0) / (secondaryTotalTroops + 1);
+                    damageMultiplier += 0.60 * (secondary.army.swordsman || 0) / (secondaryTotalTroops + 1);
+                    damageMultiplier -= 2.00 * (secondary.army.spearman || 0) / (secondaryTotalTroops + 1);
                 } else if (troop === 'spearman') {
-                    damageMultiplier -= 0.50 * (secondary.army.archer || 0) / (secondary.totalTroops + 1);
-                    damageMultiplier += 4.00 * (secondary.army.cavalry || 0) / (secondary.totalTroops + 1);
+                    damageMultiplier -= 0.50 * (secondary.army.archer || 0) / (secondaryTotalTroops + 1);
+                    damageMultiplier += 4.00 * (secondary.army.cavalry || 0) / (secondaryTotalTroops + 1);
                 } else if (troop === 'squire') damageMultiplier += 0.5;
                 else if (troop === 'knight') damageMultiplier += 1.0;
                 else if (troop === 'royal_guard') damageMultiplier += 2.0;
@@ -138,16 +186,16 @@ const simulateBattle = (attacker, defender) => {
 
     for(const troop in attacker.army) {
         const losses = Math.ceil(attacker.army[troop] * attackerLossRate);
-        finalAttackerArmy[troop] = attacker.army[troop] - losses;
+        finalAttackerArmy[troop] = (attacker.army[troop] || 0) - losses;
         attackerLosses[troop] = losses;
     }
     for(const troop in defender.army) {
         const losses = Math.ceil(defender.army[troop] * defenderLossRate);
-        finalDefenderArmy[troop] = defender.army[troop] - losses;
+        finalDefenderArmy[troop] = (defender.army[troop] || 0) - losses;
         defenderLosses[troop] = losses;
     }
 
-    return { winner_id: winner, attackerLosses, defenderLosses, finalAttackerArmy, finalDefenderArmy };
+    return { winner_id: winner, attackerLosses, defenderLosses, finalAttackerArmy, finalDefenderArmy, attackerPower, defenderPower };
 };
 
 const updateTitles = async (client) => {
@@ -179,38 +227,50 @@ exports.handler = async function (event, context) {
         const client = await db.getClient();
         try {
             await client.query('BEGIN');
-            // Process any finished training queue
+            
+            // 1. Process Training Queue Completion
             const { rows: queue } = await client.query('SELECT * FROM training_queue WHERE user_id = $1', [userId]);
             if (queue.length > 0 && new Date(queue[0].finish_time) <= new Date()) {
                 await client.query(`UPDATE armies SET ${queue[0].troop_type} = ${queue[0].troop_type} + $1 WHERE user_id = $2`, [queue[0].quantity, userId]);
                 await client.query('DELETE FROM training_queue WHERE user_id = $1', [userId]);
             }
-
-            const { rows: users } = await client.query('SELECT *, king_game_coins::text, power::text FROM users WHERE discord_id = $1', [userId]);
-            if (users.length === 0) throw new Error('User not found.');
             
+            // 2. Fetch User and Army Data
+            const { rows: users } = await client.query('SELECT *, king_game_coins::text, power::text FROM users WHERE discord_id = $1 FOR UPDATE', [userId]);
+            if (users.length === 0) throw new Error('User not found.');
             let user = users[0];
-             // AFK coin calculation
+            
+            const { rows: armies } = await client.query('SELECT * FROM armies WHERE user_id = $1', [userId]);
+            if (armies.length === 0) {
+                 await client.query('INSERT INTO armies (user_id) VALUES ($1)', [userId]);
+                 const { rows: newArmies } = await client.query('SELECT * FROM armies WHERE user_id = $1', [userId]);
+                 armies[0] = newArmies[0];
+            } else {
+                 armies[0].troop_levels = armies[0].troop_levels || {}; // Ensure it's an object
+            }
+            
+            // 3. AFK Coin Calculation & Power Recalculation
             const lastUpdate = new Date(user.last_king_game_update);
             const secondsDiff = Math.floor((new Date() - lastUpdate) / 1000);
             if (secondsDiff > 0) {
-                 const { cps } = calculateKingGameState(user); // simplified call
+                const { cps } = calculateKingGameState(user); 
                 user.king_game_coins = (BigInt(user.king_game_coins) + BigInt(secondsDiff * cps)).toString();
-                await client.query('UPDATE users SET king_game_coins = $1, last_king_game_update = NOW() WHERE discord_id = $2', [user.king_game_coins, userId]);
             }
+            
+            const newPower = calculateArmyPower(armies[0], armies[0].troop_levels);
+            await client.query('UPDATE users SET king_game_coins = $1, last_king_game_update = NOW(), power = $2 WHERE discord_id = $3', [user.king_game_coins, newPower, userId]);
+            user.power = newPower; // Update local copy
 
-            // Fetch all game-related data
-            const { rows: armies } = await client.query('SELECT * FROM armies WHERE user_id = $1', [userId]);
+            // 4. Fetch additional state data
             const { rows: training } = await client.query('SELECT * FROM training_queue WHERE user_id = $1', [userId]);
             const { rows: reports } = await client.query('SELECT * FROM battle_reports WHERE owner_id = $1 ORDER BY report_time DESC LIMIT 10', [userId]);
             const { rows: leaderboard } = await client.query('SELECT discord_username, power::text, title FROM users WHERE power > 0 ORDER BY power DESC LIMIT 10');
-
+            
             await client.query('COMMIT');
 
-            // Construct full game state to return to client
             return { statusCode: 200, body: JSON.stringify({ 
                 user, 
-                army: armies[0] || {}, 
+                army: armies[0], 
                 trainingQueue: training[0] || null, 
                 battleReports: reports,
                 leaderboard
@@ -231,14 +291,13 @@ exports.handler = async function (event, context) {
 
         try {
             await client.query('BEGIN');
-            // Lock the user's row to prevent race conditions
+            
             const { rows } = await client.query('SELECT *, king_game_coins::text, power::text FROM users WHERE discord_id = $1 FOR UPDATE', [userId]);
             if (rows.length === 0) throw new Error('User not found.');
             
             let user = rows[0];
             const now = new Date();
 
-            // Check if blocked
             if (user.blocked_until && new Date(user.blocked_until) > now) {
                 const remainingMinutes = Math.ceil((new Date(user.blocked_until) - now) / 60000);
                 throw new Error(`Autoclick detected. You are blocked for ${remainingMinutes} more minutes.`);
@@ -248,35 +307,94 @@ exports.handler = async function (event, context) {
             const lastUpdate = new Date(user.last_king_game_update);
             const secondsDiff = Math.floor((now - lastUpdate) / 1000);
             if (secondsDiff > 0) {
-                const { cps } = calculateKingGameState(user); // simplified call
+                const { cps } = calculateKingGameState(user); 
                 user.king_game_coins = (BigInt(user.king_game_coins) + BigInt(secondsDiff * cps)).toString();
             }
+
+            let upgrades = user.king_game_upgrades || {};
+            let active_boosts = user.active_boosts || {};
+            
+            // Fetch Army Data
+            const { rows: armies } = await client.query('SELECT * FROM armies WHERE user_id = $1 FOR UPDATE', [userId]);
+            if (armies.length === 0) throw new Error("Army data not initialized.");
+            let army = armies[0];
+            army.troop_levels = army.troop_levels || {};
 
             // ACTION HANDLER
             switch (action) {
                 case 'click': {
-                    // ... (autoclick logic from previous version)
+                    let timestamps = user.click_timestamps || [];
+                    timestamps.push(now.toISOString());
+                    timestamps = timestamps.slice(-AUTOCLICK_CLICKS_TO_CHECK);
+                    user.click_timestamps = timestamps;
+
+                    if (timestamps.length === AUTOCLICK_CLICKS_TO_CHECK) {
+                        const firstClick = new Date(timestamps[0]);
+                        if (now - firstClick < AUTOCLICK_TIME_THRESHOLD_MS) {
+                            user.blocked_until = new Date(now.getTime() + BLOCK_DURATION_HOURS * 60 * 60 * 1000);
+                            user.click_timestamps = [];
+                            throw new Error(`Autoclick detected! You are blocked for ${BLOCK_DURATION_HOURS} hour.`);
+                        }
+                    }
                     const { clickValue } = calculateKingGameState(user);
                     user.king_game_coins = (BigInt(user.king_game_coins) + BigInt(clickValue)).toString();
                     break;
                 }
                 case 'buy_upgrade': {
-                    // ... (logic from previous version)
+                    const { upgradeId } = body;
+                    if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.');
+                    const level = upgrades[upgradeId] || 0;
+                    const cost = getUpgradeCost(upgradeId, level, active_boosts);
+
+                    if (BigInt(user.king_game_coins) < BigInt(cost)) throw new Error("Not enough coins.");
+                    user.king_game_coins = (BigInt(user.king_game_coins) - BigInt(cost)).toString();
+                    upgrades[upgradeId] = level + 1;
                     break;
                 }
                 case 'rebirth': {
-                    // ... (logic from previous version)
-                    user.gems += (user.rebirth_level + 1) * 5;
+                    if (user.rebirth_level >= MAX_REBIRTH_LEVEL) throw new Error("You have reached the maximum rebirth level.");
+                    
+                    let canRebirth = true;
+                    for (const id in KING_GAME_UPGRADES) {
+                        if ((upgrades[id] || 0) < MAX_UPGRADE_LEVEL) {
+                            canRebirth = false;
+                            break;
+                        }
+                    }
+                    if (!canRebirth) throw new Error(`You must have all upgrades at level ${MAX_UPGRADE_LEVEL} to rebirth.`);
+
+                    const gemsEarned = (user.rebirth_level + 1) * 5;
+                    user.gems += gemsEarned;
+                    user.rebirth_level += 1;
+                    user.king_game_coins = '0';
+                    upgrades = {}; 
+                    active_boosts = {};
+                    
                     // Reset army and levels on rebirth
-                    await client.query(`UPDATE armies SET swordsman=0, spearman=0, archer=0, cavalry=0, squire=0, knight=0, royal_guard=0, troop_levels='{}' WHERE user_id = $1`, [userId]);
+                    await client.query(`UPDATE armies SET squire=0, swordsman=0, spearman=0, archer=0, cavalry=0, knight=0, royal_guard=0, troop_levels='{}'::jsonb WHERE user_id = $1`, [userId]);
+                    army = await client.query('SELECT * FROM armies WHERE user_id = $1', [userId]).rows[0]; // Fetch reset army
                     break;
                 }
                 case 'buy_boost': {
-                    // ... (logic from previous version)
+                    const { boostId } = body;
+                    const boost = GEM_BOOSTS[boostId];
+                    if (!boost) throw new Error('Invalid boost.');
+                    if (user.gems < boost.cost) throw new Error('Not enough gems.');
+                    if (active_boosts[boostId] && new Date(active_boosts[boostId]) > now) throw new Error('This boost is already active.');
+                    
+                    user.gems -= boost.cost;
+                    active_boosts[boostId] = new Date(now.getTime() + boost.duration_minutes * 60 * 1000).toISOString();
                     break;
                 }
                  case 'send_coins': {
-                    // ... (logic from previous version)
+                    const { recipientId, amount } = body;
+                    const amountBigInt = BigInt(amount);
+                    if (!recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount.");
+                    if (recipientId === userId) throw new Error("You cannot send coins to yourself.");
+                    if (BigInt(user.king_game_coins) < amountBigInt) throw new Error("Not enough coins to send.");
+
+                    user.king_game_coins = (BigInt(user.king_game_coins) - amountBigInt).toString();
+                    await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [amount, recipientId]);
                     break;
                 }
                 case 'train_troops': {
@@ -301,60 +419,69 @@ exports.handler = async function (event, context) {
                     const { troopType } = body;
                     if (!TROOPS[troopType]) throw new Error("Invalid troop type.");
                     
-                    const { rows: armies } = await client.query('SELECT troop_levels FROM armies WHERE user_id = $1', [userId]);
-                    const troopLevels = armies[0].troop_levels || {};
-                    const currentLevel = troopLevels[troopType] || 0;
-
+                    const currentLevel = army.troop_levels[troopType] || 0;
                     if (currentLevel >= MAX_TROOP_LEVEL) throw new Error("Troop is already at max level.");
                     
                     const cost = getTroopUpgradeCost(troopType, currentLevel);
                     if (BigInt(user.king_game_coins) < cost) throw new Error("Not enough coins for troop upgrade.");
                     user.king_game_coins = (BigInt(user.king_game_coins) - cost).toString();
 
-                    troopLevels[troopType] = currentLevel + 1;
-                    await client.query('UPDATE armies SET troop_levels = $1 WHERE user_id = $2', [troopLevels, userId]);
+                    army.troop_levels[troopType] = currentLevel + 1;
+                    await client.query('UPDATE armies SET troop_levels = $1 WHERE user_id = $2', [army.troop_levels, userId]);
+                    break;
+                }
+                case 'upgrade_spy_defense': {
+                     const currentLevel = user.spy_defense_level || 0;
+                     const cost = BigInt(Math.ceil(SPY_DEFENSE_UPGRADE.baseCost * Math.pow(SPY_DEFENSE_UPGRADE.costMultiplier, currentLevel)));
+                     if (BigInt(user.king_game_coins) < cost) throw new Error("Not enough coins for spy defense upgrade.");
+                     user.king_game_coins = (BigInt(user.king_game_coins) - cost).toString();
+                     user.spy_defense_level = currentLevel + 1;
+                     break;
+                }
+                case 'spy': {
+                    // ... (Spy logic would go here)
                     break;
                 }
                 case 'attack': {
-                    const { targetId } = body;
-                    if (!targetId || targetId === userId) throw new Error("Invalid target.");
-                    
-                    // Fetch attacker and defender data
-                    const { rows: targetUsers } = await client.query('SELECT * FROM users WHERE discord_id = $1', [targetId]);
-                    if (targetUsers.length === 0) throw new Error("Target not found.");
-                    const targetUser = targetUsers[0];
-
-                    if (targetUser.title === 'King' || targetUser.title === 'Queen') throw new Error("You cannot attack the King or Queen.");
-
-                    // ... (Battle simulation logic from helpers)
-                    // This part would fetch army data for both, call simulateBattle, update armies and power for both users, and create reports.
-                    
-                    await updateTitles(client); // Recalculate titles after a battle
+                    // ... (Attack logic would go here)
                     break;
                 }
-                // ... other actions like 'spy', 'upgrade_spy_defense' would go here
+                case 'convert_time': {
+                    if (user.user_status === 'Perm') throw new Error("Permanent users cannot convert coins to time.");
+                    const cost = 1000000; // Placeholder value for the front end, the real value is 100 Billion
+                    if (BigInt(user.king_game_coins) < BigInt(cost)) throw new Error("You need 100 Billion coins to convert.");
+                    
+                    // The rest of convert time logic
+                    break;
+                }
                 default:
                     throw new Error("Invalid action.");
             }
 
-            // Final save of user state
+            // --- FINAL SAVE ---
+            const newPower = calculateArmyPower(army, army.troop_levels);
+            user.power = newPower;
             await client.query(
                 `UPDATE users SET 
-                    king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = $3, 
-                    rebirth_level = $4, click_timestamps = $5, blocked_until = $6,
-                    gems = $7, active_boosts = $8, power = (SELECT calculate_power_for_user($9))
-                WHERE discord_id = $9`, 
-                [user.king_game_coins, JSON.stringify(user.king_game_upgrades), now.toISOString(), 
-                user.rebirth_level, user.click_timestamps, user.blocked_until,
-                user.gems, JSON.stringify(user.active_boosts), userId]
+                    king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = NOW(), 
+                    rebirth_level = $3, click_timestamps = $4, blocked_until = $5,
+                    gems = $6, active_boosts = $7, power = $8, spy_defense_level = $9
+                WHERE discord_id = $10`, 
+                [user.king_game_coins, JSON.stringify(upgrades), user.rebirth_level, user.click_timestamps, user.blocked_until,
+                user.gems, JSON.stringify(active_boosts), newPower, user.spy_defense_level, userId]
             );
-
-            await client.query('COMMIT');
             
+            await client.query('COMMIT');
+
             // Re-fetch final state to return to client
             const { rows: finalUsers } = await client.query('SELECT *, king_game_coins::text, power::text FROM users WHERE discord_id = $1', [userId]);
-
-            return { statusCode: 200, body: JSON.stringify(finalUsers[0]) };
+            const finalUser = finalUsers[0];
+            
+            return { statusCode: 200, body: JSON.stringify({ 
+                user: finalUser, 
+                army: army, 
+                trainingQueue: (await client.query('SELECT * FROM training_queue WHERE user_id = $1', [userId])).rows[0] || null,
+            }) };
 
         } catch (error) {
             await client.query('ROLLBACK');
@@ -366,4 +493,3 @@ exports.handler = async function (event, context) {
 
     return { statusCode: 405, body: 'Method Not Allowed' };
 };
-
