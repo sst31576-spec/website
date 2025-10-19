@@ -265,11 +265,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // --- Logique des jeux "Earn Time" ---
+    
     const handleCoinFlip = async () => {
         const betSelect = document.getElementById('coinflip-bet');
         const flipBtn = document.getElementById('coinflip-btn');
         const resultEl = document.getElementById('coinflip-result');
-        
         if (!betSelect || !flipBtn || !resultEl) return;
 
         flipBtn.disabled = true;
@@ -286,11 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'An unknown error occurred.');
             
-            // Met à jour l'affichage du temps restant
-            const timeDisplay = document.querySelector('#earn-time-content .time-display p');
-            if (timeDisplay) {
-                timeDisplay.textContent = formatTimeRemaining(data.new_expires_at);
-            }
+            document.querySelector('#earn-time-content .time-display p').textContent = formatTimeRemaining(data.new_expires_at);
             
             if (data.win) {
                 resultEl.className = 'game-result win';
@@ -299,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultEl.className = 'game-result loss';
                 resultEl.textContent = `You lost! Your streak has been reset.`;
             }
-            
         } catch (error) {
             resultEl.className = 'game-result loss';
             resultEl.textContent = `Error: ${error.message}`;
@@ -309,6 +305,129 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const handleBlackjackAction = async (action, bet = null) => {
+        const payload = { game: 'blackjack', action };
+        if (bet) payload.bet = bet;
+
+        const resultEl = document.getElementById('blackjack-result');
+        const actionBtns = document.querySelectorAll('#blackjack-actions button');
+        actionBtns.forEach(btn => btn.disabled = true);
+        if (resultEl) resultEl.textContent = 'Processing...';
+
+        try {
+            const response = await fetch('/api/earn-time', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'An unknown error occurred.');
+            
+            renderBlackjackInterface(data.gameState);
+            
+        } catch (error) {
+            if(resultEl) {
+                resultEl.className = 'game-result loss';
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        }
+    };
+
+    const createCardElement = (card, isHidden = false) => {
+        const cardDiv = document.createElement('div');
+        if(isHidden) {
+            cardDiv.className = 'card hidden';
+        } else {
+            cardDiv.className = `card ${['♥', '♦'].includes(card.suit) ? 'red' : ''}`;
+            cardDiv.innerHTML = `<span>${card.rank}</span><span>${card.suit}</span>`;
+        }
+        return cardDiv;
+    };
+    
+    const calculateHandValue = (hand) => {
+        let value = hand.reduce((sum, card) => {
+            if (['J', 'Q', 'K'].includes(card.rank)) return sum + 10;
+            if (card.rank === 'A') return sum + 11;
+            return sum + parseInt(card.rank);
+        }, 0);
+        let aces = hand.filter(card => card.rank === 'A').length;
+        while (value > 21 && aces > 0) {
+            value -= 10;
+            aces--;
+        }
+        return value;
+    };
+
+    const renderBlackjackInterface = (gameState = null) => {
+        const container = document.getElementById('blackjack-game-container');
+        if (!container) return;
+
+        if (!gameState) { // Écran de mise initial
+            container.innerHTML = `
+                <div class="game-interface">
+                    <div class="bet-controls">
+                        <label for="blackjack-bet">Bet:</label>
+                        <select id="blackjack-bet">
+                            <option value="10m">10 Minutes</option>
+                            <option value="30m">30 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                            <option value="2h">2 Hours</option>
+                        </select>
+                    </div>
+                    <button id="blackjack-deal-btn" class="discord-btn">Deal Cards</button>
+                    <div id="blackjack-result" class="game-result"></div>
+                </div>`;
+            document.getElementById('blackjack-deal-btn').addEventListener('click', () => {
+                const bet = document.getElementById('blackjack-bet').value;
+                handleBlackjackAction('deal', bet);
+            });
+            return;
+        }
+
+        const playerValue = calculateHandValue(gameState.playerHand);
+        const dealerVisibleHand = gameState.gameOver ? gameState.dealerHand : [gameState.dealerHand[0]];
+        const dealerValue = gameState.gameOver ? calculateHandValue(gameState.dealerHand) : calculateHandValue(dealerVisibleHand);
+
+        container.innerHTML = `
+            <div id="blackjack-board">
+                <div class="hand-area">
+                    <h5>Dealer's Hand <span class="hand-score">(${dealerValue})</span></h5>
+                    <div id="dealer-hand" class="card-hand"></div>
+                </div>
+                <div class="hand-area">
+                    <h5>Your Hand <span class="hand-score">(${playerValue})</span></h5>
+                    <div id="player-hand" class="card-hand"></div>
+                </div>
+                <div id="blackjack-actions"></div>
+                <div id="blackjack-result" class="game-result"></div>
+            </div>`;
+        
+        const playerHandEl = document.getElementById('player-hand');
+        gameState.playerHand.forEach(card => playerHandEl.appendChild(createCardElement(card)));
+
+        const dealerHandEl = document.getElementById('dealer-hand');
+        gameState.dealerHand.forEach((card, index) => {
+            dealerHandEl.appendChild(createCardElement(card, !gameState.gameOver && index === 1));
+        });
+
+        const actionsEl = document.getElementById('blackjack-actions');
+        const resultEl = document.getElementById('blackjack-result');
+
+        if (gameState.gameOver) {
+            resultEl.textContent = gameState.message;
+            resultEl.className = gameState.message.includes('win') ? 'game-result win' : gameState.message.includes('lose') ? 'game-result loss' : 'game-result';
+            actionsEl.innerHTML = `<button id="play-again-btn" class="discord-btn">Play Again</button>`;
+            document.getElementById('play-again-btn').addEventListener('click', () => renderBlackjackInterface(null));
+        } else {
+            actionsEl.innerHTML = `
+                <button id="blackjack-hit-btn" class="discord-btn">Hit</button>
+                <button id="blackjack-stand-btn" class="secondary-btn">Stand</button>
+            `;
+            document.getElementById('blackjack-hit-btn').addEventListener('click', () => handleBlackjackAction('hit'));
+            document.getElementById('blackjack-stand-btn').addEventListener('click', () => handleBlackjackAction('stand'));
+        }
+    };
+    
     const renderEarnTimePage = async () => {
         const container = document.getElementById('earn-time-content');
         if (!container || !currentUser) return;
@@ -331,6 +450,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 <div class="games-grid">
                     <div class="game-card">
+                        <h4>Blackjack</h4>
+                        <p>Get closer to 21 than the dealer without going over. Win 2x your bet. Blackjack pays 3:2.</p>
+                        <div id="blackjack-game-container"></div>
+                    </div>
+
+                    <div class="game-card">
                         <h4>Coin Flip</h4>
                         <p>A chance to double your bet or lose it all. The more you win in a row, the harder it gets.</p>
                         <div class="game-interface">
@@ -347,15 +472,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div id="coinflip-result" class="game-result"></div>
                         </div>
                     </div>
-                </div>
+                </div>`;
 
-                <div style="margin-top: 30px; border-top: 1px solid var(--background-primary); padding-top: 20px;">
-                    <h4>More Games Coming Soon</h4>
-                    <p style="color: var(--text-muted);">Blackjack & Dino Game are in development.</p>
-                </div>
-            `;
-            // Attache l'écouteur d'événement après avoir créé le bouton
             document.getElementById('coinflip-btn').addEventListener('click', handleCoinFlip);
+            renderBlackjackInterface(null); // Initialise l'interface de mise du Blackjack
 
         } catch (error) {
             container.innerHTML = `
