@@ -8,7 +8,6 @@
     --brand-red: #f04747;
     --brand-green: #43b581;
     --brand-blue: #5865f2;
-    /* NOUVELLE COULEUR */
     --brand-orange: #f08347; 
     --border-radius: 8px;
 }
@@ -113,7 +112,6 @@ nav a.active {
     font-weight: 700;
     text-transform: uppercase;
 }
-/* --- MODIFICATION BADGES --- */
 .status-badge.owner { background-color: var(--brand-red); color: white; }
 .status-badge.admin { background-color: var(--brand-red); color: white; } /* Legacy */
 .status-badge.k-manager { background-color: var(--brand-green); color: white; }
@@ -144,7 +142,7 @@ nav a.active {
     top: 55px;
     right: 0;
     background-color: var(--background-secondary);
-    min-width: 160px; /* Augmenté pour le toggle */
+    min-width: 160px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     border-radius: var(--border-radius);
     z-index: 100;
@@ -162,7 +160,6 @@ nav a.active {
     background-color: var(--background-primary);
 }
 
-/* --- NOUVEAU: STYLE POUR LE TOGGLE TESTER --- */
 .dropdown-toggle-item {
     display: flex;
     justify-content: space-between;
@@ -262,6 +259,12 @@ nav a.active {
     margin: 20px auto 0 auto;
 }
 
+/* --- CORRECTION POUR CENTRER LE BOUTON --- */
+#key-display-area .discord-btn {
+    margin-left: auto;
+    margin-right: auto;
+}
+
 #key-display-area button {
     margin-top: 10px;
 }
@@ -286,6 +289,7 @@ nav a.active {
     background-color: #d83d3d; 
 }
 
+/* ... (Le reste du CSS pour le panneau admin et le responsive design reste le même) ... */
 
 /* --- Admin Table --- */
 .admin-table {
