@@ -6,5 +6,9 @@ const pool = new Pool({
 });
 
 module.exports = {
+  // Fonction pour les requêtes simples (utilisée par les autres fichiers)
   query: (text, params) => pool.query(text, params),
+  
+  // Fonction pour obtenir un client afin de gérer les transactions (ce qui manquait)
+  getClient: () => pool.connect(),
 };
