@@ -8,7 +8,7 @@
     --brand-red: #f04747;
     --brand-green: #43b581;
     --brand-blue: #5865f2;
-    --brand-gold: #faa61a;
+    --brand-gold: #faa61a; /* New: Gold for King/Gems */
     --border-radius: 8px;
 }
 
@@ -65,14 +65,14 @@ body {
 .secondary-btn {
     padding: 10px 16px;
     border: none;
-    background-color: var(--text-muted);
-    color: white; 
+    background-color: var(--background-primary); /* Changed to primary background for contrast */
+    color: var(--text-normal); 
     border-radius: var(--border-radius); 
     cursor: pointer;
     font-weight: 500;
     transition: background-color 0.2s; 
 }
-.secondary-btn:hover:not(:disabled) { background-color: #63676d; }
+.secondary-btn:hover:not(:disabled) { background-color: var(--background-tertiary); }
 .secondary-btn:disabled { background-color: #484b51; color: #72767d; cursor: not-allowed; }
 
 .secondary-btn-red { 
@@ -108,12 +108,7 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 /* --- General Page & Form Styles --- */
 .content { padding: 32px; display: flex; justify-content: center; align-items: flex-start; min-height: calc(100vh - 60px); }
 .page { width: 100%; display: flex; justify-content: center; }
-#suggestion-form { display: flex; flex-direction: column; gap: 16px; text-align: left; margin-top: 16px; }
 #suggestion-form input, #suggestion-form textarea { background-color: var(--background-primary); border: 1px solid var(--background-tertiary); border-radius: var(--border-radius); color: var(--text-normal); font-family: 'Roboto', sans-serif; font-size: 16px; padding: 12px; }
-#suggestion-form textarea { min-height: 120px; resize: vertical; }
-.status-message { margin-top: 8px; font-weight: 500; }
-.status-message.success { color: var(--brand-green); }
-.status-message.error { color: var(--brand-red); }
 .key-container { display: flex; gap: 8px; margin-bottom: 16px; }
 #generated-key-input { flex-grow: 1; background-color: var(--background-tertiary); border: 1px solid var(--background-primary); color: var(--text-normal); padding: 10px; border-radius: var(--border-radius); font-size: 16px; text-align: center; }
 
@@ -122,19 +117,12 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 .admin-table th, .admin-table td { border: 1px solid var(--background-primary); padding: 10px 8px; text-align: left; }
 .admin-table th { background-color: var(--background-primary); color: var(--header-primary); font-weight: 700; text-transform: uppercase; }
 #admin-search-input { width: 100%; padding: 10px; background-color: var(--background-primary); border: 1px solid var(--background-tertiary); border-radius: var(--border-radius); color: var(--text-normal); font-size: 16px; box-sizing: border-box; margin-bottom: 10px; }
-.key-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
-.key-badge.temp { background-color: var(--brand-red); color: white; }
-.key-badge.perm { background-color: var(--brand-green); color: white; }
 
 #mobile-nav-links { display: none; }
 
 /* ======================================= */
-/* --- NEW KING GAME STYLES --- */
+/* --- GAME SPECIFIC STYLES --- */
 /* ======================================= */
-
-#page-earn-time .card-box {
-    max-width: 1200px;
-}
 
 .game-tabs {
     display: flex;
@@ -150,77 +138,125 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
     font-weight: 500;
     cursor: pointer;
     border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-bottom-color 0.2s;
 }
+.tab-link:hover { color: var(--text-normal); }
 .tab-link.active {
     color: var(--header-primary);
     border-bottom-color: var(--brand-blue);
 }
 .tab-content {
     display: none;
+    min-height: 500px; /* Ensures content area is visible */
 }
 .tab-content.active {
     display: block;
 }
 
-.game-layout {
+/* --- Economy Tab Layout --- */
+#tab-economy {
     display: grid;
-    gap: 20px;
-    text-align: left;
-}
-
-/* Economy Tab */
-.economy-layout {
     grid-template-columns: 300px 1fr;
     grid-template-areas: "main-stats upgrades" "actions upgrades";
+    gap: 20px;
 }
 .main-stats-panel { grid-area: main-stats; }
 .actions-panel { grid-area: actions; }
 .upgrades-panel { grid-area: upgrades; }
 
-.coin-display { text-align: center; }
+.panel-box { background-color: var(--background-tertiary); padding: 15px; border-radius: var(--border-radius); margin-bottom: 20px; }
+.panel-box h4 { margin: 0 0 15px 0; text-align: center; color: var(--header-primary); }
+
+.coin-display { text-align: center; padding: 10px; border-bottom: 1px solid var(--background-primary); }
 .coin-display h2 { font-size: 32px; font-weight: bold; color: var(--header-primary); margin: 0; word-wrap: break-word; }
 .coin-display p { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; }
-.bonus-display { color: var(--brand-gold); font-weight: bold; font-size: 14px; }
+.bonus-display { color: var(--brand-gold); font-weight: bold; font-size: 14px; margin-top: 5px; }
 
 .clicker-area { text-align: center; margin: 20px 0; }
 #kg-clicker-btn { width: 120px; height: 120px; border-radius: 50%; border: 3px solid var(--brand-blue); background-color: var(--background-secondary); cursor: pointer; transition: transform 0.1s; font-size: 48px; }
-#kg-clicker-btn:active { transform: scale(0.95); }
+#kg-clicker-btn:active:not(:disabled) { transform: scale(0.95); }
 
-.panel-box { background-color: var(--background-tertiary); padding: 15px; border-radius: var(--border-radius); }
-.panel-box h4 { margin: 0 0 15px 0; text-align: center; }
-
-#upgrades-list { max-height: 400px; overflow-y: auto; padding-right: 10px; }
+/* Upgrades */
+#upgrades-list { max-height: 450px; overflow-y: auto; padding-right: 10px; }
 .upgrade-item { background-color: var(--background-primary); padding: 10px; border-radius: var(--border-radius); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-.upgrade-info { display: flex; flex-direction: column; }
+.upgrade-info { display: flex; flex-direction: column; text-align: left; }
 .upgrade-info strong { color: var(--header-primary); }
 .upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
 .upgrade-info small { font-size: 12px; color: var(--text-muted); }
 
-#gem-shop, #rebirth-section { display: flex; flex-direction: column; gap: 10px; }
-#rebirth-section p { margin: 0 0 10px 0; }
-
-.active-boosts p { margin: 2px 0; font-size: 14px; }
-.active-boosts strong { color: var(--brand-green); }
-
-/* Barracks Tab */
-.barracks-layout {
-    grid-template-columns: 1fr 1fr;
+/* Send Coins */
+.send-coins-container { padding: 15px; }
+.user-select-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
+#kg-recipient-search { padding: 10px; border-radius: var(--border-radius); width: 100%; box-sizing: border-box; }
+.user-dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--background-tertiary);
+    width: 100%;
+    box-shadow: 0px 4px 8px 0px rgba(0,0,0,0.4);
+    z-index: 10;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    max-height: 200px;
+    overflow-y: auto;
 }
-.my-army-panel h4, .training-panel h4 { text-align: left; }
-.troop-list, .training-options { max-height: 400px; overflow-y: auto; }
-.troop-item, .training-item { display: grid; grid-template-columns: 1fr 1fr; align-items: center; margin-bottom: 10px; background-color: var(--background-primary); padding: 10px; border-radius: var(--border-radius); }
-.troop-item > div, .training-item > div { display: flex; flex-direction: column; }
-.troop-item button, .training-item button { justify-self: end; }
+.user-dropdown-content a { color: var(--text-normal); padding: 8px 12px; text-decoration: none; display: block; font-size: 14px; }
+.user-dropdown-content a:hover { background-color: var(--background-primary); }
+#kg-send-amount { padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; }
+#kg-send-btn { width: 100%; }
+
+/* Rebirth & Boosts */
+#rebirth-section button { background-color: var(--brand-gold); }
+#rebirth-section button:hover:not(:disabled) { background-color: #d19445; }
+.max-rebirth-msg { font-weight: bold; color: var(--brand-green); margin-top: 10px; }
+#gem-shop button { background-color: var(--brand-blue); }
+#gem-shop button:hover:not(:disabled) { background-color: #4e5d94; }
+
+.active-boosts-container { padding: 10px; margin-top: 15px; border-top: 1px solid var(--background-primary); }
+.active-boosts-container h4 { margin: 0 0 5px 0; text-align: left; font-size: 16px; }
+.active-boosts-container p { margin: 2px 0; font-size: 14px; color: var(--text-muted); }
+.active-boosts-container strong { color: var(--brand-green); }
+
+
+/* --- Barracks Tab Layout --- */
+#tab-barracks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.troop-list { max-height: 500px; overflow-y: auto; padding-right: 10px; }
+.troop-item { 
+    background-color: var(--background-primary); 
+    padding: 15px; 
+    border-radius: var(--border-radius); 
+    margin-bottom: 10px; 
+    display: grid; 
+    grid-template-columns: 2fr 1fr;
+    gap: 15px;
+    align-items: center;
+}
+.troop-stats h5 { margin: 0 0 5px 0; color: var(--brand-gold); font-size: 16px; }
+.troop-stats p { margin: 0; font-size: 12px; color: var(--text-muted); }
+.troop-stats strong { color: var(--header-primary); }
+
+.troop-actions { display: flex; flex-direction: column; gap: 8px; }
+.troop-actions input { padding: 8px; background-color: var(--background-secondary); border: 1px solid var(--background-primary); color: var(--text-normal); border-radius: var(--border-radius); text-align: center; }
+.troop-actions button { padding: 8px; }
+
+.training-queue { margin-top: 20px; padding: 15px; border: 1px solid var(--background-primary); border-radius: var(--border-radius); }
 .training-queue p { margin: 0; }
-.training-queue .timer { font-size: 18px; font-weight: bold; color: var(--brand-gold); }
+.training-queue .timer { font-size: 18px; font-weight: bold; color: var(--brand-green); }
+.training-queue .finished-msg { color: var(--brand-green); }
 
-/* Battle Tab */
-.battle-layout {
+/* --- Battle Tab Layout --- */
+#tab-battle {
+    display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
-.leaderboard-list { max-height: 350px; overflow-y: auto; }
-.leaderboard-item { display: flex; justify-content: space-between; padding: 8px; border-radius: 4px; }
+.leaderboard-list { max-height: 450px; overflow-y: auto; }
+.leaderboard-item { display: flex; justify-content: space-between; padding: 10px; border-radius: 4px; transition: background-color 0.1s; }
 .leaderboard-item:nth-child(odd) { background-color: var(--background-primary); }
+.leaderboard-item:hover { background-color: var(--background-tertiary); cursor: pointer; }
 .leaderboard-item .rank { font-weight: bold; min-width: 25px; }
 .leaderboard-item .name { font-weight: 500; }
 .leaderboard-item .power { color: var(--text-muted); }
@@ -228,17 +264,24 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
 .title-queen { color: #c37cf2; font-weight: bold; }
 .title-general { color: #6e8ef7; font-weight: bold; }
 
-.attack-panel input, .attack-panel select { background-color: var(--background-primary); border: 1px solid var(--background-tertiary); color: var(--text-normal); padding: 8px; border-radius: var(--border-radius); width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+.attack-panel { padding: 15px; }
+.attack-panel input { width: 100%; box-sizing: border-box; }
+.target-info { border: 1px dashed var(--text-muted); padding: 10px; border-radius: var(--border-radius); margin-top: 10px; }
+.target-info p { margin: 5px 0; font-size: 14px; }
+.target-info strong { color: var(--header-primary); }
+.attack-actions { display: flex; gap: 10px; margin-top: 15px; }
+.attack-actions button { flex-grow: 1; }
 
+.reports-panel { margin-top: 20px; }
 .battle-reports-list { max-height: 300px; overflow-y: auto; }
-.report-item { background: var(--background-primary); padding: 10px; border-radius: var(--border-radius); margin-bottom: 5px; font-size: 14px; }
+.report-item { background: var(--background-primary); padding: 10px; border-radius: var(--border-radius); margin-bottom: 5px; font-size: 14px; text-align: left; }
 .report-item.win { border-left: 3px solid var(--brand-green); }
 .report-item.loss { border-left: 3px solid var(--brand-red); }
 
 /* --- RESPONSIVE DESIGN --- */
 
 @media (max-width: 1000px) {
-    .economy-layout, .barracks-layout, .battle-layout {
+    #tab-economy, #tab-barracks, #tab-battle {
         grid-template-columns: 1fr;
         grid-template-areas: initial;
     }
@@ -246,21 +289,13 @@ nav a.active { color: var(--header-primary); border-bottom: 3px solid var(--bran
         grid-area: initial;
     }
 }
-
 @media (max-width: 900px) {
     .top-bar-left nav { display: none; }
     #mobile-nav-links { display: block; border-bottom: 1px solid var(--background-primary); margin-bottom: 5px; padding-bottom: 5px; }
-    #mobile-nav-links a { color: var(--text-muted); font-weight: 500; }
     .content { padding: 16px; }
     .card-box { margin: 10px auto; padding: 24px; max-width: 100%; }
-    .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
 }
-
 @media (max-width: 500px) {
     .top-bar { padding: 0 10px; height: 50px; }
-    .header-logo, #user-avatar { width: 30px; height: 30px; }
     #user-name { display: none; }
-    .dropdown-content { top: 45px; }
-    .key-container { flex-direction: column; gap: 10px; }
 }
-
