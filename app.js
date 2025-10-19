@@ -1,37 +1,3 @@
-// NOUVEAU: Helper function to determine user's primary role and status
-function determineUserStatus(user) {
-    const roles = user.roles || [];
-    let status = {
-        text: 'Free',
-        className: 'free',
-        isTester: false,
-        isAdmin: false
-    };
-
-    // Role IDs
-    const OWNER_ID = '869611811962511451';
-    const K_MANAGER_ID = '1428730376519553186';
-    const TESTER_ID = '1421439929052954674';
-
-    if (roles.includes(OWNER_ID)) {
-        status = { text: 'Owner', className: 'owner', isTester: true, isAdmin: true };
-    } else if (roles.includes(K_MANAGER_ID)) {
-        status = { text: 'K-Manager', className: 'k-manager', isTester: true, isAdmin: true };
-    } else if (roles.includes(TESTER_ID)) {
-        status = { text: 'Tester', className: 'tester', isTester: true, isAdmin: false };
-    } else if (user.user_status === 'perm') {
-        status.text = 'Perm';
-        status.className = 'perm';
-    }
-    
-    // Legacy support for isAdmin flag
-    if (user.isAdmin && !status.isAdmin) {
-        status.isAdmin = true;
-    }
-
-    return status;
-}
-
 function formatTimeRemaining(expiryDate) {
     if (!expiryDate) return 'N/A';
     const expiry = new Date(expiryDate);
@@ -49,14 +15,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
     const userNameEl = document.getElementById('user-name');
-    const homeUserNameEl = document.getElementById('home-username');
+    const homeUserNameEl = document.getElementById('home-username'); // Assurez-vous que cet ID existe
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('.page');
     const userProfileToggle = document.getElementById('user-profile-toggle');
     const dropdownMenu = document.getElementById('dropdown-menu');
+    const manageKeysLink = document.getElementById('manage-keys-link');
     const suggestionForm = document.getElementById('suggestion-form');
+    // NOUVEAU: Sélection du bouton
     const removeExpiredBtn = document.getElementById('remove-expired-btn');
     let currentUser = null;
 
@@ -120,64 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- CORRECTION MAJEURE: SETUPMAINAPP ---
     const setupMainApp = (user) => {
         loginContainer.classList.add('hidden');
         mainAppContainer.classList.remove('hidden');
-        
         userNameEl.textContent = user.discord_username;
         if (homeUserNameEl) homeUserNameEl.textContent = user.discord_username;
         userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
-
-        const status = determineUserStatus(user);
-        
-        userStatusBadgeEl.textContent = status.text;
-        userStatusBadgeEl.className = 'status-badge ' + status.className;
-
-        const dynamicLinksContainer = document.getElementById('dynamic-dropdown-links');
-        dynamicLinksContainer.innerHTML = ''; // Vide le conteneur avant de reconstruire
-        
-        if (status.isAdmin) {
-            const adminLink = document.createElement('a');
-            adminLink.href = "/manage-keys";
-            adminLink.textContent = "Admin Panel";
-            adminLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
-                switchPage('manage-keys');
-                dropdownMenu.classList.remove('show');
-            });
-            dynamicLinksContainer.appendChild(adminLink);
+        const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
+        userStatusBadgeEl.textContent = displayStatus;
+        userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
+        if (user.isAdmin) {
+            manageKeysLink.classList.remove('hidden');
         }
-
-        if (status.isTester) {
-            const testerToggleContainer = document.createElement('div');
-            testerToggleContainer.className = 'dropdown-toggle-item';
-            
-            const label = document.createElement('label');
-            label.htmlFor = 'tester-mode-toggle';
-            label.textContent = 'Tester Mode';
-
-            const toggle = document.createElement('input');
-            toggle.type = 'checkbox';
-            toggle.id = 'tester-mode-toggle';
-            
-            const isTesterModeEnabled = localStorage.getItem('testerMode') === 'true';
-            toggle.checked = isTesterModeEnabled;
-
-            toggle.addEventListener('change', () => {
-                localStorage.setItem('testerMode', toggle.checked);
-            });
-            
-            testerToggleContainer.appendChild(label);
-            testerToggleContainer.appendChild(toggle);
-            // Insère le toggle avant le bouton logout, à l'intérieur du conteneur dynamique
-            dynamicLinksContainer.appendChild(testerToggleContainer);
-        }
-        
         handleRouting();
     };
-
 
     const switchPage = (pageId) => {
         pages.forEach(page => {
@@ -187,8 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.toggle('active', link.dataset.page === pageId);
         });
         if (pageId === 'get-key') renderGetKeyPage();
-        // CORRIGÉ: Utilise la nouvelle fonction pour vérifier les droits admin
-        if (pageId === 'manage-keys' && currentUser && determineUserStatus(currentUser).isAdmin) renderAdminPanel();
+        if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
     };
 
     const handleRouting = () => {
@@ -270,12 +193,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- CORRECTION MAJEURE: DISPLAYKEY ---
+    // --- MODIFICATION ICI ---
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
-
-        // On réintègre le bouton "Get Script" et on corrige le texte du bouton "Copy"
+        
+        // 1. AJOUT DU BOUTON "Get Script"
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
@@ -289,29 +212,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
-        
-        // Nouvelle logique de copie intelligente
-        document.getElementById('copy-key-btn').addEventListener('click', () => {
-            const btn = document.getElementById('copy-key-btn');
-            const originalKey = data.key;
-            
-            const isTesterModeEnabled = localStorage.getItem('testerMode') === 'true';
-            const status = determineUserStatus(currentUser);
 
-            // La clé est préfixée seulement si le mode est activé ET si l'utilisateur est un testeur
-            const keyToCopy = (isTesterModeEnabled && status.isTester) ? `TESTER_${originalKey}` : originalKey;
-            
-            navigator.clipboard.writeText(keyToCopy).then(() => {
-                btn.textContent = 'Copied!';
-                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy key: ', err);
-                btn.textContent = 'Error';
-                setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-            });
+        // 2. AMÉLIORATION DU BOUTON "Copy"
+        document.getElementById('copy-key-btn').addEventListener('click', () => {
+            const input = document.getElementById('generated-key-input');
+            const btn = document.getElementById('copy-key-btn');
+            input.select();
+            document.execCommand('copy');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
         });
-        
-        // Logique du bouton "Get Script"
+
+        // 3. LOGIQUE POUR LE BOUTON "Get Script"
         document.getElementById('get-script-btn').addEventListener('click', (e) => {
             const scriptToCopy = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/DoggyKing/king-gen-hub/refs/heads/main/keyhub",true))()';
             const btn = e.target;
@@ -322,11 +234,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.textContent = 'Get Script';
                     btn.style.backgroundColor = 'var(--brand-blue)';
                 }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy script: ', err);
+                btn.textContent = 'Error';
+                btn.style.backgroundColor = 'var(--brand-red)';
+                 setTimeout(() => {
+                    btn.textContent = 'Get Script';
+                    btn.style.backgroundColor = 'var(--brand-blue)';
+                }, 2000);
             });
         });
 
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
+    // --- FIN DE LA MODIFICATION ---
 
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
@@ -348,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Le reste des fonctions (admin panel etc.) reste identique à votre fichier...
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         const searchInput = document.getElementById('admin-search-input');
@@ -360,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
             
-            container.innerHTML = ''; 
+            container.innerHTML = ''; // Important: vide le conteneur avant d'ajouter la table
             
             const table = document.createElement('table');
             table.className = 'admin-table';
@@ -521,6 +441,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    if (manageKeysLink) {
+        manageKeysLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
+            switchPage('manage-keys');
+            dropdownMenu.classList.remove('show');
+        });
+    }
+
     if (userProfileToggle) {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     }
@@ -576,6 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // NOUVEAU: Attacher l'écouteur d'événement au bouton
     if (removeExpiredBtn) {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
