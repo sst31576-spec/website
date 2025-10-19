@@ -1,3 +1,38 @@
+// Helper function to determine user's primary role and status
+function determineUserStatus(user) {
+    const roles = user.roles || [];
+    let status = {
+        text: 'Free',
+        className: 'free',
+        isTester: false,
+        isAdmin: false
+    };
+
+    // Role IDs
+    const OWNER_ID = '869611811962511451';
+    const K_MANAGER_ID = '1428730376519553186';
+    const TESTER_ID = '1421439929052954674';
+
+    if (roles.includes(OWNER_ID)) {
+        status = { text: 'Owner', className: 'owner', isTester: true, isAdmin: true };
+    } else if (roles.includes(K_MANAGER_ID)) {
+        status = { text: 'K-Manager', className: 'k-manager', isTester: true, isAdmin: true };
+    } else if (roles.includes(TESTER_ID)) {
+        status = { text: 'Tester', className: 'tester', isTester: true, isAdmin: false };
+    } else if (user.user_status === 'perm') {
+        status.text = 'Perm';
+        status.className = 'perm';
+    }
+    
+    // Legacy support for isAdmin flag
+    if (user.isAdmin && !status.isAdmin) {
+        status.isAdmin = true;
+    }
+
+    return status;
+}
+
+
 function formatTimeRemaining(expiryDate) {
     if (!expiryDate) return 'N/A';
     const expiry = new Date(expiryDate);
@@ -15,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
     const userNameEl = document.getElementById('user-name');
-    const homeUserNameEl = document.getElementById('home-username'); // Assurez-vous que cet ID existe
+    const homeUserNameEl = document.getElementById('home-username'); 
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -24,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownMenu = document.getElementById('dropdown-menu');
     const manageKeysLink = document.getElementById('manage-keys-link');
     const suggestionForm = document.getElementById('suggestion-form');
-    // NOUVEAU: Sélection du bouton
     const removeExpiredBtn = document.getElementById('remove-expired-btn');
     let currentUser = null;
 
@@ -87,19 +121,83 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
+    
+    // --- MODIFICATION: SETUP MAIN APP ---
     const setupMainApp = (user) => {
         loginContainer.classList.add('hidden');
         mainAppContainer.classList.remove('hidden');
+        
         userNameEl.textContent = user.discord_username;
         if (homeUserNameEl) homeUserNameEl.textContent = user.discord_username;
         userAvatarEl.src = user.discord_avatar || 'assets/logo.png';
-        const displayStatus = user.isAdmin ? 'Admin' : user.user_status;
-        userStatusBadgeEl.textContent = displayStatus;
-        userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase();
-        if (user.isAdmin) {
-            manageKeysLink.classList.remove('hidden');
+
+        const status = determineUserStatus(user);
+        
+        userStatusBadgeEl.textContent = status.text;
+        userStatusBadgeEl.className = 'status-badge ' + status.className;
+
+        // Clear and rebuild the dynamic part of the dropdown menu
+        const dynamicLinksContainer = document.getElementById('dynamic-dropdown-links');
+        if (!dynamicLinksContainer) { // Create it if it doesn't exist
+            const container = document.createElement('div');
+            container.id = 'dynamic-dropdown-links';
+            dropdownMenu.insertBefore(container, dropdownMenu.firstChild);
+        } else {
+            dynamicLinksContainer.innerHTML = ''; // Clear previous links
         }
+        
+        // Add Admin Panel link if admin
+        if (status.isAdmin) {
+            const adminLink = document.createElement('a');
+            adminLink.href = "/manage-keys";
+            adminLink.id = "manage-keys-link";
+            adminLink.textContent = "Admin Panel";
+            adminLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
+                switchPage('manage-keys');
+                dropdownMenu.classList.remove('show');
+            });
+            dynamicLinksContainer.appendChild(adminLink);
+        }
+
+        // Add Tester Mode toggle if tester
+        if (status.isTester) {
+            const testerToggleContainer = document.createElement('div');
+            testerToggleContainer.className = 'dropdown-toggle-item';
+            
+            const label = document.createElement('label');
+            label.htmlFor = 'tester-mode-toggle';
+            label.textContent = 'Tester Mode';
+
+            const toggle = document.createElement('input');
+            toggle.type = 'checkbox';
+            toggle.id = 'tester-mode-toggle';
+            
+            // Check localStorage for saved state
+            const isTesterModeEnabled = localStorage.getItem('testerMode') === 'true';
+            toggle.checked = isTesterModeEnabled;
+
+            toggle.addEventListener('change', () => {
+                localStorage.setItem('testerMode', toggle.checked);
+                // Optionally provide feedback to the user
+                const feedback = document.getElementById('tester-mode-feedback');
+                if(feedback) feedback.remove();
+
+                const newFeedback = document.createElement('span');
+                newFeedback.id = 'tester-mode-feedback';
+                newFeedback.textContent = `Tester mode ${toggle.checked ? 'ON' : 'OFF'}. Relaunch script.`;
+                newFeedback.style.fontSize = '12px';
+                newFeedback.style.color = 'var(--brand-green)';
+                testerToggleContainer.appendChild(newFeedback);
+                setTimeout(() => newFeedback.remove(), 3000);
+            });
+            
+            testerToggleContainer.appendChild(label);
+            testerToggleContainer.appendChild(toggle);
+            dynamicLinksContainer.appendChild(testerToggleContainer);
+        }
+        
         handleRouting();
     };
 
@@ -111,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.toggle('active', link.dataset.page === pageId);
         });
         if (pageId === 'get-key') renderGetKeyPage();
-        if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
+        if (pageId === 'manage-keys' && currentUser && determineUserStatus(currentUser).isAdmin) renderAdminPanel();
     };
 
     const handleRouting = () => {
@@ -192,19 +290,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
+    
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
-
-        // --- MODIFICATION START ---
-        // Ajout du bouton "Get Script" ici
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
                 <div class="key-container">
                     <input type="text" value="${data.key}" readonly id="generated-key-input" />
-                    <button id="copy-key-btn" class="secondary-btn">Copy Key</button>
+                    <button id="copy-key-btn" class="secondary-btn">Copy</button>
                 </div>
                 <button id="get-script-btn" class="discord-btn">Get Script</button> 
                 <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
@@ -212,19 +307,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
-        // --- MODIFICATION END ---
-        
         document.getElementById('copy-key-btn').addEventListener('click', () => {
             const input = document.getElementById('generated-key-input');
             const btn = document.getElementById('copy-key-btn');
             input.select();
             document.execCommand('copy');
             btn.textContent = 'Copied!';
-            setTimeout(() => { btn.textContent = 'Copy Key'; }, 2000);
+            setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
         });
-
-        // --- NOUVEL ÉVÉNEMENT START ---
-        // Logique pour copier le script dans le presse-papiers
+        
         document.getElementById('get-script-btn').addEventListener('click', (e) => {
             const scriptToCopy = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/DoggyKing/king-gen-hub/refs/heads/main/keyhub",true))()';
             const btn = e.target;
@@ -245,11 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 2000);
             });
         });
-        // --- NOUVEL ÉVÉNEMENT END ---
 
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
-
 
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
@@ -282,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
             
-            container.innerHTML = ''; // Important: vide le conteneur avant d'ajouter la table
+            container.innerHTML = '';
             
             const table = document.createElement('table');
             table.className = 'admin-table';
@@ -442,16 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    if (manageKeysLink) {
-        manageKeysLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
-            switchPage('manage-keys');
-            dropdownMenu.classList.remove('show');
-        });
-    }
-
+    
     if (userProfileToggle) {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     }
@@ -507,7 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // NOUVEAU: Attacher l'écouteur d'événement au bouton
     if (removeExpiredBtn) {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
