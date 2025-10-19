@@ -2,14 +2,14 @@
 const axios = require('axios');
 const cookie = require('cookie');
 const jwt = require('jsonwebtoken');
-const db = require('./db'); // Ensure this path is correct
+const db = require('./db'); // Assurez-vous que ce chemin est correct
 
 const {
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
     REDIRECT_URI,
     JWT_SECRET,
-    GUILD_ID // IMPORTANT: Add your Discord Server ID to your Netlify environment variables
+    GUILD_ID // IMPORTANT : Assurez-vous d'avoir ajouté l'ID de votre serveur Discord dans vos variables d'environnement Netlify
 } = process.env;
 
 exports.handler = async function (event, context) {
@@ -19,7 +19,7 @@ exports.handler = async function (event, context) {
     }
 
     try {
-        // Exchange code for an access token
+        // Échange le code contre un jeton d'accès
         const tokenResponse = await axios.post('https://discord.com/api/oauth2/token', new URLSearchParams({
             client_id: DISCORD_CLIENT_ID,
             client_secret: DISCORD_CLIENT_SECRET,
@@ -32,36 +32,37 @@ exports.handler = async function (event, context) {
 
         const { access_token } = tokenResponse.data;
 
-        // Fetch user's Discord identity
+        // Récupère l'identité de l'utilisateur Discord
         const userResponse = await axios.get('https://discord.com/api/users/@me', {
             headers: { 'Authorization': `Bearer ${access_token}` }
         });
         const discordUser = userResponse.data;
 
-        // --- NOUVELLE PARTIE : FETCH USER ROLES ---
+        // --- NOUVELLE PARTIE : RÉCUPÉRER LES RÔLES DE L'UTILISATEUR ---
         let userRoles = [];
         try {
+            // Requête pour obtenir les informations du membre sur votre serveur spécifique
             const guildMemberResponse = await axios.get(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
                 headers: { 'Authorization': `Bearer ${access_token}` }
             });
             userRoles = guildMemberResponse.data.roles || [];
         } catch (guildError) {
-            // This error means the user is not in the server.
+            // Cette erreur (404) signifie que l'utilisateur n'est pas dans le serveur.
             if (guildError.response && guildError.response.status === 404) {
                  return {
-                    statusCode: 403,
+                    statusCode: 403, // Accès interdit
                     body: 'Access Denied: You must be a member of the Discord server.'
                 };
             }
             console.error('Error fetching guild member info:', guildError.message);
-            // If another error occurs, we can proceed without roles, but it's not ideal.
+            // Si une autre erreur se produit, on peut continuer sans les rôles, mais ce n'est pas idéal.
         }
         // --- FIN DE LA NOUVELLE PARTIE ---
 
         const { id, username, avatar } = discordUser;
         const avatarUrl = avatar ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : null;
 
-        // Upsert user in the database with their new roles
+        // Met à jour ou insère l'utilisateur dans la base de données avec ses nouveaux rôles
         await db.query(
             `INSERT INTO users (discord_id, discord_username, discord_avatar, last_login, roles)
              VALUES ($1, $2, $3, NOW(), $4)
@@ -70,20 +71,20 @@ exports.handler = async function (event, context) {
                 discord_username = EXCLUDED.discord_username,
                 discord_avatar = EXCLUDED.discord_avatar,
                 last_login = NOW(),
-                roles = EXCLUDED.roles;`, // Make sure to update roles on every login
+                roles = EXCLUDED.roles;`, // Assurez-vous de mettre à jour les rôles à chaque connexion
             [id, username, avatarUrl, userRoles]
         );
 
-        // Create JWT
+        // Crée le JWT
         const token = jwt.sign({ discord_id: id }, JWT_SECRET, { expiresIn: '7d' });
 
-        // Set JWT in a secure cookie
+        // Définit le JWT dans un cookie sécurisé
         const sessionCookie = cookie.serialize('session_token', token, {
             httpOnly: true,
             secure: true,
             path: '/',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
+            maxAge: 60 * 60 * 24 * 7 // 7 jours
         });
 
         return {
