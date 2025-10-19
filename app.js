@@ -103,6 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const switchPage = (pageId) => {
+        if (kingGameInterval) { // Stop King Game loop when changing pages
+            clearInterval(kingGameInterval);
+            kingGameInterval = null;
+        }
         pages.forEach(page => {
             page.classList.toggle('hidden', page.id !== `page-${pageId}`);
         });
@@ -310,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bet) payload.bet = bet;
 
         const resultEl = document.getElementById('blackjack-result');
-        const actionBtns = document.querySelectorAll('#blackjack-actions button');
+        const actionBtns = document.querySelectorAll('#blackjack-actions button, #blackjack-deal-btn');
         actionBtns.forEach(btn => btn.disabled = true);
         if (resultEl) resultEl.textContent = 'Processing...';
 
@@ -323,6 +327,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'An unknown error occurred.');
             
+            // Re-fetch time to show updates from server
+            const timeResponse = await fetch('/api/earn-time');
+            const timeData = await timeResponse.json();
+            document.querySelector('#earn-time-content .time-display p').textContent = formatTimeRemaining(timeData.expires_at);
+
             renderBlackjackInterface(data.gameState);
             
         } catch (error) {
@@ -330,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultEl.className = 'game-result loss';
                 resultEl.textContent = `Error: ${error.message}`;
             }
+             actionBtns.forEach(btn => btn.disabled = false);
         }
     };
 
@@ -362,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('blackjack-game-container');
         if (!container) return;
 
-        if (!gameState) { // Écran de mise initial
+        if (!gameState || !gameState.deck) {
             container.innerHTML = `
                 <div class="game-interface">
                     <div class="bet-controls">
@@ -415,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (gameState.gameOver) {
             resultEl.textContent = gameState.message;
-            resultEl.className = gameState.message.includes('win') ? 'game-result win' : gameState.message.includes('lose') ? 'game-result loss' : 'game-result';
+            resultEl.className = gameState.message.toLowerCase().includes('win') ? 'game-result win' : gameState.message.toLowerCase().includes('lose') || gameState.message.toLowerCase().includes('bust') ? 'game-result loss' : 'game-result';
             actionsEl.innerHTML = `<button id="play-again-btn" class="discord-btn">Play Again</button>`;
             document.getElementById('play-again-btn').addEventListener('click', () => renderBlackjackInterface(null));
         } else {
@@ -426,6 +436,158 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('blackjack-hit-btn').addEventListener('click', () => handleBlackjackAction('hit'));
             document.getElementById('blackjack-stand-btn').addEventListener('click', () => handleBlackjackAction('stand'));
         }
+    };
+
+    // --- King Game (Clicker) ---
+    let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1 };
+    let kingGameInterval = null;
+
+    const KING_GAME_UPGRADES_CONFIG = {
+        click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1 },
+        b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 },
+        b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 },
+        b3: { name: 'Castle', baseCost: 12000, costMultiplier: 1.14, cps: 45 },
+        b4: { name: 'Kingdom', baseCost: 130000, costMultiplier: 1.16, cps: 250 },
+    };
+
+    const formatKingGameNumber = (numStr) => {
+        return BigInt(numStr).toLocaleString('en-US');
+    };
+
+    const getUpgradeCost = (upgradeId, level) => {
+        const upgrade = KING_GAME_UPGRADES_CONFIG[upgradeId];
+        return BigInt(Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level)));
+    };
+
+    const updateKingGameUI = () => {
+        const coinCountEl = document.getElementById('kg-coin-count');
+        const cpsCountEl = document.getElementById('kg-cps-count');
+        if (coinCountEl) coinCountEl.textContent = formatKingGameNumber(kingGameState.coins.toString());
+        if (cpsCountEl) cpsCountEl.textContent = `${formatKingGameNumber(kingGameState.cps.toString())} coins/sec`;
+
+        const upgradesContainer = document.getElementById('kg-upgrades-list');
+        if (!upgradesContainer) return;
+
+        upgradesContainer.innerHTML = '';
+        for (const id in KING_GAME_UPGRADES_CONFIG) {
+            const config = KING_GAME_UPGRADES_CONFIG[id];
+            const level = kingGameState.upgrades[id] || 0;
+            const cost = getUpgradeCost(id, level);
+            const canAfford = kingGameState.coins >= cost;
+
+            const item = document.createElement('div');
+            item.className = 'upgrade-item';
+            item.innerHTML = `
+                <div class="upgrade-info">
+                    <strong>${config.name} (Lvl ${level})</strong>
+                    <small>Cost: ${formatKingGameNumber(cost.toString())}</small>
+                </div>
+                <button class="secondary-btn" data-upgrade-id="${id}" ${canAfford ? '' : 'disabled'}>Buy</button>
+            `;
+            upgradesContainer.appendChild(item);
+        }
+        upgradesContainer.querySelectorAll('button').forEach(btn => btn.addEventListener('click', (e) => {
+            handleKingGameAction('buy_upgrade', { upgradeId: e.target.dataset.upgradeId });
+        }));
+    };
+
+    const handleKingGameAction = async (action, params = {}) => {
+        const payload = { game: 'king_game', action, ...params };
+
+        try {
+            const response = await fetch('/api/earn-time', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'King Game action failed.');
+            
+            kingGameState.coins = BigInt(data.coins);
+            kingGameState.upgrades = data.upgrades;
+            
+            // Recalculer les stats locales
+            const getLevel = (id) => kingGameState.upgrades[id] || 0;
+            kingGameState.clickValue = 1 + (getLevel('click') * KING_GAME_UPGRADES_CONFIG.click.value);
+            kingGameState.cps = 0;
+            for (const id in KING_GAME_UPGRADES_CONFIG) {
+                if (id !== 'click') {
+                    kingGameState.cps += getLevel(id) * KING_GAME_UPGRADES_CONFIG[id].cps;
+                }
+            }
+            
+            if (action === 'convert_time') {
+                 const timeResponse = await fetch('/api/earn-time');
+                 const timeData = await timeResponse.json();
+                 document.querySelector('#earn-time-content .time-display p').textContent = formatTimeRemaining(timeData.expires_at);
+                 alert("Success! 1 hour has been added to your key.");
+            }
+            if (action === 'send_coins') {
+                 alert("Coins sent successfully!");
+            }
+
+            updateKingGameUI();
+
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    };
+
+    const renderKingGame = () => {
+        const container = document.getElementById('king-game-container');
+        container.innerHTML = `
+            <div class="king-game-container">
+                <div class="king-game-main">
+                    <div class="coin-display">
+                        <h2 id="kg-coin-count">0</h2>
+                        <p id="kg-cps-count">0 coins/sec</p>
+                    </div>
+                    <div class="clicker-area">
+                        <button id="kg-clicker-btn">👑</button>
+                    </div>
+                    <div class="king-game-actions">
+                        <button id="kg-convert-btn" class="discord-btn">Convert 1M coins to 1h</button>
+                        <input type="text" id="kg-recipient-name" placeholder="Recipient Username">
+                        <input type="number" id="kg-send-amount" placeholder="Amount to Send" min="1">
+                        <button id="kg-send-btn" class="secondary-btn">Send Coins</button>
+                    </div>
+                </div>
+                <div class="king-game-upgrades">
+                    <h4>Upgrades</h4>
+                    <div id="kg-upgrades-list">Loading...</div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('kg-clicker-btn').addEventListener('click', () => {
+            kingGameState.coins += BigInt(kingGameState.clickValue);
+            document.getElementById('kg-coin-count').textContent = formatKingGameNumber(kingGameState.coins.toString());
+            handleKingGameAction('click');
+        });
+        document.getElementById('kg-convert-btn').addEventListener('click', () => handleKingGameAction('convert_time'));
+        document.getElementById('kg-send-btn').addEventListener('click', () => {
+            const recipientName = document.getElementById('kg-recipient-name').value;
+            const amount = document.getElementById('kg-send-amount').value;
+            if(recipientName && amount > 0) {
+                handleKingGameAction('send_coins', { recipientName, amount });
+            } else {
+                alert("Please provide a recipient and a valid amount.");
+            }
+        });
+
+        // Boucle de jeu
+        if (kingGameInterval) clearInterval(kingGameInterval);
+        kingGameInterval = setInterval(() => {
+            kingGameState.coins += BigInt(kingGameState.cps);
+            const coinCountEl = document.getElementById('kg-coin-count');
+            if (coinCountEl) coinCountEl.textContent = formatKingGameNumber(kingGameState.coins.toString());
+            // We only update upgrade buttons periodically to reduce rendering load
+            if (Date.now() % 5000 < 1000) {
+                 updateKingGameUI();
+            }
+        }, 1000);
+
+        handleKingGameAction('load'); // Charger les données initiales
     };
     
     const renderEarnTimePage = async () => {
@@ -448,6 +610,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p>${formatTimeRemaining(data.expires_at)}</p>
                 </div>
                 
+                 <div class="games-grid" style="grid-template-columns: 1fr; margin-bottom: 20px;">
+                     <div class="game-card" style="max-width: 800px; margin: auto;">
+                        <h4>King Game</h4>
+                        <p>Click the crown, buy upgrades to increase your earnings, and convert your coins into key time!</p>
+                        <div id="king-game-container">Loading Game...</div>
+                    </div>
+                </div>
+
                 <div class="games-grid">
                     <div class="game-card">
                         <h4>Blackjack</h4>
@@ -473,9 +643,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 </div>`;
-
+            
             document.getElementById('coinflip-btn').addEventListener('click', handleCoinFlip);
-            renderBlackjackInterface(null); // Initialise l'interface de mise du Blackjack
+            renderBlackjackInterface(null); 
+            renderKingGame();
 
         } catch (error) {
             container.innerHTML = `
