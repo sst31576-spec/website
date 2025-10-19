@@ -649,11 +649,22 @@ document.addEventListener('DOMContentLoaded', () => {
             renderKingGame();
 
         } catch (error) {
-            container.innerHTML = `
-                <p class="error-message" style="font-size: 1.1rem;">${error.message}</p>
-                <p>Only users with an active 'Free' key can access the games.</p>
-                <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>
-            `;
+            // On vérifie si l'utilisateur connecté a le statut 'Perm'
+            if (currentUser && currentUser.user_status === 'Perm') {
+                // Si oui, on affiche un message spécifique pour lui
+                container.innerHTML = `
+                    <h3 style="margin-bottom: 10px;">Fonctionnalité non disponible pour les utilisateurs permanents</h3>
+                    <p style="color: var(--text-muted);">En tant qu'utilisateur avec une clé permanente, votre accès n'expire jamais. Vous n'avez donc pas besoin de gagner du temps.</p>
+                    <a href="/" class="discord-btn" style="margin-top: 25px;">Retour à l'accueil</a>
+                `;
+            } else {
+                // Sinon (pour les utilisateurs 'Free'), on affiche le message original
+                container.innerHTML = `
+                    <p class="error-message" style="font-size: 1.1rem;">${error.message}</p>
+                    <p>Seuls les utilisateurs avec une clé 'Free' active peuvent accéder aux jeux.</p>
+                    <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Obtenir une clé</a>
+                `;
+            }
         }
     };
 
