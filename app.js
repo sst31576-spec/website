@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
     const userNameEl = document.getElementById('user-name');
-    const homeUserNameEl = document.getElementById('home-username'); // Assurez-vous que cet ID existe
+    const homeUserNameEl = document.getElementById('home-username');
     const userAvatarEl = document.getElementById('user-avatar');
     const userStatusBadgeEl = document.getElementById('user-status-badge');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropdownMenu = document.getElementById('dropdown-menu');
     const manageKeysLink = document.getElementById('manage-keys-link');
     const suggestionForm = document.getElementById('suggestion-form');
-    // NOUVEAU: Sélection du bouton
     const removeExpiredBtn = document.getElementById('remove-expired-btn');
     let currentUser = null;
 
@@ -193,12 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- MODIFICATION ICI ---
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
         
-        // 1. AJOUT DU BOUTON "Get Script"
+        // --- MODIFICATION ICI ---
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
@@ -206,14 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" value="${data.key}" readonly id="generated-key-input" />
                     <button id="copy-key-btn" class="secondary-btn">Copy</button>
                 </div>
-                <button id="get-script-btn" class="discord-btn">Get Script</button> 
+                <button id="get-script-btn" class="discord-btn">Get Script</button>
                 <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
                 <div id="hwid-status" class="status-message"></div>
                 ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
-
-        // 2. AMÉLIORATION DU BOUTON "Copy"
+        
         document.getElementById('copy-key-btn').addEventListener('click', () => {
             const input = document.getElementById('generated-key-input');
             const btn = document.getElementById('copy-key-btn');
@@ -222,8 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Copied!';
             setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
         });
-
-        // 3. LOGIQUE POUR LE BOUTON "Get Script"
+        
         document.getElementById('get-script-btn').addEventListener('click', (e) => {
             const scriptToCopy = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/DoggyKing/king-gen-hub/refs/heads/main/keyhub",true))()';
             const btn = e.target;
@@ -247,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
-    // --- FIN DE LA MODIFICATION ---
 
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
@@ -280,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Failed to fetch keys.');
             const keys = await response.json();
             
-            container.innerHTML = ''; // Important: vide le conteneur avant d'ajouter la table
+            container.innerHTML = '';
             
             const table = document.createElement('table');
             table.className = 'admin-table';
@@ -505,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // NOUVEAU: Attacher l'écouteur d'événement au bouton
     if (removeExpiredBtn) {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
