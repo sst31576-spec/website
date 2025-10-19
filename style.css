@@ -437,12 +437,13 @@ nav a.active {
     flex-direction: column;
     gap: 15px;
     width: 100%;
-    max-width: 300px; /* Centrer les boutons */
+    max-width: 300px;
     margin: 20px auto;
 }
 
 .game-view {
     width: 100%;
+    text-align: left; /* Aligner le contenu du jeu à gauche */
 }
 
 .game-view-header {
@@ -468,15 +469,6 @@ nav a.active {
 }
 .back-to-menu-btn:hover {
     color: var(--text-normal);
-}
-/* --- FIN DES NOUVEAUX STYLES --- */
-
-.game-card {
-    background-color: var(--background-primary);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    text-align: center;
-    border: 1px solid var(--background-tertiary);
 }
 
 .game-interface {
@@ -511,9 +503,41 @@ nav a.active {
     font-size: 18px;
     font-weight: 700;
     min-height: 25px;
+    text-align: center;
 }
 .game-result.win { color: var(--brand-green); }
 .game-result.loss { color: var(--brand-red); }
+
+/* --- Send Time Container --- */
+.send-time-container {
+    background-color: var(--background-tertiary);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.send-time-container h4 {
+    margin-top: 0;
+}
+
+.send-time-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap; /* Pour les petits écrans */
+}
+
+.send-time-controls input,
+.send-time-controls select {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+}
 
 /* --- Blackjack Styles --- */
 #blackjack-board {
@@ -531,6 +555,7 @@ nav a.active {
     margin: 0 0 10px 0;
     color: var(--text-muted);
     font-size: 16px;
+    text-align: center;
 }
 .hand-score {
     font-weight: bold;
@@ -543,6 +568,7 @@ nav a.active {
     min-height: 95px;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
 }
 
 .card {
@@ -562,8 +588,11 @@ nav a.active {
 }
 
 .card.red { color: #f04747; }
-.card.hidden { background-color: #5865f2; }
+.card.hidden { background: #5865f2; color: #5865f2; }
 
+#blackjack-actions {
+    text-align: center;
+}
 #blackjack-actions button {
     margin: 0 5px;
 }
