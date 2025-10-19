@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (manageKeysLink) {
             dropdownMenu.insertBefore(profileLink, manageKeysLink);
         } else {
-            // Fallback if admin link isn't present
             const logoutLink = dropdownMenu.querySelector('a[href="/auth/logout"]');
             dropdownMenu.insertBefore(profileLink, logoutLink);
         }
@@ -133,201 +132,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Page Rendering Functions ---
     
-    const renderGetKeyPage = async () => { /* This function remains as it was */ };
-    const renderAdminPanel = async () => { /* This function remains as it was */ };
+    const renderGetKeyPage = async () => { /* Your existing function */ };
+    const renderAdminPanel = async () => { /* Your existing function */ };
+    const renderProfilePage = async () => { /* Your existing function */ };
 
     // --- "Earn Time" Game Logic ---
     
-    const handleCoinFlip = async () => {
-        const flipBtn = document.getElementById('coinflip-btn');
-        const coin = document.querySelector('.coin');
-        const resultEl = document.getElementById('coinflip-result');
-        if (!flipBtn || !coin || !resultEl) return;
-
-        flipBtn.disabled = true;
-        resultEl.textContent = '';
-        coin.classList.add('flipping');
-
-        try {
-            const bet = document.getElementById('coinflip-bet').value;
-            const response = await fetch('/api/earn-time', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ game: 'coinflip', bet })
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
-
-            setTimeout(() => {
-                coin.classList.remove('flipping');
-                if (data.win) {
-                    resultEl.className = 'game-result win';
-                    resultEl.textContent = `You won! Streak: ${data.new_streak}.`;
-                } else {
-                    resultEl.className = 'game-result loss';
-                    resultEl.textContent = 'You lost! Streak reset.';
-                }
-                updateTimeDisplay();
-            }, 1200);
-        } catch (error) {
-            coin.classList.remove('flipping');
-            resultEl.className = 'game-result loss';
-            resultEl.textContent = `Error: ${error.message}`;
-        } finally {
-            setTimeout(() => { flipBtn.disabled = false; }, 1500);
-        }
-    };
-    
-    const createCardElement = (isHidden = false) => {
-        const container = document.createElement('div');
-        container.className = 'card-container';
-        const card = document.createElement('div');
-        card.className = 'card';
-        const front = document.createElement('div');
-        front.className = 'card-face card-front';
-        const back = document.createElement('div');
-        back.className = 'card-face card-back';
-        card.appendChild(front);
-        card.appendChild(back);
-        container.appendChild(card);
-        if (!isHidden) {
-            setTimeout(() => card.classList.add('is-flipping'), 50);
-        }
-        return container;
-    };
-
-    const updateCardElement = (cardContainer, cardData) => {
-        const cardFront = cardContainer.querySelector('.card-front');
-        cardFront.innerHTML = `<span>${cardData.rank}</span><span>${cardData.suit}</span>`;
-        cardFront.classList.toggle('red', ['♥', '♦'].includes(cardData.suit));
-    };
-    
-    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => {
-        hand.forEach((cardData, index) => {
-            setTimeout(() => {
-                const isHidden = !revealLastCard && index === hand.length - 1;
-                const cardEl = createCardElement(isHidden);
-                handEl.appendChild(cardEl);
-                if (!isHidden) {
-                    updateCardElement(cardEl, cardData);
-                }
-            }, index * 250);
-        });
-    };
-    
-    const handleBlackjackAction = async (action, bet = null) => { /* ... This function remains as it was ... */ };
-    
-    const renderBlackjackInterface = (gameState = null) => {
-        const container = document.getElementById('blackjack-view-content');
-        if (!container) return;
-        
-        container.innerHTML = '';
-
-        if (!gameState || !gameState.deck) {
-            container.innerHTML = `
-                <p>Get closer to 21 than the dealer without going over. Win 2x your bet. Blackjack pays 3:2.</p>
-                <div class="game-interface">
-                    <div class="bet-controls"> ... </div>
-                    <button id="blackjack-deal-btn" class="discord-btn">Deal Cards</button>
-                    <div id="blackjack-result" class="game-result"></div>
-                </div>`;
-            document.getElementById('blackjack-deal-btn').addEventListener('click', () => {
-                handleBlackjackAction('deal', document.getElementById('blackjack-bet').value);
-            });
-            return;
-        }
-
-        container.innerHTML = `<div id="blackjack-board"> ... </div>`;
-        const playerHandEl = document.getElementById('player-hand');
-        const dealerHandEl = document.getElementById('dealer-hand');
-        
-        dealCardsAnimated(gameState.playerHand, playerHandEl, true);
-        dealCardsAnimated(gameState.dealerHand, dealerHandEl, gameState.gameOver);
-        
-        // ... (Rest of the blackjack rendering logic)
-    };
+    const handleCoinFlip = async () => { /* Your existing function */ };
+    const createCardElement = (isHidden = false) => { /* Your existing function */ };
+    const updateCardElement = (cardContainer, cardData) => { /* Your existing function */ };
+    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => { /* Your existing function */ };
+    const handleBlackjackAction = async (action, bet = null) => { /* Your existing function */ };
+    const renderBlackjackInterface = (gameState = null) => { /* Your existing function */ };
     
     let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1 };
-    const handleKingGameAction = async (action, params = {}) => { /* ... This function remains as it was ... */ };
+    const handleKingGameAction = async (action, params = {}) => { /* Your existing function */ };
+    const updateKingGameUI = () => { /* Your existing function */ };
     
-    const handleRecipientSearch = async (e) => {
-        const query = e.target.value;
-        const suggestionsEl = document.getElementById('recipient-suggestions');
-        if (query.length < 2) {
-            suggestionsEl.innerHTML = '';
-            return;
-        }
-        try {
-            const response = await fetch('/api/earn-time', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'search_users', query })
-            });
-            const users = await response.json();
-            suggestionsEl.innerHTML = users.map(user => `<div class="suggestion-item">${user}</div>`).join('');
-            suggestionsEl.querySelectorAll('.suggestion-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    document.getElementById('send-time-recipient').value = item.textContent;
-                    suggestionsEl.innerHTML = '';
-                });
-            });
-        } catch (error) {
-            console.error("Search failed:", error);
-        }
-    };
-
-    const handleSendTime = async () => { /* ... This function remains as it was ... */ };
-
-    const updateTimeDisplay = async () => {
-        const timeDisplayEl = document.querySelector('.time-display p');
-        if (!timeDisplayEl) return;
-        try {
-            const response = await fetch('/api/earn-time');
-            const keyData = await response.json();
-            if (keyData.key_type === 'perm') {
-                const ms = parseInt(keyData.playable_time_ms);
-                const hours = Math.floor(ms / 3600000);
-                const minutes = Math.floor((ms % 3600000) / 60000);
-                timeDisplayEl.textContent = `${hours}h ${minutes}m`;
-            } else {
-                timeDisplayEl.textContent = formatTimeRemaining(keyData.expires_at);
-            }
-        } catch (error) {
-            // Handle cases where the user might not have a key
-            timeDisplayEl.textContent = "N/A";
-        }
-    };
+    const handleRecipientSearch = async (e) => { /* Your existing function */ };
+    const handleSendTime = async () => { /* Your existing function */ };
+    const updateTimeDisplay = async () => { /* Your existing function */ };
     
-    const renderKingGameView = () => { /* ... This function remains as it was ... */ };
-
-    const renderCoinFlipView = () => {
-        const container = document.getElementById('earn-time-content');
-        container.innerHTML = `
-            <div class="game-view">
-                <div class="game-view-header">
-                    <button class="back-to-menu-btn">&lt; Back to Games</button>
-                    <h4>Coin Flip</h4>
-                </div>
-                <div class="coin-flipper"><div class="coin"><div class="coin-face coin-front">👑</div><div class="coin-face coin-back">☠️</div></div></div>
-                <div class="game-interface">
-                    <div class="bet-controls">
-                        <label for="coinflip-bet">Bet:</label>
-                        <select id="coinflip-bet">
-                            <option value="10m">10 Minutes</option>
-                            <option value="30m">30 Minutes</option>
-                            <option value="1h">1 Hour</option>
-                            <option value="2h">2 Hours</option>
-                        </select>
-                    </div>
-                    <button id="coinflip-btn" class="discord-btn">Flip the Coin</button>
-                    <div id="coinflip-result" class="game-result"></div>
-                </div>
-            </div>`;
-        document.querySelector('.back-to-menu-btn').addEventListener('click', renderEarnTimePage);
-        document.getElementById('coinflip-btn').addEventListener('click', handleCoinFlip);
-    };
-
-    const renderBlackjackView = () => { /* ... This function remains as it was ... */ };
+    const renderKingGameView = () => { /* Your existing function */ };
+    const renderCoinFlipView = () => { /* Your existing function */ };
+    const renderBlackjackView = () => { /* Your existing function */ };
     
     const renderEarnTimePage = async () => {
         if (kingGameInterval) clearInterval(kingGameInterval);
@@ -355,10 +183,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4>Send Time to a Friend</h4>
                         <div class="send-time-controls">
                             <div class="form-group">
-                                <input type="text" id="send-time-recipient" placeholder="Recipient's Username">
+                                <input type="text" id="send-time-recipient" placeholder="Recipient's Username" autocomplete="off">
                                 <div id="recipient-suggestions" class="autocomplete-suggestions"></div>
                             </div>
-                            <select id="send-time-amount">...</select>
+                            <select id="send-time-amount">
+                                <option value="10m">10 Minutes</option>
+                                <option value="30m">30 Minutes</option>
+                                <option value="1h">1 Hour</option>
+                            </select>
                             <button id="send-time-btn" class="secondary-btn">Send Time</button>
                         </div>
                         <div id="send-time-status" class="status-message"></div>
@@ -371,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>Earn Time</h2>
                 <div class="time-display">${timeInfoHtml}</div>
                 ${sendTimeHtml}
-                <p>Select a game to play:</p>
+                <p style="text-align:center;">Select a game to play:</p>
                 <div class="game-selection-menu">
                     <button id="select-king-game" class="discord-btn">King Game</button>
                     <button id="select-blackjack" class="discord-btn">Blackjack</button>
@@ -395,6 +227,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // --- Event Listener Setup ---
+
+    const setupEventListeners = () => {
+        navLinks.forEach(link => {
+            if (link.dataset.listenerAttached) return;
+            link.addEventListener('click', (e) => {
+                const pageId = e.target.dataset.page || (e.target.parentElement.dataset.page);
+                if (pageId) {
+                    e.preventDefault();
+                    window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
+                    switchPage(pageId);
+                }
+            });
+            link.dataset.listenerAttached = 'true';
+        });
+
+        if (userProfileToggle && !userProfileToggle.dataset.listenerAttached) {
+            userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+            userProfileToggle.dataset.listenerAttached = 'true';
+        }
+        window.addEventListener('click', (e) => {
+            if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+    };
+    
     // --- Initialization ---
 
     const initialize = async () => {
@@ -403,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 if (response.status === 401) showLoginView();
                 else if (response.status === 403) showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du');
-                else throw new Error('Failed to fetch user data');
+                else throw new Error(`Server responded with status: ${response.status}`);
                 return;
             }
             currentUser = await response.json();
