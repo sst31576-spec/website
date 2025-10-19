@@ -11,8 +11,6 @@ function formatTimeRemaining(expiryDate) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // This is the main entry point of the script.
-    
     // --- DOM Element Selection ---
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
@@ -130,32 +128,57 @@ document.addEventListener('DOMContentLoaded', () => {
         switchPage(pageId);
     };
     
-    // --- Page Rendering Functions ---
-    
-    const renderGetKeyPage = async () => { /* Your existing function */ };
-    const renderAdminPanel = async () => { /* Your existing function */ };
-    const renderProfilePage = async () => { /* Your existing function */ };
+    // --- Page Rendering & Logic ---
+
+    const renderGetKeyPage = async () => { /* Function content from previous versions */ };
+    const renderAdminPanel = async () => { /* Function content from previous versions */ };
+
+    const renderProfilePage = async () => {
+        const container = document.getElementById('page-profile').querySelector('.card-box');
+        container.innerHTML = '<h2>Profile</h2><p>Loading profile data...</p>';
+        
+        try {
+            const response = await fetch('/api/profile');
+            if (!response.ok) throw new Error('Failed to load profile.');
+            const data = await response.json();
+            
+            const timeEarnedMs = parseInt(data.total_time_earned);
+            const timeEarnedHours = (timeEarnedMs / 3600000).toFixed(1);
+
+            container.innerHTML = `
+                <h2>${data.discord_username}'s Profile</h2>
+                <ul class="profile-stats">
+                    <li><span>Key Type</span><span>${data.key_type === 'perm' ? 'Permanent' : 'Temporary'}</span></li>
+                    <li><span>Script Executions</span><span>${data.script_executions}</span></li>
+                    <li><span>King Game Coins</span><span>${BigInt(data.king_game_coins).toLocaleString('en-US')}</span></li>
+                    <li><span>Total Time Earned/Received</span><span>${timeEarnedHours} hours</span></li>
+                </ul>
+            `;
+        } catch (error) {
+            container.innerHTML = `<h2>Profile</h2><p class="error-message">${error.message}</p>`;
+        }
+    };
 
     // --- "Earn Time" Game Logic ---
+    const updateTimeDisplay = async () => { /* Function content from previous versions */ };
     
-    const handleCoinFlip = async () => { /* Your existing function */ };
-    const createCardElement = (isHidden = false) => { /* Your existing function */ };
-    const updateCardElement = (cardContainer, cardData) => { /* Your existing function */ };
-    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => { /* Your existing function */ };
-    const handleBlackjackAction = async (action, bet = null) => { /* Your existing function */ };
-    const renderBlackjackInterface = (gameState = null) => { /* Your existing function */ };
+    const handleCoinFlip = async () => { /* Function content from previous versions */ };
+    const createCardElement = (isHidden = false) => { /* Function content from previous versions */ };
+    const updateCardElement = (cardContainer, cardData) => { /* Function content from previous versions */ };
+    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => { /* Function content from previous versions */ };
+    const handleBlackjackAction = async (action, bet = null) => { /* Function content from previous versions */ };
+    const renderBlackjackInterface = (gameState = null) => { /* Function content from previous versions */ };
     
     let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1 };
-    const handleKingGameAction = async (action, params = {}) => { /* Your existing function */ };
-    const updateKingGameUI = () => { /* Your existing function */ };
+    const handleKingGameAction = async (action, params = {}) => { /* Function content from previous versions */ };
+    const updateKingGameUI = () => { /* Function content from previous versions */ };
     
-    const handleRecipientSearch = async (e) => { /* Your existing function */ };
-    const handleSendTime = async () => { /* Your existing function */ };
-    const updateTimeDisplay = async () => { /* Your existing function */ };
+    const handleRecipientSearch = async (e) => { /* Function content from previous versions */ };
+    const handleSendTime = async () => { /* Function content from previous versions */ };
     
-    const renderKingGameView = () => { /* Your existing function */ };
-    const renderCoinFlipView = () => { /* Your existing function */ };
-    const renderBlackjackView = () => { /* Your existing function */ };
+    const renderKingGameView = () => { /* Function content from previous versions */ };
+    const renderCoinFlipView = () => { /* Function content from previous versions */ };
+    const renderBlackjackView = () => { /* Function content from previous versions */ };
     
     const renderEarnTimePage = async () => {
         if (kingGameInterval) clearInterval(kingGameInterval);
@@ -233,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             if (link.dataset.listenerAttached) return;
             link.addEventListener('click', (e) => {
-                const pageId = e.target.dataset.page || (e.target.parentElement.dataset.page);
+                const pageId = e.target.dataset.page || e.target.closest('[data-page]')?.dataset.page;
                 if (pageId) {
                     e.preventDefault();
                     window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
