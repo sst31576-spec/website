@@ -196,25 +196,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
+
+        // --- MODIFICATION START ---
+        // Ajout du bouton "Get Script" ici
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
                 <div class="key-container">
                     <input type="text" value="${data.key}" readonly id="generated-key-input" />
-                    <button id="copy-key-btn" class="secondary-btn">Copy</button>
+                    <button id="copy-key-btn" class="secondary-btn">Copy Key</button>
                 </div>
+                <button id="get-script-btn" class="discord-btn">Get Script</button> 
                 <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button>
                 <div id="hwid-status" class="status-message"></div>
                 ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''}
             </div>
         `;
+        // --- MODIFICATION END ---
+        
         document.getElementById('copy-key-btn').addEventListener('click', () => {
             const input = document.getElementById('generated-key-input');
+            const btn = document.getElementById('copy-key-btn');
             input.select();
             document.execCommand('copy');
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = 'Copy Key'; }, 2000);
         });
+
+        // --- NOUVEL ÉVÉNEMENT START ---
+        // Logique pour copier le script dans le presse-papiers
+        document.getElementById('get-script-btn').addEventListener('click', (e) => {
+            const scriptToCopy = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/DoggyKing/king-gen-hub/refs/heads/main/keyhub",true))()';
+            const btn = e.target;
+            navigator.clipboard.writeText(scriptToCopy).then(() => {
+                btn.textContent = 'Copied!';
+                btn.style.backgroundColor = 'var(--brand-green)';
+                setTimeout(() => {
+                    btn.textContent = 'Get Script';
+                    btn.style.backgroundColor = 'var(--brand-blue)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy script: ', err);
+                btn.textContent = 'Error';
+                btn.style.backgroundColor = 'var(--brand-red)';
+                 setTimeout(() => {
+                    btn.textContent = 'Get Script';
+                    btn.style.backgroundColor = 'var(--brand-blue)';
+                }, 2000);
+            });
+        });
+        // --- NOUVEL ÉVÉNEMENT END ---
+
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
+
 
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
