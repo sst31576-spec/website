@@ -8,6 +8,8 @@
     --brand-red: #f04747;
     --brand-green: #43b581;
     --brand-blue: #5865f2;
+    /* NOUVELLE COULEUR */
+    --brand-orange: #f08347; 
     --border-radius: 8px;
 }
 
@@ -111,7 +113,11 @@ nav a.active {
     font-weight: 700;
     text-transform: uppercase;
 }
-.status-badge.admin { background-color: var(--brand-red); color: white; }
+/* --- MODIFICATION BADGES --- */
+.status-badge.owner { background-color: var(--brand-red); color: white; }
+.status-badge.admin { background-color: var(--brand-red); color: white; } /* Legacy */
+.status-badge.k-manager { background-color: var(--brand-green); color: white; }
+.status-badge.tester { background-color: var(--brand-orange); color: white; }
 .status-badge.perm { background-color: var(--brand-blue); color: white; }
 .status-badge.free { background-color: var(--text-muted); color: white; }
 
@@ -138,7 +144,7 @@ nav a.active {
     top: 55px;
     right: 0;
     background-color: var(--background-secondary);
-    min-width: 120px;
+    min-width: 160px; /* Augmenté pour le toggle */
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     border-radius: var(--border-radius);
     z-index: 100;
@@ -156,20 +162,57 @@ nav a.active {
     background-color: var(--background-primary);
 }
 
+/* --- NOUVEAU: STYLE POUR LE TOGGLE TESTER --- */
+.dropdown-toggle-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    color: var(--text-normal);
+    cursor: pointer;
+}
+.dropdown-toggle-item:hover {
+     background-color: var(--background-primary);
+}
+.dropdown-toggle-item input[type="checkbox"] {
+    appearance: none;
+    width: 40px;
+    height: 20px;
+    background-color: var(--background-primary);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.dropdown-toggle-item input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    background-color: white;
+    transition: transform 0.2s;
+}
+.dropdown-toggle-item input[type="checkbox"]:checked {
+    background-color: var(--brand-green);
+}
+.dropdown-toggle-item input[type="checkbox"]:checked::before {
+    transform: translateX(20px);
+}
+
 /* --- Main Content --- */
 .content {
     padding: 32px;
     display: flex;
     justify-content: center;
-    /* FIX 1: Centrage vertical */
     align-items: center; 
-    /* AJOUT: S'assure que .content prend l'espace vertical restant pour que le centrage fonctionne */
     min-height: calc(100vh - 60px); 
 }
 
 .page {
     width: 100%;
-    /* Centering admin table for larger screens */
     display: flex;
     justify-content: center;
 }
@@ -214,11 +257,13 @@ nav a.active {
     text-align: center;
 }
 
-/* FIX 2: Centrage du bouton Generate Key */
 #generate-key-btn {
     display: block; 
-    margin: 20px auto 0 auto; /* Centre le bouton horizontalement et lui donne une marge supérieure */
-    /* Assurez-vous que les styles .discord-btn ou équivalents sont appliqués en HTML */
+    margin: 20px auto 0 auto;
+}
+
+#key-display-area button {
+    margin-top: 10px;
 }
 
 .secondary-btn {
@@ -240,6 +285,7 @@ nav a.active {
 .secondary-btn-red:hover { 
     background-color: #d83d3d; 
 }
+
 
 /* --- Admin Table --- */
 .admin-table {
@@ -289,7 +335,6 @@ nav a.active {
     margin-bottom: 10px;
 }
 
-/* --- Admin Table Badges (NOUVEAU STYLE) --- */
 .key-badge {
     padding: 4px 8px;
     border-radius: 4px;
@@ -309,25 +354,23 @@ nav a.active {
     color: white;
 }
 
-/* Cache par défaut le conteneur des liens mobiles sur grand écran */
 #mobile-nav-links {
     display: none;
 }
+
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN (Media Queries) --- */
 /* ======================================= */
 
 @media (max-width: 900px) {
-    /* Cache la navigation principale sur les écrans de moins de 900px */
     .top-bar-left nav {
         display: none;
     }
     
-    /* Le conteneur pour les liens mobiles dans le dropdown */
     #mobile-nav-links {
-        display: block; /* Affiche le conteneur sur mobile */
-        border-bottom: 1px solid var(--background-primary); /* Ajoute un séparateur */
+        display: block;
+        border-bottom: 1px solid var(--background-primary);
         margin-bottom: 5px;
         padding-bottom: 5px;
     }
@@ -337,7 +380,6 @@ nav a.active {
         font-weight: 500;
     }
 
-    /* Styles généraux pour mobile (inchangés) */
     .content {
         padding: 16px;
     }
@@ -362,9 +404,7 @@ nav a.active {
     }
 }
 
-/* Téléphones portables */
 @media (max-width: 500px) {
-    /* Réduit la taille des éléments de l'en-tête */
     .top-bar {
         padding: 0 10px;
         height: 50px;
@@ -380,23 +420,19 @@ nav a.active {
         height: 30px;
     }
 
-    /* Cache le nom de l'utilisateur pour gagner de la place */
     #user-name {
         display: none;
     }
     
-    /* Affiche le menu déroulant directement sous l'icône de profil */
     .dropdown-content {
         top: 45px; 
     }
 
-    /* Pour les formulaires, comme la suggestion */
     #suggestion-form input,
     #suggestion-form textarea {
         font-size: 14px;
     }
 
-    /* Pour la clé générée, empile les éléments */
     .key-container {
         flex-direction: column;
         gap: 10px;
@@ -406,9 +442,4 @@ nav a.active {
         width: 100%;
         box-sizing: border-box;
     }
-}
-
-/* --- Get Key Page --- */
-#key-display-area button {
-    margin-top: 10px; /* Ajoute un espace au-dessus de chaque bouton dans cette zone */
 }
