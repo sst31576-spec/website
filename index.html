@@ -32,7 +32,6 @@
                     <a href="/get-key" class="nav-link" data-page="get-key">Get Key</a>
                     <a href="/suggestion" class="nav-link" data-page="suggestion">Suggestion</a>
                     <a href="https://www.roblox.com/games/96049156219003/Key-Access" class="nav-link" target="_blank">Buy Perm</a>
-                    <a href="/earn-time" class="nav-link" data-page="earn-time">Earn Time</a>
                 </nav>
             </div>
             <div class="top-bar-right">
@@ -43,7 +42,6 @@
                 </div>
                 <div class="dropdown-content" id="dropdown-menu">
                     <div id="mobile-nav-links"></div>
-                    <!-- Profile link will be inserted here by JS -->
                     <a href="/manage-keys" id="manage-keys-link" class="hidden">Admin Panel</a>
                     <a href="/auth/logout">Logout</a>
                 </div>
@@ -51,26 +49,21 @@
         </header>
 
         <main class="content">
-            <!-- Page: Home -->
             <div id="page-home" class="page">
                  <div class="card-box">
                     <h2>Welcome back, <span id="home-username"></span>!</h2>
                     <p>I hope you enjoy the script</p>
-                    <a href="/get-key" class="discord-btn" style="background-color: var(--brand-green);" data-page="get-key">Get Your Key Now</a>
+                    <a href="/get-key" class="discord-btn" style="background-color: var(--brand-green);">Get Your Key Now</a>
                 </div>
             </div>
 
-            <!-- Page: Get Key -->
             <div id="page-get-key" class="page hidden">
                 <div class="card-box">
                     <h2>Get Your Key</h2>
-                    <div id="key-generation-content">
-                        <!-- Content is loaded dynamically by JavaScript -->
-                    </div>
+                    <div id="key-generation-content"></div>
                 </div>
             </div>
 
-            <!-- Page: Suggestion -->
             <div id="page-suggestion" class="page hidden">
                 <div class="card-box">
                     <h2>Suggestions</h2>
@@ -85,7 +78,6 @@
                 </div>
             </div>
             
-            <!-- Page: Admin Panel -->
             <div id="page-manage-keys" class="page hidden">
                 <div class="card-box" style="max-width: 900px; text-align: left;">
                     <h2>Manage Keys</h2>
@@ -93,28 +85,9 @@
                         <input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">
                         <button id="remove-expired-btn" class="secondary-btn-red">Remove All Expired</button>
                     </div>
-                    <div id="admin-key-list">
-                        <!-- Content is loaded dynamically by JavaScript -->
-                    </div>
+                    <div id="admin-key-list"></div>
                 </div>
             </div>
-
-            <!-- Page: Earn Time -->
-            <div id="page-earn-time" class="page hidden">
-                <div class="card-box" style="max-width: 800px;">
-                    <div id="earn-time-content">
-                        <!-- Content is loaded dynamically by JavaScript -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Page: Profile -->
-            <div id="page-profile" class="page hidden">
-                <div class="card-box" style="max-width: 600px;">
-                    <!-- Content is loaded dynamically by JavaScript -->
-                </div>
-            </div>
-
         </main>
     </div>
 
