@@ -26,19 +26,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const suggestionForm = document.getElementById('suggestion-form');
     const removeExpiredBtn = document.getElementById('remove-expired-btn');
     let currentUser = null;
+    let allUsers = [];
 
-    // --- King Game (Clicker) ---
-    const KING_GAME_MAX_LEVEL = 50; // Must match backend config
+    // --- King Game Config (Must match backend) ---
+    const KING_GAME_MAX_LEVEL = 50;
+    const MAX_REBIRTH_LEVEL = 10;
     const KING_GAME_UPGRADES_CONFIG = {
-        click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1, description: 'Increases coins earned per click.' },
-        b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1, description: 'Generates 1 coin per second.' },
-        b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8, description: 'Generates 8 coins per second.' },
-        b3: { name: 'Castle', baseCost: 12000, costMultiplier: 1.14, cps: 45, description: 'Generates 45 coins per second.' },
-        b4: { name: 'Kingdom', baseCost: 130000, costMultiplier: 1.16, cps: 250, description: 'Generates 250 coins per second.' },
+        click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1, description: 'Increases coins per click.' },
+        b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1, description: 'Generates 1 coin/sec.' },
+        b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8, description: 'Generates 8 coins/sec.' },
+        b3: { name: 'Castle', baseCost: 12000, costMultiplier: 1.14, cps: 45, description: 'Generates 45 coins/sec.' },
+        b4: { name: 'Kingdom', baseCost: 130000, costMultiplier: 1.16, cps: 250, description: 'Generates 250 coins/sec.' },
+        b5: { name: 'Empire', baseCost: 1500000, costMultiplier: 1.18, cps: 1400, description: 'Generates 1,400 coins/sec.' },
+        b6: { name: 'Galaxy', baseCost: 20000000, costMultiplier: 1.2, cps: 7800, description: 'Generates 7,800 coins/sec.' },
+        b7: { name: 'Universe', baseCost: 330000000, costMultiplier: 1.22, cps: 44000, description: 'Generates 44,000 coins/sec.' },
     };
-    let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1, rebirth_level: 0 };
-    let kingGameInterval = null;
+    const GEM_BOOSTS_CONFIG = {
+        'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 },
+        'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },
+    };
 
+    let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1, rebirth_level: 0, gems: 0, active_boosts: {} };
+    let kingGameInterval = null;
+    let boostUpdateInterval = null;
+
+    // --- Core App Functions (Login, Routing, etc.) ---
     const setupMobileNav = () => {
         const mainNav = document.querySelector('.top-bar-left nav');
         const mobileNavContainer = document.getElementById('mobile-nav-links');
@@ -115,16 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const switchPage = (pageId) => {
-        if (kingGameInterval) { // Stop King Game loop when changing pages
-            clearInterval(kingGameInterval);
-            kingGameInterval = null;
-        }
-        pages.forEach(page => {
-            page.classList.toggle('hidden', page.id !== `page-${pageId}`);
-        });
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.dataset.page === pageId);
-        });
+        if (kingGameInterval) clearInterval(kingGameInterval);
+        if (boostUpdateInterval) clearInterval(boostUpdateInterval);
+        
+        pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
+        navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === pageId));
+        
         if (pageId === 'get-key') renderGetKeyPage();
         if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
         if (pageId === 'earn-time') renderEarnTimePage();
@@ -144,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         switchPage(pageId);
     };
 
+    // --- Other Page Rendering Functions (unchanged placeholders) ---
     const renderGetKeyPage = async () => {
         const container = document.getElementById('key-generation-content');
         if (!container || !currentUser) return;
@@ -182,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `<p class="error-message">${error.message}</p>`;
         }
     };
-
     const handleGenerateKey = async (hash = null) => {
         const btn = document.getElementById('generate-key-btn');
         if (btn) {
@@ -209,7 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-
     const displayKey = (data) => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
@@ -260,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid);
     };
-
     const handleResetHwid = async () => {
         const btn = document.getElementById('reset-hwid-btn');
         const statusEl = document.getElementById('hwid-status');
@@ -280,29 +286,178 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => { btn.disabled = false; }, 2000);
         }
     };
-    
-    // --- "Earn Time" Game Logic ---
-    const handleCoinFlip = async () => {
-        // ... (This function remains but will fail until backend code is provided)
+    const renderAdminPanel = async () => {
+        const container = document.getElementById('admin-key-list');
+        const searchInput = document.getElementById('admin-search-input');
+        if (!container || !searchInput) return;
+
+        container.innerHTML = '<p>Loading keys...</p>';
+        try {
+            const response = await fetch('/api/admin/keys');
+            if (!response.ok) throw new Error('Failed to fetch keys.');
+            const keys = await response.json();
+            
+            container.innerHTML = '';
+            
+            const table = document.createElement('table');
+            table.className = 'admin-table';
+            table.innerHTML = `<thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Action</th></tr></thead><tbody></tbody>`;
+            container.appendChild(table);
+            const tbody = table.querySelector('tbody');
+            
+            tbody.innerHTML = keys.length === 0 ? '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>' : keys.map(key => `
+                <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}">
+                    <td class="key-value">${key.key_value}</td>
+                    <td><span class="key-badge ${key.key_type}">${key.key_type}</span></td> 
+                    <td class="owner-name">${key.discord_username || 'N/A'}</td>
+                    <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td>
+                    <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td>
+                    <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td>
+                </tr>`).join('');
+            
+            const tableRows = container.querySelectorAll('tbody tr');
+            searchInput.oninput = () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                tableRows.forEach(row => {
+                    const keyValue = row.querySelector('.key-value').textContent.toLowerCase();
+                    const ownerName = row.querySelector('.owner-name').textContent.toLowerCase();
+                    row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none';
+                });
+            };
+            
+            container.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey));
+            container.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
+            container.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit));
+        } catch (error) {
+            container.innerHTML = `<p class="error-message">${error.message}</p>`;
+        }
+    };
+    const handleRemoveAllExpired = async () => {
+        if (!confirm('Are you sure you want to delete ALL expired keys? This action cannot be undone.')) return;
+        removeExpiredBtn.disabled = true;
+        removeExpiredBtn.textContent = 'Deleting...';
+        try {
+            const response = await fetch('/api/admin/keys', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_expired' })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to delete expired keys.');
+            alert(result.message);
+            renderAdminPanel();
+        } catch (error) {
+            alert('Error: ' + error.message);
+        } finally {
+            removeExpiredBtn.disabled = false;
+            removeExpiredBtn.textContent = 'Remove All Expired';
+        }
+    };
+    const handleDeleteKey = async (e) => {
+        const row = e.target.closest('tr');
+        const keyId = row.dataset.keyId;
+        if (confirm('Are you sure you want to delete this key permanently?')) {
+            try {
+                const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) });
+                if (!response.ok) throw new Error('Failed to delete.');
+                row.remove();
+            } catch (error) { alert('Error deleting key.'); }
+        }
+    };
+    const handleEdit = async (e) => {
+        const cell = e.target;
+        const row = cell.closest('tr');
+        const keyId = row.dataset.keyId;
+        const keyType = row.dataset.keyType; 
+        const isHwid = cell.classList.contains('hwid-cell');
+        const isExpires = cell.classList.contains('expires-cell');
+        
+        if (isExpires && keyType.toLowerCase() !== 'temp') {
+            alert("Only 'temp' keys can have their expiration date modified.");
+            return;
+        }
+
+        let newHwid = undefined;
+        let newExpiresAt = undefined;
+
+        if (isHwid) {
+            const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim();
+            const result = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid);
+            if (result === null) return; 
+            newHwid = result.trim();
+        } else if (isExpires) {
+            const result = prompt('Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):', '12h');
+            if (result === null) return; 
+            const input = result.trim().toLowerCase();
+            
+            if (input === 'clear') {
+                newExpiresAt = null;
+            } else {
+                const parseDuration = (str) => {
+                    const matchHours = str.match(/(\d+)h/);
+                    const matchMinutes = str.match(/(\d+)m/);
+                    let ms = 0;
+                    if (matchHours) ms += parseInt(matchHours[1]) * 3600000;
+                    if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60000;
+                    return ms;
+                };
+                const durationMs = parseDuration(input);
+                if (durationMs > 0) {
+                    newExpiresAt = new Date(Date.now() + durationMs).toISOString();
+                } else {
+                    alert('Invalid format. Use "24h", "90m", or "clear".');
+                    return;
+                }
+            }
+        }
+        
+        if (newHwid === undefined && newExpiresAt === undefined) return;
+        
+        try {
+            cell.classList.add('loading');
+            const payload = { key_id: keyId };
+            if (newHwid !== undefined) payload.new_roblox_user_id = newHwid;
+            if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt;
+
+            const response = await fetch('/api/admin/keys', { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            if (!response.ok) throw new Error('Failed to update.');
+            
+            if (newHwid !== undefined) {
+                cell.textContent = newHwid === '' ? 'Not Set' : newHwid;
+            }
+            if (newExpiresAt !== undefined) {
+                const finalExpires = newExpiresAt === null ? '' : newExpiresAt;
+                row.dataset.expiresAt = finalExpires;
+                cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires);
+            }
+            cell.classList.remove('loading');
+            cell.classList.add('success-flash');
+            setTimeout(() => cell.classList.remove('success-flash'), 1000);
+        } catch (error) { 
+            alert('Error updating key: ' + error.message); 
+            cell.classList.remove('loading');
+        }
     };
 
-    const handleBlackjackAction = async (action, bet = null) => {
-        // ... (This function remains but will fail until backend code is provided)
-    };
-    
-    // --- King Game ---
-    const formatKingGameNumber = (numStr) => {
-        return BigInt(numStr).toLocaleString('en-US');
-    };
+
+    // --- King Game Functions ---
+    const formatKingGameNumber = (numStr) => BigInt(numStr).toLocaleString('en-US');
 
     const getUpgradeCost = (upgradeId, level) => {
         const upgrade = KING_GAME_UPGRADES_CONFIG[upgradeId];
-        return BigInt(Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level)));
+        let cost = BigInt(Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level)));
+        if (kingGameState.active_boosts['half_cost'] && new Date(kingGameState.active_boosts['half_cost']) > new Date()) {
+            cost = cost / BigInt(2);
+        }
+        return cost;
     };
-    
-    const handleKingGameAction = async (action, params = {}) => {
-        const payload = { game: 'king_game', action, ...params };
 
+    const handleKingGameAction = async (action, params = {}) => {
+        const payload = { action, ...params };
         try {
             const response = await fetch('/api/earn-time', {
                 method: 'POST',
@@ -311,274 +466,255 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'King Game action failed.');
+
+            kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins) };
             
-            kingGameState.coins = BigInt(data.coins);
-            kingGameState.upgrades = data.upgrades;
-            kingGameState.rebirth_level = data.rebirth_level || 0;
-            
-            // Recalculate local stats based on server response
-            const bonus = 1 + kingGameState.rebirth_level * 0.1;
-            const getLevel = (id) => kingGameState.upgrades[id] || 0;
-            kingGameState.clickValue = Math.round((1 + (getLevel('click') * KING_GAME_UPGRADES_CONFIG.click.value)) * bonus);
-            
-            let newCps = 0;
-            for (const id in KING_GAME_UPGRADES_CONFIG) {
-                if (id !== 'click') {
-                    newCps += getLevel(id) * KING_GAME_UPGRADES_CONFIG[id].cps;
-                }
+            if (action === 'rebirth') {
+                alert(`Congratulations on reaching Rebirth Level ${kingGameState.rebirth_level}! You've earned gems and your journey starts anew with a permanent coin bonus.`);
             }
-            kingGameState.cps = Math.round(newCps * bonus);
-            
-            if (action === 'convert_time') {
-                 const timeResponse = await fetch('/api/earn-time');
-                 const timeData = await timeResponse.json();
-                 document.querySelector('#earn-time-content .time-display p').textContent = formatTimeRemaining(timeData.expires_at);
-                 alert("Success! 1 hour has been added to your key.");
+             if (action === 'buy_boost') {
+                alert(`Boost purchased successfully!`);
             }
             if (action === 'send_coins') {
                  alert("Coins sent successfully!");
-            }
-            if (action === 'rebirth') {
-                alert(`Congratulations on reaching Rebirth Level ${kingGameState.rebirth_level}! Your journey starts anew with a permanent coin bonus.`);
+                 document.getElementById('kg-send-amount').value = '';
+                 document.getElementById('kg-recipient-search').value = '';
             }
 
             updateKingGameUI();
-
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
     };
-    
+
     const updateKingGameUI = () => {
-        const coinCountEl = document.getElementById('kg-coin-count');
-        const cpsCountEl = document.getElementById('kg-cps-count');
-        const bonusDisplayEl = document.getElementById('kg-bonus-display');
+        if (!document.getElementById('king-game-container')) return;
 
-        if (coinCountEl) coinCountEl.textContent = formatKingGameNumber(kingGameState.coins.toString());
-        if (cpsCountEl) cpsCountEl.textContent = `${formatKingGameNumber(kingGameState.cps.toString())} coins/sec`;
+        // Update main stats
+        document.getElementById('kg-coin-count').textContent = formatKingGameNumber(kingGameState.coins.toString());
+        const bonus = 1 + (kingGameState.rebirth_level || 0) * 0.1;
         
-        if (bonusDisplayEl) {
-            const bonus = 1 + (kingGameState.rebirth_level || 0) * 0.1;
-            bonusDisplayEl.textContent = `Coin Bonus: x${bonus.toFixed(2)}`;
-            bonusDisplayEl.style.display = kingGameState.rebirth_level > 0 ? 'block' : 'none';
+        let baseCps = 0;
+        for (const id in KING_GAME_UPGRADES_CONFIG) {
+            if (id !== 'click') {
+                baseCps += (kingGameState.upgrades[id] || 0) * KING_GAME_UPGRADES_CONFIG[id].cps;
+            }
         }
+        let finalCps = Math.round(baseCps * bonus);
+        if (kingGameState.active_boosts['x2_coins'] && new Date(kingGameState.active_boosts['x2_coins']) > new Date()){
+            finalCps *= 2;
+        }
+        kingGameState.cps = finalCps;
+        document.getElementById('kg-cps-count').textContent = `${formatKingGameNumber(kingGameState.cps.toString())} coins/sec`;
+        
+        document.getElementById('kg-gem-count').textContent = `${kingGameState.gems || 0} Gems`;
+        const bonusEl = document.getElementById('kg-bonus-display');
+        bonusEl.textContent = `Rebirth Bonus: x${bonus.toFixed(2)}`;
+        bonusEl.style.display = kingGameState.rebirth_level > 0 ? 'block' : 'none';
 
+        // Update Upgrades List
         const upgradesContainer = document.getElementById('kg-upgrades-list');
-        if (!upgradesContainer) return;
-
-        let allMaxed = true;
+        let allMaxed = kingGameState.rebirth_level < MAX_REBIRTH_LEVEL;
         upgradesContainer.innerHTML = '';
         for (const id in KING_GAME_UPGRADES_CONFIG) {
             const config = KING_GAME_UPGRADES_CONFIG[id];
             const level = kingGameState.upgrades[id] || 0;
-            
-            if (level < KING_GAME_MAX_LEVEL) {
-                allMaxed = false;
-            }
+            if (level < KING_GAME_MAX_LEVEL) allMaxed = false;
 
             const cost = getUpgradeCost(id, level);
-            const canAfford = kingGameState.coins >= cost;
-
             const item = document.createElement('div');
             item.className = 'upgrade-item';
             item.innerHTML = `
                 <div class="upgrade-info">
                     <strong>${config.name} (Lvl ${level})</strong>
-                    <small style="color: #a4a4a4; font-style: italic;">${config.description}</small>
+                    <small class="desc">${config.description}</small>
                     <small>Cost: ${formatKingGameNumber(cost.toString())}</small>
                 </div>
-                <button class="secondary-btn" data-upgrade-id="${id}" ${canAfford ? '' : 'disabled'}>Buy</button>
+                <button class="secondary-btn" data-upgrade-id="${id}" ${kingGameState.coins >= cost ? '' : 'disabled'}>Buy</button>
             `;
+            const btn = item.querySelector('button');
+            btn.addEventListener('click', (e) => {
+                e.target.disabled = true;
+                handleKingGameAction('buy_upgrade', { upgradeId: e.target.dataset.upgradeId }).finally(() => { e.target.disabled = false; });
+            });
             upgradesContainer.appendChild(item);
         }
-        
-        upgradesContainer.querySelectorAll('button').forEach(btn => btn.addEventListener('click', (e) => {
-            handleKingGameAction('buy_upgrade', { upgradeId: e.target.dataset.upgradeId });
-        }));
 
-        const actionsContainer = document.getElementById('kg-actions-container');
-        let rebirthBtn = document.getElementById('kg-rebirth-btn');
-        if (allMaxed) {
-            if (!rebirthBtn) {
-                rebirthBtn = document.createElement('button');
-                rebirthBtn.id = 'kg-rebirth-btn';
-                rebirthBtn.className = 'discord-btn';
-                rebirthBtn.style.backgroundColor = 'var(--brand-green)';
-                rebirthBtn.addEventListener('click', () => {
-                    if (confirm('Are you sure you want to rebirth? This will reset your coins and upgrades for a permanent bonus.')) {
-                        handleKingGameAction('rebirth');
-                    }
-                });
-                actionsContainer.prepend(rebirthBtn);
+        // Update Gem Shop
+        const gemShopContainer = document.getElementById('kg-gem-shop');
+        gemShopContainer.innerHTML = '';
+        for (const id in GEM_BOOSTS_CONFIG) {
+            const config = GEM_BOOSTS_CONFIG[id];
+            const isActive = kingGameState.active_boosts[id] && new Date(kingGameState.active_boosts[id]) > new Date();
+            const btn = document.createElement('button');
+            btn.className = 'secondary-btn';
+            btn.textContent = `${config.name} (${config.cost} Gems)`;
+            btn.disabled = isActive || kingGameState.gems < config.cost;
+            btn.addEventListener('click', () => handleKingGameAction('buy_boost', { boostId: id }));
+            gemShopContainer.appendChild(btn);
+        }
+        
+        // Update Active Boosts display
+        const boostsContainer = document.getElementById('kg-active-boosts');
+        boostsContainer.innerHTML = '<h4>Active Boosts</h4>';
+        let hasActiveBoosts = false;
+        for (const id in kingGameState.active_boosts) {
+            const expiry = new Date(kingGameState.active_boosts[id]);
+            if (expiry > new Date()) {
+                hasActiveBoosts = true;
+                const remaining = Math.ceil((expiry - new Date()) / 1000);
+                const minutes = Math.floor(remaining / 60);
+                const seconds = remaining % 60;
+                const p = document.createElement('p');
+                p.innerHTML = `${GEM_BOOSTS_CONFIG[id].name.split('(')[0].trim()}: <strong>${minutes}m ${seconds.toString().padStart(2, '0')}s</strong>`;
+                boostsContainer.appendChild(p);
             }
-            rebirthBtn.textContent = `Rebirth (Level ${kingGameState.rebirth_level + 1})`;
+        }
+        boostsContainer.style.display = hasActiveBoosts ? 'block' : 'none';
+
+        // Update Rebirth Button
+        const rebirthContainer = document.getElementById('kg-rebirth-container');
+        if (allMaxed && kingGameState.rebirth_level < MAX_REBIRTH_LEVEL) {
+            rebirthContainer.innerHTML = `<button id="kg-rebirth-btn" class="discord-btn">Rebirth (Level ${kingGameState.rebirth_level + 1})</button>`;
+            rebirthContainer.querySelector('#kg-rebirth-btn').addEventListener('click', () => {
+                if (confirm('Are you sure you want to rebirth? This will reset your coins and upgrades for a permanent bonus and gems!')) {
+                    handleKingGameAction('rebirth');
+                }
+            });
+        } else if (kingGameState.rebirth_level >= MAX_REBIRTH_LEVEL) {
+             rebirthContainer.innerHTML = `<p class="max-rebirth-msg">You have reached the max rebirth level!</p>`;
         } else {
-            if (rebirthBtn) {
-                rebirthBtn.remove();
-            }
+            rebirthContainer.innerHTML = '';
         }
     };
     
+    const fetchUserList = async () => {
+        try {
+            const response = await fetch('/api/earn-time?action=get_users');
+            allUsers = await response.json();
+        } catch(e) { console.error("Failed to fetch user list", e); }
+    };
+
     const renderKingGame = () => {
-        const container = document.getElementById('king-game-container');
+        const container = document.getElementById('earn-time-content');
         container.innerHTML = `
-            <div class="king-game-container">
-                <div class="king-game-main">
+            <div id="king-game-container" class="king-game-layout">
+                <div class="kg-left-panel">
                     <div class="coin-display">
                         <h2 id="kg-coin-count">0</h2>
                         <p id="kg-cps-count">0 coins/sec</p>
-                        <p id="kg-bonus-display" style="color: var(--brand-green); font-weight: bold; display: none;"></p>
+                        <p id="kg-bonus-display" style="display: none;"></p>
                     </div>
                     <div class="clicker-area">
                         <button id="kg-clicker-btn">👑</button>
                     </div>
-                    <div id="kg-actions-container" class="king-game-actions">
-                        <button id="kg-convert-btn" class="discord-btn">Convert 1M coins to 1h</button>
-                        <input type="text" id="kg-recipient-name" placeholder="Recipient Username">
-                        <input type="number" id="kg-send-amount" placeholder="Amount to Send" min="1">
-                        <button id="kg-send-btn" class="secondary-btn">Send Coins</button>
+                     <div id="kg-active-boosts" class="active-boosts-container" style="display: none;"></div>
+                </div>
+                <div class="kg-right-panel">
+                    <div class="upgrades-container">
+                        <h4>Upgrades</h4>
+                        <div id="kg-upgrades-list"></div>
+                    </div>
+                    <div class="shop-container">
+                         <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4>
+                         <div id="kg-gem-shop"></div>
                     </div>
                 </div>
-                <div class="king-game-upgrades">
-                    <h4>Upgrades</h4>
-                    <div id="kg-upgrades-list">Loading...</div>
+                <div class="kg-bottom-panel">
+                    <div id="kg-rebirth-container"></div>
+                    <div class="send-coins-container">
+                        <h4>Send Coins</h4>
+                        <div class="user-select-wrapper">
+                            <input type="text" id="kg-recipient-search" placeholder="Search for a user...">
+                            <div id="kg-recipient-dropdown" class="user-dropdown-content"></div>
+                        </div>
+                        <input type="number" id="kg-send-amount" placeholder="Amount" min="1">
+                        <button id="kg-send-btn" class="secondary-btn">Send</button>
+                    </div>
                 </div>
-            </div>
-        `;
+            </div>`;
+        
+        const searchInput = document.getElementById('kg-recipient-search');
+        const dropdown = document.getElementById('kg-recipient-dropdown');
+        let selectedUserId = null;
 
-        document.getElementById('kg-clicker-btn').addEventListener('click', () => {
-            const btn = document.getElementById('kg-clicker-btn');
-            btn.disabled = true; // Prevent spamming while waiting for server
-            handleKingGameAction('click').finally(() => { btn.disabled = false; });
+        searchInput.addEventListener('focus', () => dropdown.style.display = 'block');
+        searchInput.addEventListener('blur', () => setTimeout(() => dropdown.style.display = 'none', 150));
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            dropdown.innerHTML = '';
+            const filteredUsers = allUsers.filter(u => u.discord_username.toLowerCase().includes(query));
+            filteredUsers.slice(0, 10).forEach(user => {
+                const item = document.createElement('a');
+                item.textContent = user.discord_username;
+                item.addEventListener('mousedown', () => {
+                    searchInput.value = user.discord_username;
+                    selectedUserId = user.discord_id;
+                    dropdown.style.display = 'none';
+                });
+                dropdown.appendChild(item);
+            });
         });
-        document.getElementById('kg-convert-btn').addEventListener('click', () => handleKingGameAction('convert_time'));
+
+        document.getElementById('kg-clicker-btn').addEventListener('click', (e) => {
+            e.target.disabled = true;
+            handleKingGameAction('click').finally(() => { e.target.disabled = false; });
+        });
+        
         document.getElementById('kg-send-btn').addEventListener('click', () => {
-            const recipientName = document.getElementById('kg-recipient-name').value;
             const amount = document.getElementById('kg-send-amount').value;
-            if(recipientName && amount > 0) {
-                handleKingGameAction('send_coins', { recipientName, amount });
+            if (selectedUserId && amount > 0) {
+                handleKingGameAction('send_coins', { recipientId: selectedUserId, amount });
             } else {
-                alert("Please provide a recipient and a valid amount.");
+                alert("Please select a valid user from the list and enter a positive amount.");
             }
         });
-
+        
+        fetchUserList();
+        
         if (kingGameInterval) clearInterval(kingGameInterval);
         kingGameInterval = setInterval(() => {
-            kingGameState.coins += BigInt(kingGameState.cps);
-            const coinCountEl = document.getElementById('kg-coin-count');
-            if (coinCountEl) coinCountEl.textContent = formatKingGameNumber(kingGameState.coins.toString());
-            if (Date.now() % 5000 < 1000) {
-                 updateKingGameUI();
+            kingGameState.coins += BigInt(kingGameState.cps || 0);
+            if(document.getElementById('kg-coin-count')){
+                document.getElementById('kg-coin-count').textContent = formatKingGameNumber(kingGameState.coins.toString());
             }
         }, 1000);
 
+        if(boostUpdateInterval) clearInterval(boostUpdateInterval);
+        boostUpdateInterval = setInterval(updateKingGameUI, 1000);
+
         handleKingGameAction('load');
     };
-    
+
     const renderEarnTimePage = async () => {
         const container = document.getElementById('earn-time-content');
         if (!container || !currentUser) return;
-        container.innerHTML = '<p>Loading your key information...</p>';
+        container.innerHTML = '<p>Loading your game data...</p>';
 
         try {
             const response = await fetch('/api/earn-time');
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Could not fetch key data.');
-            }
-            const data = await response.json();
-            
-            container.innerHTML = `
-                <div class="time-display">
-                    <h3>Your Remaining Time</h3>
-                    <p>${formatTimeRemaining(data.expires_at)}</p>
-                </div>
-                <div class="games-grid" style="grid-template-columns: 1fr; margin-bottom: 20px;">
-                     <div class="game-card" style="max-width: 800px; margin: auto;">
-                        <h4>King Game</h4>
-                        <p>Click the crown, buy upgrades to increase your earnings, and convert your coins into key time!</p>
-                        <div id="king-game-container">Loading Game...</div>
-                    </div>
-                </div>
-                <div class="games-grid">
-                    <div class="game-card">
-                        <h4>Blackjack</h4>
-                        <p>Get closer to 21 than the dealer without going over. Win 2x your bet. Blackjack pays 3:2.</p>
-                        <div id="blackjack-game-container"><button class="discord-btn" disabled>Coming Soon</button></div>
-                    </div>
-                    <div class="game-card">
-                        <h4>Coin Flip</h4>
-                        <p>A chance to double your bet or lose it all. The more you win in a row, the harder it gets.</p>
-                        <div class="game-interface"><button class="discord-btn" disabled>Coming Soon</button></div>
-                    </div>
-                </div>`;
+            if (!response.ok) throw await response.json();
             
             renderKingGame();
 
         } catch (error) {
-            if (currentUser && currentUser.user_status === 'Perm') {
+            if (currentUser?.user_status === 'Perm') {
                 container.innerHTML = `
-                    <h3 style="margin-bottom: 10px;">Feature Not Available for Permanent Users</h3>
-                    <p style="color: var(--text-muted);">As a user with a permanent key, your access never expires. You do not need to earn time.</p>
+                    <h3>Feature Not Available for Permanent Users</h3>
+                    <p>As a user with a permanent key, your access never expires.</p>
                     <a href="/" class="discord-btn" style="margin-top: 25px;">Back to Home</a>
                 `;
             } else {
                 container.innerHTML = `
-                    <p class="error-message" style="font-size: 1.1rem;">${error.message}</p>
-                    <p>Only users with an active 'Free' key can access the games.</p>
+                    <p class="error-message">${error.error || 'Could not load game data.'}</p>
+                    <p>Only users with an active 'Free' key can access this page.</p>
                     <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>
                 `;
             }
         }
     };
-
-    const renderAdminPanel = async () => {
-        // ... (This function remains unchanged)
-    };
     
-    const handleRemoveAllExpired = async () => {
-        // ... (This function remains unchanged)
-    };
-
-    const handleDeleteKey = async (e) => {
-        // ... (This function remains unchanged)
-    };
-
-    const handleEdit = async (e) => {
-        // ... (This function remains unchanged)
-    };
-
     // --- Event Listeners ---
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            const pageId = e.target.dataset.page;
-            if (pageId) {
-                e.preventDefault();
-                window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
-                switchPage(pageId);
-            }
-        });
-    });
-
-    if (manageKeysLink) {
-        manageKeysLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
-            switchPage('manage-keys');
-            dropdownMenu.classList.remove('show');
-        });
-    }
-
-    if (userProfileToggle) {
-        userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
-    }
-
-    window.addEventListener('click', (e) => {
-        if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.remove('show');
-        }
-    });
-    
     if (suggestionForm) {
         suggestionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -627,8 +763,39 @@ document.addEventListener('DOMContentLoaded', () => {
     if (removeExpiredBtn) {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            const pageId = e.target.dataset.page;
+            if (pageId) {
+                e.preventDefault();
+                window.history.pushState({ page: pageId }, '', `/${pageId === 'home' ? '' : pageId}`);
+                switchPage(pageId);
+            }
+        });
+    });
+
+    if (manageKeysLink) {
+        manageKeysLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.history.pushState({ page: 'manage-keys' }, '', '/manage-keys');
+            switchPage('manage-keys');
+            dropdownMenu.classList.remove('show');
+        });
+    }
+
+    if (userProfileToggle) {
+        userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
+    }
+
+    window.addEventListener('click', (e) => {
+        if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            dropdownMenu.classList.remove('show');
+        }
+    });
 
     // --- Initialization ---
     setupMobileNav();
     checkUserStatus();
 });
+
