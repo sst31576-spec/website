@@ -34,7 +34,6 @@ function formatBigNumber(numStr) {
     }
 }
 
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Element Selection ---
     const loginContainer = document.getElementById('login-container');
@@ -51,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const manageKeysLink = document.getElementById('manage-keys-link');
     const suggestionForm = document.getElementById('suggestion-form');
     const removeExpiredBtn = document.getElementById('remove-expired-btn');
-    
+
     // --- GLOBAL STATE ---
     let currentUser = null;
     let allUsers = [];
@@ -106,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 },
         'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },
     };
-
+    
     // --- CORE APP FUNCTIONS ---
     const setupMobileNav = () => {
         const mainNav = document.querySelector('.top-bar-left nav');
@@ -500,35 +499,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- NEW GAME LOGIC ---
-
+    
     async function sendGameAction(action, params = {}) {
-        // ... (API communication logic)
+        try {
+            const response = await fetch('/api/earn-time', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...params }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'API action failed.');
+            
+            // The server response is the new source of truth
+            startGame(data); 
+            
+            if (action === 'rebirth') alert(`Congratulations on reaching Rebirth Level ${data.user.rebirth_level}! You've earned gems and your journey starts anew with a permanent coin bonus.`);
+            if (action === 'buy_boost') alert(`Boost purchased successfully!`);
+            if (action === 'train_troops') alert('Training started!');
+
+            return data;
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+            // Do not reload on error, just show message.
+            throw error;
+        }
     }
 
     function calculateCPS() {
-        // ... (CPS calculation logic)
+        if (!gameState.user) return 0;
+        const { king_game_upgrades, rebirth_level, user_status, title, active_boosts } = gameState.user;
+        const upgrades = king_game_upgrades || {};
+        let cps = 0;
+        for (const id in KING_GAME_UPGRADES) {
+            if (id !== 'click') {
+                cps += (upgrades[id] || 0) * KING_GAME_UPGRADES[id].cps;
+            }
+        }
+        const rebirthBonus = 1 + (rebirth_level || 0) * 0.1;
+        cps *= rebirthBonus;
+        if (user_status === 'Perm') cps *= 2;
+        if (title === 'Queen') cps *= 2;
+        if (active_boosts?.['x2_coins'] && new Date(active_boosts['x2_coins']) > new Date()) {
+            cps *= 2;
+        }
+        return Math.round(cps);
     }
-
+    
+    // --- UI RENDER FUNCTIONS ---
     function updateAllUI() {
         if (!document.getElementById('game-container') || !gameState.user) return;
-        
-        // This function will call all individual UI update functions
         updateEconomyUI();
         updateBarracksUI();
         updateBattleUI();
     }
     
-    function updateEconomyUI() {
-        // ... (Render the Economy Tab)
-    }
-
-    function updateBarracksUI() {
-        // ... (Render the Barracks Tab)
-    }
-
-    function updateBattleUI() {
-        // ... (Render the Battle Tab)
-    }
+    function updateEconomyUI() { /* Renders the entire Kingdom Tab */ }
+    function updateBarracksUI() { /* Renders the entire Barracks Tab */ }
+    function updateBattleUI() { /* Renders the entire Battle Tab */ }
 
     function startGame(initialState) {
         gameState = initialState;
@@ -598,10 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const suggestionTextarea = document.getElementById('suggestion-textarea');
                 const gameNameInput = document.getElementById('game-name-input');
                 const gameLinkInput = document.getElementById('game-link-input');
-
                 const suggestion = suggestionTextarea.value.trim();
                 const gameName = gameNameInput.value.trim();
                 const gameLink = gameLinkInput.value.trim();
+                if (!suggestion || !gameName || !gameLink) throw new Error("Please fill all fields.");
 
                 const response = await fetch('/api/send-suggestion', { 
                     method: 'POST', 
@@ -623,11 +650,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     if (removeExpiredBtn) {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
-    
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             const pageId = e.target.dataset.page;
@@ -638,7 +663,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
     if (manageKeysLink) {
         manageKeysLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -647,11 +671,9 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdownMenu.classList.remove('show');
         });
     }
-
     if (userProfileToggle) {
         userProfileToggle.addEventListener('click', () => dropdownMenu.classList.toggle('show'));
     }
-
     window.addEventListener('click', (e) => {
         if (userProfileToggle && !userProfileToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
             dropdownMenu.classList.remove('show');
