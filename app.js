@@ -130,8 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Page Rendering & Logic ---
 
-    const renderGetKeyPage = async () => { /* Your function here */ };
-    const renderAdminPanel = async () => { /* Your function here */ };
+    const renderGetKeyPage = async () => { /* Add your existing function here */ };
+    const renderAdminPanel = async () => { /* Add your existing function here */ };
 
     const renderProfilePage = async () => {
         const container = document.getElementById('page-profile').querySelector('.card-box');
@@ -160,25 +160,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- "Earn Time" Game Logic ---
-    const updateTimeDisplay = async () => { /* Your function here */ };
+    const updateTimeDisplay = async () => { /* Add your existing function here */ };
     
-    const handleCoinFlip = async () => { /* Your function here */ };
-    const createCardElement = (isHidden = false) => { /* Your function here */ };
-    const updateCardElement = (cardContainer, cardData) => { /* Your function here */ };
-    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => { /* Your function here */ };
-    const handleBlackjackAction = async (action, bet = null) => { /* Your function here */ };
-    const renderBlackjackInterface = (gameState = null) => { /* Your function here */ };
+    const handleCoinFlip = async () => { /* Add your existing function here */ };
+    const createCardElement = (isHidden = false) => { /* Add your existing function here */ };
+    const updateCardElement = (cardContainer, cardData) => { /* Add your existing function here */ };
+    const dealCardsAnimated = (hand, handEl, revealLastCard = true) => { /* Add your existing function here */ };
+    const handleBlackjackAction = async (action, bet = null) => { /* Add your existing function here */ };
+    const renderBlackjackInterface = (gameState = null) => { /* Add your existing function here */ };
     
     let kingGameState = { coins: BigInt(0), upgrades: {}, cps: 0, clickValue: 1 };
-    const handleKingGameAction = async (action, params = {}) => { /* Your function here */ };
-    const updateKingGameUI = () => { /* Your function here */ };
+    const handleKingGameAction = async (action, params = {}) => { /* Add your existing function here */ };
+    const updateKingGameUI = () => { /* Add your existing function here */ };
     
-    const handleRecipientSearch = async (e) => { /* Your function here */ };
-    const handleSendTime = async () => { /* Your function here */ };
+    const handleRecipientSearch = async (e) => { /* Add your existing function here */ };
+    const handleSendTime = async () => { /* Add your existing function here */ };
     
-    const renderKingGameView = () => { /* Your function here */ };
-    const renderCoinFlipView = () => { /* Your function here */ };
-    const renderBlackjackView = () => { /* Your function here */ };
+    const renderKingGameView = () => { /* Add your existing function here */ };
+    const renderCoinFlipView = () => { /* Add your existing function here */ };
+    const renderBlackjackView = () => { /* Add your existing function here */ };
     
     const renderEarnTimePage = async () => {
         if (kingGameInterval) clearInterval(kingGameInterval);
