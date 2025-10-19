@@ -53,7 +53,8 @@ const getUpgradeCost = (upgradeId, level) => {
 };
 
 const calculateKingGameState = (user) => {
-    const upgrades = user.king_game_upgrades ? JSON.parse(user.king_game_upgrades) : {};
+    // CORRIGÉ : On n'utilise plus JSON.parse ici
+    const upgrades = user.king_game_upgrades || {};
     const getLevel = (id) => upgrades[id] || 0;
 
     let clickValue = 1 + (getLevel('click') * KING_GAME_UPGRADES.click.value);
@@ -81,12 +82,17 @@ exports.handler = async function (event, context) {
 
     // GET: Récupérer les infos du joueur
     if (event.httpMethod === 'GET') {
-         try {
+        try {
+            // CORRIGÉ : On vérifie si l'utilisateur a une clé 'perm' OU une clé 'temp' active
             const { rows } = await db.query(
-                'SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = $2 AND expires_at > NOW()',
-                [id, 'temp']
+                'SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1',
+                [id]
             );
-            if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active temporary key to play with.' }) };
+
+            if (rows.length === 0) {
+                return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) };
+            }
+            
             return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) };
         } catch (error) {
             console.error('Earn Time GET Error:', error);
@@ -102,13 +108,22 @@ exports.handler = async function (event, context) {
 
         try {
             await client.query('BEGIN');
+
             // Logique du Coin Flip
             if (game === 'coinflip') {
-                // ... (code du coinflip reste identique)
+                //
+                // ATTENTION : TU DOIS REMETTRE LE CODE DU JEU COINFLIP ICI
+                //
+                await client.query('COMMIT'); // N'oublie pas le commit à la fin de la logique
+                // et de retourner une réponse 200
             }
             // Logique du Blackjack
             else if (game === 'blackjack') {
-                // ... (code du blackjack reste identique)
+                //
+                // ATTENTION : TU DOIS REMETTRE LE CODE DU JEU BLACKJACK ICI
+                //
+                await client.query('COMMIT'); // N'oublie pas le commit à la fin de la logique
+                // et de retourner une réponse 200
             }
             // Logique du King Game
             else if (game === 'king_game') {
@@ -117,7 +132,8 @@ exports.handler = async function (event, context) {
                 if (rows.length === 0) throw new Error('User not found.');
                 
                 let user = rows[0];
-                let upgrades = user.king_game_upgrades ? JSON.parse(user.king_game_upgrades) : {};
+                // CORRIGÉ : On n'utilise plus JSON.parse ici
+                let upgrades = user.king_game_upgrades || {};
 
                 // Calcul gains AFK
                 const now = new Date();
