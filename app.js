@@ -10,7 +10,7 @@ function formatTimeRemaining(expiryDate) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Sélection des éléments du DOM ---
+    // --- DOM Element Selection ---
     const loginContainer = document.getElementById('login-container');
     const mainAppContainer = document.getElementById('main-app');
     const loginError = document.getElementById('login-error-message');
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Logique des jeux "Earn Time" ---
+    // --- "Earn Time" Game Logic ---
     
     const handleCoinFlip = async () => {
         const betSelect = document.getElementById('coinflip-bet');
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kingGameState.coins = BigInt(data.coins);
             kingGameState.upgrades = data.upgrades;
             
-            // Recalculer les stats locales
+            // Recalculate local stats
             const getLevel = (id) => kingGameState.upgrades[id] || 0;
             kingGameState.clickValue = 1 + (getLevel('click') * KING_GAME_UPGRADES_CONFIG.click.value);
             kingGameState.cps = 0;
@@ -575,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Boucle de jeu
+        // Game loop
         if (kingGameInterval) clearInterval(kingGameInterval);
         kingGameInterval = setInterval(() => {
             kingGameState.coins += BigInt(kingGameState.cps);
@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 1000);
 
-        handleKingGameAction('load'); // Charger les données initiales
+        handleKingGameAction('load'); // Load initial data
     };
     
     const renderEarnTimePage = async () => {
@@ -649,20 +649,20 @@ document.addEventListener('DOMContentLoaded', () => {
             renderKingGame();
 
         } catch (error) {
-            // On vérifie si l'utilisateur connecté a le statut 'Perm'
+            // Check if the logged-in user has 'Perm' status
             if (currentUser && currentUser.user_status === 'Perm') {
-                // Si oui, on affiche un message spécifique pour lui
+                // If so, display a specific message for them
                 container.innerHTML = `
-                    <h3 style="margin-bottom: 10px;">Fonctionnalité non disponible pour les utilisateurs permanents</h3>
-                    <p style="color: var(--text-muted);">En tant qu'utilisateur avec une clé permanente, votre accès n'expire jamais. Vous n'avez donc pas besoin de gagner du temps.</p>
-                    <a href="/" class="discord-btn" style="margin-top: 25px;">Retour à l'accueil</a>
+                    <h3 style="margin-bottom: 10px;">Feature Not Available for Permanent Users</h3>
+                    <p style="color: var(--text-muted);">As a user with a permanent key, your access never expires. You do not need to earn time.</p>
+                    <a href="/" class="discord-btn" style="margin-top: 25px;">Back to Home</a>
                 `;
             } else {
-                // Sinon (pour les utilisateurs 'Free'), on affiche le message original
+                // Otherwise (for 'Free' users), display the original message
                 container.innerHTML = `
                     <p class="error-message" style="font-size: 1.1rem;">${error.message}</p>
-                    <p>Seuls les utilisateurs avec une clé 'Free' active peuvent accéder aux jeux.</p>
-                    <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Obtenir une clé</a>
+                    <p>Only users with an active 'Free' key can access the games.</p>
+                    <a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>
                 `;
             }
         }
@@ -828,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- Écouteurs d'événements ---
+    // --- Event Listeners ---
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             const pageId = e.target.dataset.page;
@@ -908,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
         removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
     }
 
-    // --- Initialisation ---
+    // --- Initialization ---
     setupMobileNav();
     checkUserStatus();
 });
