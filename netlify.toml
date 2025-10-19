@@ -29,6 +29,12 @@
   to = "/.netlify/functions/api-generate-key"
   status = 200
 
+# NOUVELLE REDIRECTION AJOUTÉE ICI
+[[redirects]]
+  from = "/api/earn-time"
+  to = "/.netlify/functions/api-earn-time"
+  status = 200
+
 [[redirects]]
   from = "/api/reset-hwid"
   to = "/.netlify/functions/api-reset-hwid"
