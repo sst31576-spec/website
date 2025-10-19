@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (pageId === 'get-key') renderGetKeyPage();
         if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel();
+        // LIGNE MODIFIÉE
+        if (pageId === 'earn-time') renderEarnTimePage();
     };
 
     const handleRouting = () => {
@@ -119,6 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (path === '/get-key') pageId = 'get-key';
         if (path === '/suggestion') pageId = 'suggestion';
         if (path === '/manage-keys') pageId = 'manage-keys';
+        // LIGNE AJOUTÉE
+        if (path === '/earn-time') pageId = 'earn-time';
         
         if (pageId === 'home' && path !== '' && path !== '/') {
             window.history.replaceState({page: pageId}, '', '/');
@@ -196,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('key-generation-content');
         if (!container) return;
         
-        // --- MODIFICATION ICI ---
         container.innerHTML = `
             <div id="key-display-area">
                 <h4>Your key is ready:</h4>
@@ -264,6 +267,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // NOUVELLE FONCTION AJOUTÉE
+    const renderEarnTimePage = async () => {
+        const container = document.getElementById('earn-time-content');
+        if (!container || !currentUser) return;
+
+        // Pour l'instant, on met un message temporaire.
+        // Plus tard, on appellera l'API ici pour obtenir le temps restant de l'utilisateur.
+        container.innerHTML = `
+            <p style="color: var(--text-muted);">This is where the casino games will be.</p>
+            <p>You must have a temporary key to play.</p>
+        `;
+        
+        // On ajoutera ici la logique pour :
+        // 1. Vérifier si l'utilisateur a une clé 'temp'.
+        // 2. Afficher son temps restant.
+        // 3. Afficher les jeux (Blackjack, Coin Flip, etc.).
+    };
+
     const renderAdminPanel = async () => {
         const container = document.getElementById('admin-key-list');
         const searchInput = document.getElementById('admin-search-input');
