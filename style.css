@@ -241,7 +241,6 @@ nav a.active {
     background-color: #d83d3d; 
 }
 
-
 /* --- Admin Table --- */
 .admin-table {
     width: 100%;
@@ -314,7 +313,6 @@ nav a.active {
 #mobile-nav-links {
     display: none;
 }
-
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN (Media Queries) --- */
@@ -408,4 +406,9 @@ nav a.active {
         width: 100%;
         box-sizing: border-box;
     }
+}
+
+/* --- Get Key Page --- */
+#key-display-area button {
+    margin-top: 10px; /* Ajoute un espace au-dessus de chaque bouton dans cette zone */
 }
