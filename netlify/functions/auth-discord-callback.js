@@ -9,7 +9,7 @@ const {
     DISCORD_CLIENT_SECRET,
     REDIRECT_URI,
     JWT_SECRET,
-    GUILD_ID // IMPORTANT : Assurez-vous d'avoir ajouté l'ID de votre serveur Discord dans vos variables d'environnement Netlify
+    GUILD_ID
 } = process.env;
 
 exports.handler = async function (event, context) {
@@ -38,31 +38,31 @@ exports.handler = async function (event, context) {
         });
         const discordUser = userResponse.data;
 
-        // --- NOUVELLE PARTIE : RÉCUPÉRER LES RÔLES DE L'UTILISATEUR ---
+        // Récupérer les rôles de l'utilisateur
         let userRoles = [];
         try {
-            // Requête pour obtenir les informations du membre sur votre serveur spécifique
             const guildMemberResponse = await axios.get(`https://discord.com/api/users/@me/guilds/${GUILD_ID}/member`, {
                 headers: { 'Authorization': `Bearer ${access_token}` }
             });
             userRoles = guildMemberResponse.data.roles || [];
         } catch (guildError) {
-            // Cette erreur (404) signifie que l'utilisateur n'est pas dans le serveur.
             if (guildError.response && guildError.response.status === 404) {
                  return {
-                    statusCode: 403, // Accès interdit
+                    statusCode: 403,
                     body: 'Access Denied: You must be a member of the Discord server.'
                 };
             }
             console.error('Error fetching guild member info:', guildError.message);
-            // Si une autre erreur se produit, on peut continuer sans les rôles, mais ce n'est pas idéal.
         }
-        // --- FIN DE LA NOUVELLE PARTIE ---
 
         const { id, username, avatar } = discordUser;
         const avatarUrl = avatar ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : null;
 
-        // Met à jour ou insère l'utilisateur dans la base de données avec ses nouveaux rôles
+        // --- CORRECTION CRUCIALE ICI ---
+        // On convertit le tableau de rôles en chaîne de caractères JSON avant de le sauvegarder
+        const rolesAsJsonString = JSON.stringify(userRoles);
+
+        // Met à jour ou insère l'utilisateur dans la base de données
         await db.query(
             `INSERT INTO users (discord_id, discord_username, discord_avatar, last_login, roles)
              VALUES ($1, $2, $3, NOW(), $4)
@@ -71,8 +71,8 @@ exports.handler = async function (event, context) {
                 discord_username = EXCLUDED.discord_username,
                 discord_avatar = EXCLUDED.discord_avatar,
                 last_login = NOW(),
-                roles = EXCLUDED.roles;`, // Assurez-vous de mettre à jour les rôles à chaque connexion
-            [id, username, avatarUrl, userRoles]
+                roles = EXCLUDED.roles;`,
+            [id, username, avatarUrl, rolesAsJsonString] // On utilise la chaîne de caractères ici
         );
 
         // Crée le JWT
