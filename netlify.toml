@@ -3,7 +3,12 @@
 [build]
   functions = "netlify/functions"
   publish = "public"   # <-- remplace "public" si ton dossier build est différent (ex: "dist" ou "build")
-
+[build]
+  # Installe les dépendances listées dans package.json
+  command = "npm install" 
+  # Dossier où se trouvent vos fonctions serverless
+  functions = "netlify/functions"
+  
 [functions]
   node_bundler = "esbuild"   # ✅ évite l’erreur d’upload sur gros fichiers
   included_files = ["netlify/functions/db.js"]  # ✅ force l’inclusion de ton fichier DB local
@@ -52,6 +57,15 @@
 [[redirects]]
   from = "/api/send-suggestion"
   to = "/.netlify/functions/api-send-suggestion"
+  status = 200
+
+  # Fichier à créer à la racine de votre projet
+
+
+[[redirects]]
+  # Redirige les appels de /api/... vers votre fonction
+  from = "/api/*"
+  to = "/.netlify/functions/api-:splat"
   status = 200
 
 # Règle pour SPA
