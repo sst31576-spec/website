@@ -3,164 +3,193 @@ const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const db = require('./db');
 
-// --- CONFIGURATION DU JEU ---
-const MAX_REBIRTH_LEVEL = 10;
-const MAX_UPGRADE_LEVEL = 50; // Niveau requis pour chaque item avant le rebirth
+// --- GAME CONFIGURATION ---
 
-// Anti-Autoclick
-const AUTOCLICK_CLICKS_TO_CHECK = 15;
-const AUTOCLICK_TIME_THRESHOLD_MS = 2000; // 15 clics en 2s
-const BLOCK_DURATION_HOURS = 1;
+// Prestige & Levels
+const PRESTIGE_REQUIREMENT_LEVEL = 75;
+const MAX_PRESTIGE_LEVEL = 20;
 
-// Nouvelles améliorations
+// PvP - Troops (Name, Base Cost, Power, Cost Multiplier)
+const TROOPS_CONFIG = {
+    'warrior': { name: 'Warrior', cost: 10000, power: 10, costMultiplier: 1.05 },
+    'archer': { name: 'Archer', cost: 50000, power: 45, costMultiplier: 1.06 },
+    'knight': { name: 'Knight', cost: 250000, power: 220, costMultiplier: 1.07 },
+    'mage': { name: 'Mage', cost: 1200000, power: 1100, costMultiplier: 1.08 },
+    'dragon': { name: 'Dragon', cost: 8000000, power: 6500, costMultiplier: 1.1 },
+};
+
+// PvP - Defenses (Name, Base Cost, Power, Cost Multiplier)
+const DEFENSES_CONFIG = {
+    'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 },
+    'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 },
+    'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 },
+    'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 },
+    'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },
+};
+
+// PvP - Ranks (Power threshold, Rank Name, Bonus Multiplier Index)
+const RANKS_CONFIG = [
+    { power: 0, name: 'Unranked', index: 0 },
+    { power: 1000, name: 'Bronze III', index: 1 },
+    { power: 2500, name: 'Bronze II', index: 2 },
+    { power: 5000, name: 'Bronze I', index: 3 },
+    { power: 10000, name: 'Silver III', index: 4 },
+    { power: 20000, name: 'Silver II', index: 5 },
+    { power: 40000, name: 'Silver I', index: 6 },
+    { power: 75000, name: 'Gold III', index: 7 },
+    { power: 150000, name: 'Gold II', index: 8 },
+    { power: 300000, name: 'Gold I', index: 9 },
+    { power: 1000000, name: 'Platinum', index: 10 },
+    { power: 5000000, name: 'Diamond', index: 11 },
+    { power: 25000000, name: 'Master', index: 12 },
+    { power: 100000000, name: 'Legend', index: 13 },
+];
+
+// 50+ Building Upgrades
 const KING_GAME_UPGRADES = {
     click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1 },
-    b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 },
-    b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 },
-    b3: { name: 'Castle', baseCost: 12000, costMultiplier: 1.14, cps: 45 },
-    b4: { name: 'Kingdom', baseCost: 130000, costMultiplier: 1.16, cps: 250 },
-    b5: { name: 'Empire', baseCost: 1500000, costMultiplier: 1.18, cps: 1400 },
-    b6: { name: 'Galaxy', baseCost: 20000000, costMultiplier: 1.2, cps: 7800 },
-    b7: { name: 'Universe', baseCost: 330000000, costMultiplier: 1.22, cps: 44000 },
+    b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35 }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150 }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720 }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800 }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000 }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000 }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000 }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6 }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7 }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8 }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8 }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9 }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10 }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11 }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11 }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12 }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13 }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14 },
 };
+let lastCps = 1.8e14; let lastCost = 8e17;
+for (let i = 21; i <= 50; i++) {
+    lastCps *= (5 + i * 0.1); lastCost *= (6 + i * 0.15);
+    KING_GAME_UPGRADES[`b${i}`] = { name: `Cosmic Structure #${i-20}`, baseCost: lastCost, costMultiplier: 1.23 + (i * 0.002), cps: lastCps };
+}
 
-// Boutique de Gems
-const GEM_BOOSTS = {
-    'x2_coins': { name: '2x Coin Boost', cost: 10, duration_minutes: 60 },
-    'half_cost': { name: '50% Upgrade Discount', cost: 5, duration_minutes: 5 },
-};
+// Gem Shop
+const GEM_BOOSTS = { 'x2_coins': { name: '2x Coin Boost', cost: 10, duration_minutes: 60 }, 'half_cost': { name: '50% Upgrade Discount', cost: 5, duration_minutes: 5 },};
+const COST_PER_HOUR = BigInt('77045760000');
 
-// --- AJOUT : COÛT POUR 1H DE TEMPS DE CLÉ ---
-// (50 * (1+8+45+250+1400+7800+44000)) CPS * (8 * 3600) secondes
-const BUY_TIME_COST = BigInt('77045760000'); // 77,045,760,000
-
-// --- FONCTIONS HELPERS ---
+// --- HELPER FUNCTIONS ---
 const getUpgradeCost = (upgradeId, level, active_boosts) => {
     const upgrade = KING_GAME_UPGRADES[upgradeId];
-    let cost = Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level));
-    
+    let cost = BigInt(Math.ceil(upgrade.baseCost * Math.pow(upgrade.costMultiplier, level)));
     if (active_boosts && active_boosts['half_cost'] && new Date(active_boosts['half_cost']) > new Date()) {
-        cost = Math.ceil(cost / 2);
+        cost = cost / BigInt(2);
     }
     return cost;
 };
 
-const calculateKingGameState = (user) => {
+const getUnitCost = (unitId, currentQuantity, isTroop) => {
+    const config = isTroop ? TROOPS_CONFIG[unitId] : DEFENSES_CONFIG[unitId];
+    return BigInt(Math.ceil(config.cost * Math.pow(config.costMultiplier, currentQuantity)));
+};
+
+const calculatePower = (user) => {
+    let power = 0;
+    const troops = user.troops || {};
+    const defenses = user.defenses || {};
+    for (const troopId in troops) {
+        power += (troops[troopId].level || 1) * TROOPS_CONFIG[troopId].power * (troops[troopId].quantity || 0);
+    }
+    for (const defenseId in defenses) {
+        power += (defenses[defenseId].level || 1) * DEFENSES_CONFIG[defenseId].power * (defenses[defenseId].quantity || 0);
+    }
+    return BigInt(power);
+};
+
+const calculateKingGameState = async (user, topPlayers) => {
     const upgrades = user.king_game_upgrades || {};
     const active_boosts = user.active_boosts || {};
     const getLevel = (id) => upgrades[id] || 0;
 
-    const rebirth_bonus = 1 + (user.rebirth_level || 0) * 0.10;
-
-    let clickValue = 1 + (getLevel('click') * KING_GAME_UPGRADES.click.value);
-    let cps = 0;
+    // Base values
+    let clickValue = BigInt(1) + BigInt(getLevel('click') * (KING_GAME_UPGRADES.click?.value || 1));
+    let cps = BigInt(0);
     for (const id in KING_GAME_UPGRADES) {
-        if (id !== 'click') {
-            cps += getLevel(id) * KING_GAME_UPGRADES[id].cps;
-        }
+        if (id !== 'click') cps += BigInt(getLevel(id)) * BigInt(Math.round(KING_GAME_UPGRADES[id].cps));
     }
-    
-    let finalClickValue = Math.round(clickValue * rebirth_bonus);
-    let finalCps = Math.round(cps * rebirth_bonus);
 
+    // --- Apply Bonuses ---
+    // 1. Prestige Bonus
+    const prestige_bonus = Math.pow(2, user.prestige_level || 0);
+    let totalBonusMultiplier = prestige_bonus;
+
+    // 2. Rank Bonus
+    const currentRank = RANKS_CONFIG.slice().reverse().find(r => user.power >= r.power) || RANKS_CONFIG[0];
+    const rank_bonus = Math.pow(1.1, currentRank.index);
+    totalBonusMultiplier *= rank_bonus;
+
+    // 3. Top 3 Special Bonus
+    const userPosition = topPlayers.findIndex(p => p.discord_id === user.discord_id);
+    if (userPosition === 0) totalBonusMultiplier *= 1.5; // King
+    if (userPosition === 1) totalBonusMultiplier *= 2.0; // Queen
+
+    // Apply all bonuses
+    let finalClickValue = clickValue * BigInt(Math.round(totalBonusMultiplier));
+    let finalCps = cps * BigInt(Math.round(totalBonusMultiplier));
+    
+    // 4. Gem Boosts (applied last)
     if (active_boosts['x2_coins'] && new Date(active_boosts['x2_coins']) > new Date()) {
-        finalClickValue *= 2;
-        finalCps *= 2;
+        finalClickValue *= BigInt(2);
+        finalCps *= BigInt(2);
     }
     
-    return { clickValue: finalClickValue, cps: finalCps };
+    return { 
+        clickValue: finalClickValue.toString(), 
+        cps: finalCps.toString(),
+        power: user.power.toString(),
+        rank: currentRank.name
+    };
 };
 
-// --- HANDLER PRINCIPAL ---
+// --- MAIN HANDLER ---
 exports.handler = async function (event, context) {
     const cookies = event.headers?.cookie ? cookie.parse(event.headers.cookie) : {};
     const token = cookies.auth_token;
     if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
     
     let decoded;
-    try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (e) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) };
-    }
+    try { decoded = jwt.verify(token, process.env.JWT_SECRET); } 
+    catch (e) { return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) }; }
     const { id } = decoded;
 
-    // --- LOGIQUE GET ---
     if (event.httpMethod === 'GET') {
         const action = event.queryStringParameters.action;
-        
-        // Nouvelle action pour récupérer la liste des joueurs
         if (action === 'get_users') {
-            try {
-                const { rows } = await db.query('SELECT discord_id, discord_username FROM users ORDER BY discord_username');
+             try {
+                const { rows } = await db.query('SELECT discord_id, discord_username, power FROM users ORDER BY power DESC');
                 return { statusCode: 200, body: JSON.stringify(rows) };
-            } catch (error) {
-                 return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) };
-            }
+            } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
         }
-
-        // Action par défaut pour vérifier l'accès au jeu
         try {
             const { rows } = await db.query('SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]);
-            if (rows.length === 0) {
-                return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) };
-            }
+            if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) };
             return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) };
-        } catch (error) {
-            return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) };
-        }
+        } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) }; }
     }
 
-    // --- LOGIQUE POST ---
     if (event.httpMethod === 'POST') {
         const body = JSON.parse(event.body);
         const client = await db.getClient();
-
         try {
             await client.query('BEGIN');
-            const { rows } = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [id]);
-            if (rows.length === 0) throw new Error('User not found.');
-            
-            let user = rows[0];
+            // Fetch current user and top players in one go for efficiency
+            const userRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [id]);
+            if (userRes.rows.length === 0) throw new Error('User not found.');
+            let user = userRes.rows[0];
+            const topPlayersRes = await client.query('SELECT discord_id, power FROM users ORDER BY power DESC LIMIT 3');
+            const topPlayers = topPlayersRes.rows;
             const now = new Date();
 
-            // Vérification anti-autoclick
-            if (user.blocked_until && new Date(user.blocked_until) > now) {
-                const remainingMinutes = Math.ceil((new Date(user.blocked_until) - now) / 60000);
-                throw new Error(`Autoclick detected. You are blocked for ${remainingMinutes} more minutes.`);
-            }
-
-            // Calcul des gains AFK
+            // AFK Gains Calculation
             const lastUpdate = new Date(user.last_king_game_update);
             const secondsDiff = Math.floor((now - lastUpdate) / 1000);
             if (secondsDiff > 0) {
-                const { cps } = calculateKingGameState(user);
-                user.king_game_coins = (BigInt(user.king_game_coins) + BigInt(secondsDiff * cps)).toString();
+                const { cps } = await calculateKingGameState(user, topPlayers);
+                user.king_game_coins = (BigInt(user.king_game_coins) + (BigInt(secondsDiff) * BigInt(cps))).toString();
             }
 
             const { action } = body;
             let upgrades = user.king_game_upgrades || {};
             let active_boosts = user.active_boosts || {};
-            
-            // --- AJOUT : Variable pour la réponse ---
+            let troops = user.troops || {};
+            let defenses = user.defenses || {};
             let responseData = {};
 
-            // ACTIONS DU JEU
+            // GAME ACTIONS
             if (action === 'click') {
-                let timestamps = user.click_timestamps || [];
-                timestamps.push(now.toISOString());
-                timestamps = timestamps.slice(-AUTOCLICK_CLICKS_TO_CHECK);
-                user.click_timestamps = timestamps;
-
-                if (timestamps.length === AUTOCLICK_CLICKS_TO_CHECK) {
-                    const firstClick = new Date(timestamps[0]);
-                    if (now - firstClick < AUTOCLICK_TIME_THRESHOLD_MS) {
-                        user.blocked_until = new Date(now.getTime() + BLOCK_DURATION_HOURS * 60 * 60 * 1000);
-                        user.click_timestamps = []; // reset
-                        throw new Error(`Autoclick detected! You are blocked for ${BLOCK_DURATION_HOURS} hour.`);
-                    }
-                }
-                const { clickValue } = calculateKingGameState(user);
+                const { clickValue } = await calculateKingGameState(user, topPlayers);
                 user.king_game_coins = (BigInt(user.king_game_coins) + BigInt(clickValue)).toString();
 
             } else if (action === 'buy_upgrade') {
@@ -168,127 +197,166 @@ exports.handler = async function (event, context) {
                 if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.');
                 const level = upgrades[upgradeId] || 0;
                 const cost = getUpgradeCost(upgradeId, level, active_boosts);
+                if (BigInt(user.king_game_coins) < cost) throw new Error("Not enough coins.");
+                user.king_game_coins = (BigInt(user.king_game_coins) - cost).toString();
+                upgrades[upgradeId] = level + 1;
 
-                if (BigInt(user.king_game_coins) >= BigInt(cost)) {
-                    user.king_game_coins = (BigInt(user.king_game_coins) - BigInt(cost)).toString();
-                    upgrades[upgradeId] = level + 1;
-                } else {
-                    throw new Error("Not enough coins.");
-                }
-
-            } else if (action === 'rebirth') {
-                if (user.rebirth_level >= MAX_REBIRTH_LEVEL) throw new Error("You have reached the maximum rebirth level.");
-                
-                let canRebirth = true;
+            } else if (action === 'prestige') {
+                if ((user.prestige_level || 0) >= MAX_PRESTIGE_LEVEL) throw new Error("You have reached the maximum prestige level.");
+                let canPrestige = true;
                 for (const id in KING_GAME_UPGRADES) {
-                    if ((upgrades[id] || 0) < MAX_UPGRADE_LEVEL) {
-                        canRebirth = false;
-                        break;
-                    }
+                    if ((upgrades[id] || 0) < PRESTIGE_REQUIREMENT_LEVEL) { canPrestige = false; break; }
                 }
-                if (!canRebirth) throw new Error(`You must have all upgrades at level ${MAX_UPGRADE_LEVEL} to rebirth.`);
-
-                const gemsEarned = (user.rebirth_level + 1) * 5;
-                user.gems += gemsEarned;
-                user.rebirth_level += 1;
+                if (!canPrestige) throw new Error(`You must have all upgrades at level ${PRESTIGE_REQUIREMENT_LEVEL} to prestige.`);
+                user.gems = (user.gems || 0) + 2;
+                user.prestige_level = (user.prestige_level || 0) + 1;
                 user.king_game_coins = '0';
                 upgrades = {};
                 active_boosts = {};
 
-            } else if (action === 'buy_boost') {
-                const { boostId } = body;
-                const boost = GEM_BOOSTS[boostId];
-                if (!boost) throw new Error('Invalid boost.');
-                if (user.gems < boost.cost) throw new Error('Not enough gems.');
-
-                if (active_boosts[boostId] && new Date(active_boosts[boostId]) > now) {
-                    throw new Error('This boost is already active.');
-                }
-                
-                user.gems -= boost.cost;
-                active_boosts[boostId] = new Date(now.getTime() + boost.duration_minutes * 60 * 1000).toISOString();
-
-            } else if (action === 'send_coins') {
-                const { recipientId, amount } = body;
-                const amountBigInt = BigInt(amount);
-                if (!recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount.");
-                if (recipientId === id) throw new Error("You cannot send coins to yourself.");
-                if (BigInt(user.king_game_coins) < amountBigInt) throw new Error("Not enough coins to send.");
-
-                user.king_game_coins = (BigInt(user.king_game_coins) - amountBigInt).toString();
-                await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [amount, recipientId]);
-            
-            // --- NOUVELLE ACTION : ACHETER DU TEMPS ---
             } else if (action === 'buy_time') {
-                if (BigInt(user.king_game_coins) < BUY_TIME_COST) {
-                    throw new Error("Not enough coins to buy time.");
-                }
-                
-                // Trouver la clé temporaire active de l'utilisateur
-                const { rows: keyRows } = await client.query(
-                    'SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1',
-                    [id]
-                );
-                
-                if (keyRows.length === 0) {
-                    throw new Error("You do not have an active temporary key to extend.");
-                }
-                
-                // Soustraire le coût
-                user.king_game_coins = (BigInt(user.king_game_coins) - BUY_TIME_COST).toString();
-                
-                // Ajouter 1 heure à la date d'expiration actuelle
-                const currentExpiresAt = new Date(keyRows[0].expires_at);
-                const newExpiresAt = new Date(currentExpiresAt.getTime() + 60 * 60 * 1000);
-                
-                // Mettre à jour la clé
+                // Logic unchanged
+                const hours = parseInt(body.hours, 10);
+                if (!hours || hours <= 0 || hours > 168) throw new Error("Invalid number of hours.");
+                const totalCost = COST_PER_HOUR * BigInt(hours);
+                if (BigInt(user.king_game_coins) < totalCost) throw new Error("Not enough coins to buy time.");
+                const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [id]);
+                if (keyRows.length === 0) throw new Error("You do not have an active temporary key to extend.");
+                user.king_game_coins = (BigInt(user.king_game_coins) - totalCost).toString();
+                const newExpiresAt = new Date(new Date(keyRows[0].expires_at).getTime() + hours * 3600000);
                 await client.query('UPDATE keys SET expires_at = $1 WHERE id = $2', [newExpiresAt, keyRows[0].id]);
-                
-                // Ajouter la nouvelle date d'expiration à la réponse
                 responseData.newExpiresAt = newExpiresAt.toISOString();
+
+            } else if (action === 'buy_troop' || action === 'buy_defense') {
+                const { unitId, quantity } = body;
+                const isTroop = action === 'buy_troop';
+                const config = isTroop ? TROOPS_CONFIG[unitId] : DEFENSES_CONFIG[unitId];
+                const unitData = isTroop ? troops : defenses;
+                if (!config || !quantity || quantity <= 0) throw new Error('Invalid unit or quantity.');
+                
+                let totalCost = BigInt(0);
+                const currentQuantity = unitData[unitId]?.quantity || 0;
+                for(let i=0; i<quantity; i++){
+                    totalCost += getUnitCost(unitId, currentQuantity + i, isTroop);
+                }
+
+                if (BigInt(user.king_game_coins) < totalCost) throw new Error('Not enough coins.');
+                user.king_game_coins = (BigInt(user.king_game_coins) - totalCost).toString();
+                if (!unitData[unitId]) unitData[unitId] = { quantity: 0, level: 1 };
+                unitData[unitId].quantity += quantity;
+
+            } else if (action === 'attack_player') {
+                const { targetId } = body;
+                if (!targetId || targetId === id) throw new Error('Invalid target.');
+
+                // Cooldown check
+                const lastAttacks = user.last_attack_timestamps || {};
+                if (lastAttacks[targetId] && (now.getTime() - new Date(lastAttacks[targetId]).getTime()) < 24 * 3600 * 1000) {
+                    throw new Error('You can only attack this player once every 24 hours.');
+                }
+                
+                // Queen check
+                if (topPlayers[1] && targetId === topPlayers[1].discord_id) {
+                    throw new Error('The Queen is protected and cannot be attacked.');
+                }
+
+                // Fetch target data
+                const targetRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [targetId]);
+                if (targetRes.rows.length === 0) throw new Error('Target player not found.');
+                let targetUser = targetRes.rows[0];
+
+                // Battle Simulation
+                let attackerPower = user.power;
+                let defenderPower = targetUser.power;
+
+                // Apply Top 3 bonuses
+                const attackerPos = topPlayers.findIndex(p => p.discord_id === id);
+                const defenderPos = topPlayers.findIndex(p => p.discord_id === targetId);
+                if (attackerPos === 0) attackerPower = attackerPower * BigInt(2); // King +100%
+                if (attackerPos === 2) attackerPower = attackerPower * BigInt(1.5); // General +50%
+                if (defenderPos === 0) defenderPower = defenderPower * BigInt(2); // King +100%
+                if (defenderPos === 2) defenderPower = defenderPower * BigInt(1.5); // General +50%
+
+                const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75);
+                const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
+
+                const attackerWins = attackerRoll > defenderRoll;
+                const lossPercentWinner = 0.05; // 5%
+                const lossPercentLoser = 0.20; // 20%
+                
+                // Calculate troop losses (perma-death)
+                const calculateLosses = (userTroops, lossPercent) => {
+                    for(const troopId in userTroops) {
+                        const losses = Math.ceil(userTroops[troopId].quantity * lossPercent);
+                        userTroops[troopId].quantity -= losses;
+                        if(userTroops[troopId].quantity < 0) userTroops[troopId].quantity = 0;
+                    }
+                    return userTroops;
+                };
+
+                if (attackerWins) {
+                    const stolenAmount = BigInt(targetUser.king_game_coins) / BigInt(10);
+                    user.king_game_coins = (BigInt(user.king_game_coins) + stolenAmount).toString();
+                    targetUser.king_game_coins = (BigInt(targetUser.king_game_coins) - stolenAmount).toString();
+                    
+                    user.troops = calculateLosses(troops, lossPercentWinner);
+                    targetUser.troops = calculateLosses(targetUser.troops, lossPercentLoser);
+
+                    // If King was defeated, attacker takes his place (by getting a huge power boost)
+                    if (defenderPos === 0) {
+                        user.power = BigInt(targetUser.power) + BigInt(1); // Ensure new King
+                    }
+                    
+                    responseData.battleReport = `Victory! You stole ${stolenAmount.toLocaleString('en-US')} coins.`;
+                } else {
+                    user.troops = calculateLosses(troops, lossPercentLoser);
+                    targetUser.troops = calculateLosses(targetUser.troops, lossPercentWinner);
+                    responseData.battleReport = `Defeat! You lost the battle.`;
+                }
+                
+                // Update target user in DB
+                targetUser.power = calculatePower(targetUser);
+                await client.query('UPDATE users SET king_game_coins = $1, troops = $2, power = $3 WHERE discord_id = $4', [targetUser.king_game_coins, JSON.stringify(targetUser.troops), targetUser.power.toString(), targetId]);
+                
+                // Update attacker's cooldown timestamp
+                lastAttacks[targetId] = now.toISOString();
+                user.last_attack_timestamps = lastAttacks;
             }
-            // --- FIN DE LA NOUVELLE ACTION ---
-            
-            // SAUVEGARDE DANS LA DB
+
+            // Recalculate power and save everything for the current user
+            user.power = calculatePower(user);
             await client.query(
                 `UPDATE users SET 
                     king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = $3, 
-                    rebirth_level = $4, click_timestamps = $5, blocked_until = $6,
-                    gems = $7, active_boosts = $8
-                WHERE discord_id = $9`, 
+                    prestige_level = $4, gems = $5, active_boosts = $6,
+                    power = $7, troops = $8, defenses = $9, last_attack_timestamps = $10
+                WHERE discord_id = $11`, 
                 [user.king_game_coins, JSON.stringify(upgrades), now.toISOString(), 
-                user.rebirth_level, user.click_timestamps, user.blocked_until,
-                user.gems, JSON.stringify(active_boosts), id]
+                user.prestige_level || 0, user.gems || 0, JSON.stringify(active_boosts),
+                user.power.toString(), JSON.stringify(troops), JSON.stringify(defenses), JSON.stringify(user.last_attack_timestamps || {}), id]
             );
             
             await client.query('COMMIT');
 
-            // Nettoyer les boosts expirés pour la réponse au client
-            const final_active_boosts = {};
-            for(const boostId in active_boosts) {
-                if(new Date(active_boosts[boostId]) > now) {
-                    final_active_boosts[boostId] = active_boosts[boostId];
-                }
-            }
-
-            // Construire la réponse finale
+            // Construct final response
+            const finalGameState = await calculateKingGameState(user, topPlayers);
             const finalResponse = {
                 coins: user.king_game_coins,
                 upgrades: upgrades,
-                rebirth_level: user.rebirth_level,
-                gems: user.gems,
-                active_boosts: final_active_boosts,
-                ...responseData // Ajoute newExpiresAt si l'action était 'buy_time'
+                prestige_level: user.prestige_level || 0,
+                gems: user.gems || 0,
+                troops: troops,
+                defenses: defenses,
+                power: finalGameState.power,
+                rank: finalGameState.rank,
+                active_boosts: Object.fromEntries(Object.entries(active_boosts).filter(([_,exp]) => new Date(exp) > now)),
+                ...responseData
             };
-
-            return {
-                statusCode: 200,
-                body: JSON.stringify(finalResponse)
-            };
+            return { statusCode: 200, body: JSON.stringify(finalResponse) };
 
         } catch (error) {
             await client.query('ROLLBACK');
-            return { statusCode: 500, body: JSON.stringify({ error: error.message || 'An internal server error occurred.' }) };
+            return { statusCode: 400, body: JSON.stringify({ error: error.message || 'An internal server error occurred.' }) };
         } finally {
             client.release();
         }
