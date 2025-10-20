@@ -211,29 +211,62 @@ exports.handler = async function (event, context) {
             let upgrades = user.king_game_upgrades || {}; let active_boosts = user.active_boosts || {}; let troops = user.troops || {}; let defenses = user.defenses || {};
             
             const performAttack = async (attacker, defender, tops) => {
-                const attackerTroopsBefore = deepCopy(attacker.troops); const defenderTroopsBefore = deepCopy(defender.troops); const defenderDefensesBefore = deepCopy(defender.defenses);
-                
-                let attackerPower = attacker.power; 
-                let defenderPower = defender.power; 
-
+                const attackerTroopsBefore = deepCopy(attacker.troops);
+                const defenderTroopsBefore = deepCopy(defender.troops);
+                const defenderDefensesBefore = deepCopy(defender.defenses);
+            
+                // --- POUVOIR DE BASE ---
+                let attackerBasePower = Number(attacker.power);
+                let defenderBasePower = Number(defender.power);
+            
+                // --- APPLICATION DES BONUS DE RÔLE (KING, QUEEN, GENERAL) ---
                 const getRole = (userId, category) => { const idx = tops[category].indexOf(userId); return idx === -1 ? null : (idx === 0 ? 'King' : (idx === 1 ? 'Queen' : 'General')); }
                 const attackerRole = getRole(attacker.discord_id, 'power');
                 const defenderRole = getRole(defender.discord_id, 'power');
+            
+                let effectiveAttackerPower = attackerBasePower;
+                let effectiveDefenderPower = defenderBasePower;
 
-                if (attackerRole && LEADER_BONUSES.power[attackerRole]?.attack_power_multiplier) { attackerPower = BigInt(Math.round(Number(attackerPower) * LEADER_BONUSES.power[attackerRole].attack_power_multiplier)); }
-                if (defenderRole && LEADER_BONUSES.power[defenderRole]?.defense_power_multiplier) { defenderPower = BigInt(Math.round(Number(defenderPower) * LEADER_BONUSES.power[defenderRole].defense_power_multiplier)); }
+                if (attackerRole && LEADER_BONUSES.power[attackerRole]?.attack_power_multiplier) {
+                    effectiveAttackerPower *= LEADER_BONUSES.power[attackerRole].attack_power_multiplier;
+                }
+                if (defenderRole && LEADER_BONUSES.power[defenderRole]?.defense_power_multiplier) {
+                    effectiveDefenderPower *= LEADER_BONUSES.power[defenderRole].defense_power_multiplier;
+                }
+            
+                // --- JET DE COMBAT AVEC FACTEUR ALÉATOIRE ---
+                const attackerRoll = effectiveAttackerPower * (Math.random() * 0.5 + 0.75); // Roll entre 75% et 125%
+                const defenderRoll = effectiveDefenderPower * (Math.random() * 0.5 + 0.75);
+            
+                // --- NOUVELLE LOGIQUE DE CALCUL DES PERTES ---
+                // Les pertes sont proportionnelles à la puissance de l'adversaire par rapport à la sienne.
+                // On s'assure que la puissance de base n'est pas 0 pour éviter la division par zéro.
+                const attackerLossPercent = attackerBasePower > 0 ? Math.min(1, defenderRoll / attackerBasePower) : 1;
+                const defenderLossPercent = defenderBasePower > 0 ? Math.min(1, attackerRoll / defenderBasePower) : 1;
 
-                const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75);
-                const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
+                const calculateLosses = (unitData, lossPercent) => {
+                    if (!unitData || lossPercent <= 0) return unitData;
+                    // On ne peut pas perdre moins d'une troupe si on subit des dégâts, donc on arrondit au supérieur.
+                    for (const unitId in unitData) {
+                        const losses = Math.ceil(unitData[unitId].quantity * lossPercent);
+                        unitData[unitId].quantity -= losses;
+                        if (unitData[unitId].quantity < 0) unitData[unitId].quantity = 0;
+                    }
+                    return unitData;
+                };
                 
+                attacker.troops = calculateLosses(attacker.troops, attackerLossPercent);
+                defender.troops = calculateLosses(defender.troops, defenderLossPercent);
+                defender.defenses = calculateLosses(defender.defenses, defenderLossPercent); // Les défenses subissent les mêmes pertes que les troupes
+
+                // --- DÉTERMINATION DU VAINQUEUR POUR LE VOL ---
                 const attackerWins = attackerRoll > defenderRoll;
-
-                const calculateLosses = (unitData, lossPercent) => { if (!unitData) return {}; for (const unitId in unitData) { const losses = Math.ceil(unitData[unitId].quantity * lossPercent); unitData[unitId].quantity -= losses; if (unitData[unitId].quantity < 0) unitData[unitId].quantity = 0; } return unitData; };
-                
-                let stolenAmount = 0n; let battleReport;
+                let stolenAmount = 0n;
+                let battleReport = '';
 
                 if (attackerWins) {
-                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n;
+                    // Calcul du butin
+                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n; // Vol de 10%
                     const attackerCoinRole = getRole(attacker.discord_id, 'coins');
                     if (attackerCoinRole === 'Queen' && LEADER_BONUSES.coins.Queen.steal_multiplier) {
                         stolenAmount = BigInt(Math.round(Number(stolenAmount) * LEADER_BONUSES.coins.Queen.steal_multiplier));
@@ -241,19 +274,21 @@ exports.handler = async function (event, context) {
                     
                     attacker.king_game_coins = (BigInt(attacker.king_game_coins || '0') + stolenAmount).toString();
                     defender.king_game_coins = (BigInt(defender.king_game_coins || '0') - stolenAmount).toString();
-                    
-                    attacker.troops = calculateLosses(attacker.troops, 0.10);
-                    defender.troops = calculateLosses(defender.troops, 0.25);
-                    defender.defenses = calculateLosses(defender.defenses, 0.10);
+
                     battleReport = `Victory! You stole ${stolenAmount.toLocaleString('en-US')} coins.`;
                 } else {
-                    for(const troopId in attacker.troops) { if(!SPECIAL_UNITS_CONFIG[troopId]) attacker.troops[troopId].quantity = 0; }
-                    defender.troops = calculateLosses(defender.troops, 0.10);
-                    defender.defenses = calculateLosses(defender.defenses, 0.05);
-                    battleReport = `Total Defeat! Your regular army was wiped out.`;
+                    battleReport = `Defeat! Your attack was repelled and you couldn't steal any coins.`;
                 }
 
-                const getLostUnits = (before, after) => { const losses = {}; for(const unitId in before) { const lostCount = before[unitId].quantity - (after[unitId]?.quantity || 0); if (lostCount > 0) losses[unitId] = lostCount; } return losses; };
+                // --- RAPPORT DE PERTES ---
+                const getLostUnits = (before, after) => {
+                    const losses = {};
+                    for(const unitId in before) {
+                        const lostCount = before[unitId].quantity - (after[unitId]?.quantity || 0);
+                        if (lostCount > 0) losses[unitId] = lostCount;
+                    }
+                    return losses;
+                };
                 const attackerLosses = getLostUnits(attackerTroopsBefore, attacker.troops);
                 const defenderLosses = { ...getLostUnits(defenderTroopsBefore, defender.troops), ...getLostUnits(defenderDefensesBefore, defender.defenses) };
                 
