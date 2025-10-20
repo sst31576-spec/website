@@ -412,7 +412,7 @@ exports.handler = async function (event, context) {
             }
             
             user.power = calculatePower(user);
-            await client.query( `UPDATE users SET king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = $3, rebirth_level = $4, gems = $5, active_boosts = $6, power = $7, troops = $8, defenses = $9, last_attack_timestamps = $10, last_daily_reward_at = $12, reward_available = $13, time_purchase_count = $14 WHERE discord_id = $11`, [user.king_game_coins.toString(), JSON.stringify(upgrades), now.toISOString(), user.rebirth_level || 0, user.gems || 0, JSON.stringify(active_boosts), user.power.toString(), JSON.stringify(troops), JSON.stringify(defenses), JSON.stringify(user.last_attack_timestamps || {}), id, user.last_daily_reward_at, user.reward_available, user.time_purchase_count || 0] );
+            await client.query( `UPDATE users SET king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = $3, rebirth_level = $4, gems = $5, active_boosts = $6, power = $7, troops = $8, defenses = $9, last_attack_timestamps = $10, discord_id = $11, last_daily_reward_at = $12, reward_available = $13, time_purchase_count = $14 WHERE discord_id = $11`, [user.king_game_coins.toString(), JSON.stringify(upgrades), now.toISOString(), user.rebirth_level || 0, user.gems || 0, JSON.stringify(active_boosts), user.power.toString(), JSON.stringify(troops), JSON.stringify(defenses), JSON.stringify(user.last_attack_timestamps || {}), id, user.last_daily_reward_at, user.reward_available, user.time_purchase_count || 0] );
             
             await client.query('COMMIT');
 
