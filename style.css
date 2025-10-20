@@ -301,22 +301,25 @@ nav a.active {
 /* ======================================= */
 
 #page-earn-time .card-box {
-    max-width: 1000px; /* Wider card for the game */
+    max-width: 1200px; /* Wider card for the full game */
 }
 
 .king-game-layout {
     display: grid;
-    grid-template-columns: 300px 1fr;
-    grid-template-rows: auto auto;
+    /* NEW: Three-column layout */
+    grid-template-columns: 280px 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
     gap: 20px;
     grid-template-areas:
-        "left right"
-        "bottom bottom";
+        "left middle right"
+        "left middle right"
+        "bottom bottom bottom";
     text-align: left;
     width: 100%;
 }
 
 .kg-left-panel { grid-area: left; }
+.kg-middle-panel { grid-area: middle; }
 .kg-right-panel { grid-area: right; }
 .kg-bottom-panel { 
     grid-area: bottom; 
@@ -326,10 +329,18 @@ nav a.active {
     border-top: 1px solid var(--background-tertiary); 
     padding-top: 15px; 
     margin-top: 15px;
+    flex-wrap: wrap;
+    gap: 20px;
 }
 
 .coin-display, .clicker-area { text-align: center; }
-#kg-coin-count { font-size: 32px; font-weight: bold; color: var(--header-primary); margin: 0; }
+#kg-coin-count { 
+    font-size: 28px; 
+    font-weight: bold; 
+    color: var(--header-primary); 
+    margin: 0;
+    word-wrap: break-word;
+}
 #kg-cps-count { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; }
 #kg-bonus-display { color: var(--brand-green); font-weight: bold; }
 
@@ -345,22 +356,27 @@ nav a.active {
 }
 #kg-clicker-btn:active { transform: scale(0.95); }
 
-.upgrades-container, .shop-container {
+.upgrades-container, .shop-container, .army-container, .defense-container {
     background-color: var(--background-tertiary);
     padding: 15px;
     border-radius: var(--border-radius);
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
 }
-.upgrades-container h4, .shop-container h4 {
+.upgrades-container h4, .shop-container h4, .army-container h4, .defense-container h4 {
     margin: 0 0 10px 0;
     text-align: center;
     color: var(--header-primary);
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--background-primary);
 }
 
-#kg-upgrades-list {
-    max-height: 320px;
+#kg-upgrades-list, #kg-army-list, #kg-defenses-list {
+    max-height: 450px; /* Taller list */
     overflow-y: auto;
     padding-right: 10px;
+    flex-grow: 1;
 }
 
 .upgrade-item {
@@ -389,9 +405,9 @@ nav a.active {
 .active-boosts-container h4 { margin: 0 0 5px 0; }
 .active-boosts-container p { margin: 2px 0; font-size: 14px; }
 
-.send-coins-container { display: flex; align-items: center; gap: 10px; }
-.send-coins-container h4 { margin: 0; }
-#kg-recipient-search, #kg-send-amount {
+.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; }
+.attack-container h4, .send-coins-container h4 { margin: 0; }
+#kg-recipient-search, #kg-send-amount, #kg-attack-target-search {
     background-color: var(--background-tertiary);
     border: 1px solid var(--background-primary);
     color: var(--text-normal);
@@ -410,6 +426,8 @@ nav a.active {
     border-radius: var(--border-radius);
     max-height: 150px;
     overflow-y: auto;
+    bottom: 100%; /* Position above the input */
+    margin-bottom: 5px;
 }
 .user-dropdown-content a {
     color: var(--text-normal);
@@ -419,22 +437,27 @@ nav a.active {
 }
 .user-dropdown-content a:hover { background-color: var(--background-primary); }
 
-#kg-rebirth-btn { background-color: var(--brand-green); }
-#kg-rebirth-btn:hover { background-color: #3aa171; }
-.max-rebirth-msg { font-weight: bold; color: var(--brand-green); }
+#kg-prestige-btn { background-color: var(--brand-green); }
+#kg-prestige-btn:hover { background-color: #3aa171; }
+.max-prestige-msg { font-weight: bold; color: var(--brand-green); }
 
-/* --- AJOUT DU STYLE POUR LE BOUTON "BUY TIME" --- */
+
 .kg-buy-time-container {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
+}
+#kg-buy-time-select {
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
 }
 .kg-buy-time-container small {
     color: var(--text-muted);
     font-size: 12px;
 }
-/* --- FIN DE L'AJOUT --- */
 
 
 /* ======================================= */
@@ -452,8 +475,10 @@ nav a.active {
     
     .king-game-layout {
         grid-template-columns: 1fr;
+        grid-template-rows: auto; /* Let rows size automatically */
         grid-template-areas:
             "left"
+            "middle"
             "right"
             "bottom";
     }
