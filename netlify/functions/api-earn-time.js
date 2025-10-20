@@ -88,14 +88,12 @@ exports.handler = async function (event, context) {
                 return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch attack history.' }) };
             }
         }
-        // Fallback for any other GET request to this endpoint
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     if (event.httpMethod === 'POST') {
-        // FIX: Key validation is now the first step for any POST action.
         try {
-            const { rows } = await db.query('SELECT 1 FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]);
+            const { rows } = await db.query('SELECT 1 FROM keys WHERE owner_discord_id = $1 AND (LOWER(key_type) = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]);
             if (rows.length === 0) {
                 return { statusCode: 403, body: JSON.stringify({ error: 'You do not have an active key to play.' }) };
             }
