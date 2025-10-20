@@ -4,7 +4,7 @@ const cookie = require('cookie');
 const db = require('./db');
 
 // --- GAME CONFIGURATION ---
-const MAX_PRESTIGE_LEVEL = 50; // Augmenté pour le nouveau système
+const MAX_PRESTIGE_LEVEL = 50;
 const REBIRTH_CONFIG = [
     { percent: 10, level: 10 },  // Rebirth 1 (index 0)
     { percent: 20, level: 20 },  // Rebirth 2
@@ -85,17 +85,18 @@ const calculateRebirthProgress = (user) => {
         }
     }
     
-    const percentComplete = (buildingsMeetingLevel / totalBuildingTypes) * 100;
-    const canRebirth = percentComplete >= requirements.percent;
+    const buildingsNeeded = Math.ceil(totalBuildingTypes * (requirements.percent / 100));
+    const canRebirth = buildingsMeetingLevel >= buildingsNeeded;
     
     return {
         canRebirth,
         requiredPercent: requirements.percent,
-        currentPercent: Math.round(percentComplete),
+        currentPercent: Math.round((buildingsMeetingLevel / buildingsNeeded) * 100),
         requiredLevel: requirements.level,
         buildingsMeetingLevel,
         totalBuildingTypes,
-        missingBuildings: canRebirth ? [] : missingBuildings.slice(0, 5) // Send only a few to avoid large payload
+        buildingsNeeded,
+        missingBuildings: canRebirth ? [] : missingBuildings.slice(0, 5)
     };
 };
 
@@ -284,7 +285,34 @@ exports.handler = async function (event, context) {
             }
             else if (action === 'send_coins') { const { amount } = body; const amountBigInt = BigInt(amount); if (!body.recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount."); if (body.recipientId === id) throw new Error("You cannot send coins to yourself."); if (BigInt(user.king_game_coins || '0') < amountBigInt) throw new Error("Not enough coins to send."); const feePercent = user.userRoles.coins === 'King' ? 0n : 70n; const fee = amountBigInt * feePercent / 100n; const netAmount = amountBigInt - fee; user.king_game_coins = (BigInt(user.king_game_coins || '0') - amountBigInt).toString(); await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [netAmount.toString(), body.recipientId]); }
             else if (action === 'click') { user.king_game_coins = (BigInt(user.king_game_coins || '0') + BigInt(gameState.clickValue)).toString(); }
-            else if (action === 'buy_upgrade') { const { upgradeId } = body; if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.'); const level = upgrades[upgradeId] || 0; const cost = getUpgradeCost(upgradeId, level, active_boosts, user.userRoles); if (BigInt(user.king_game_coins || '0') < cost) throw new Error("Not enough coins."); user.king_game_coins = (BigInt(user.king_game_coins || '0') - cost).toString(); upgrades[upgradeId] = level + 1; }
+            else if (action === 'buy_upgrade') {
+                const { upgradeId, quantity } = body;
+                if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.');
+                let currentLevel = upgrades[upgradeId] || 0;
+                let totalCost = 0n;
+                let levelsToBuy = 0;
+                if (quantity === 'max') {
+                    let tempCoins = BigInt(user.king_game_coins || '0');
+                    let tempLevel = currentLevel;
+                    while (true) {
+                        const cost = getUpgradeCost(upgradeId, tempLevel, active_boosts, user.userRoles);
+                        if (tempCoins >= cost) {
+                            tempCoins -= cost;
+                            totalCost += cost;
+                            levelsToBuy++;
+                            tempLevel++;
+                        } else { break; }
+                    }
+                } else {
+                    levelsToBuy = 1;
+                    totalCost = getUpgradeCost(upgradeId, currentLevel, active_boosts, user.userRoles);
+                }
+                if (levelsToBuy > 0) {
+                    if (BigInt(user.king_game_coins || '0') < totalCost) throw new Error('Not enough coins.');
+                    user.king_game_coins = (BigInt(user.king_game_coins || '0') - totalCost).toString();
+                    upgrades[upgradeId] = currentLevel + levelsToBuy;
+                }
+            }
             else if (action === 'prestige') {
                 const progress = calculateRebirthProgress(user);
                 if (!progress.canRebirth) throw new Error("You do not meet the requirements to Rebirth.");
