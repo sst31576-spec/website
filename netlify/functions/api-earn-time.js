@@ -10,7 +10,7 @@ const SPECIAL_UNITS_CONFIG = { 'elite_soldier': { name: 'Elite Soldier', cost: 5
 const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
 const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
 const RANKS_CONFIG = []; const rankTiers = ['Bronze', 'Iron', 'Steel', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Emerald', 'Ruby', 'Sapphire', 'Amethyst', 'Topaz', 'Jade', 'Opal', 'Onyx', 'Quartz', 'Titanium', 'Obsidian', 'Mythril', 'Adamantite']; const subRanks = ['V', 'IV', 'III', 'II', 'I']; let powerThreshold = 1000; let rankIndex = 0; RANKS_CONFIG.push({ power: 0, name: 'Unranked', index: rankIndex }); rankIndex++; for (const tier of rankTiers) { for (const sub of subRanks) { RANKS_CONFIG.push({ power: powerThreshold, name: `${tier} ${sub}`, index: rankIndex }); powerThreshold = Math.floor(powerThreshold * 1.4); rankIndex++; } powerThreshold = Math.floor(powerThreshold * 1.2); }
-const KING_GAME_UPGRADES = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1 }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35 }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150 }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720 }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800 }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000 }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000 }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000 }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6 }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7 }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8 }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8 }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9 }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10 }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11 }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11 }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12 }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13 }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14 },};
+const KING_GAME_UPGRADES = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1 }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35 }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150 }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720 }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800 }, b7: { name: 'Guard Tower', cost: 9e6, costMultiplier: 1.15, cps: 21000 }, b8: { name: 'Church', cost: 5.5e7, costMultiplier: 1.16, cps: 115000 }, b9: { name: 'Library', cost: 3.8e8, costMultiplier: 1.16, cps: 650000 }, b10: { name: 'Town Hall', cost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6 }, b11: { name: 'Castle', cost: 1.8e10, costMultiplier: 1.18, cps: 2e7 }, b12: { name: 'Barracks', cost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8 }, b13: { name: 'University', cost: 8e11, costMultiplier: 1.19, cps: 6e8 }, b14: { name: 'Cathedral', cost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9 }, b15: { name: 'Royal Palace', cost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10 }, b16: { name: 'Kingdom', cost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11 }, b17: { name: 'Empire', cost: 2.1e15, costMultiplier: 1.21, cps: 9e11 }, b18: { name: 'Senate', cost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12 }, b19: { name: 'Colosseum', cost: 1.1e17, costMultiplier: 1.22, cps: 3e13 }, b20: { name: 'Grand Temple', cost: 8e17, costMultiplier: 1.23, cps: 1.8e14 },};
 const highTierNames = [ 'Quantum Forge', 'Nebula Reactor', 'Stargate Hub', 'Galactic Exchange', 'Celestial Spire', 'Ethereal Nexus', 'Singularity Core', 'Hyperspace Beacon', 'Chrono-Synth Factory', 'Void Matter Extractor', 'Cosmic Oracle', 'Stellar Shipyard', 'Dimension Weaver', 'Reality Engine', 'Genesis Chamber', 'Omega Citadel', 'Astro-Observatory', 'Dark Matter Plant', 'Supernova Catalyst', 'Infinity Gate', 'Celestial Forge', 'Stardust Silo', 'Event Horizon Lab', 'Galaxy Brain Nexus', 'Time Dilation Spire', 'Reality Bender', 'The Omniverse', 'Finality Point', 'The Great Attractor', 'The Void' ];
 let lastCps = BigInt('180000000000000'); let lastCost = BigInt('800000000000000000');
 for (let i = 21; i <= 50; i++) { const cpsMultiplier = BigInt(Math.round((5 + i * 0.1) * 10)); const costMultiplier = BigInt(Math.round((6 + i * 0.15) * 100)); lastCps = (lastCps * cpsMultiplier) / 10n; lastCost = (lastCost * costMultiplier) / 100n; const name = highTierNames[i - 21] || `Cosmic Entity #${i - 20}`; KING_GAME_UPGRADES[`b${i}`] = { name: name, baseCost: lastCost, costMultiplier: 1.23 + (i * 0.002), cps: lastCps };}
@@ -30,7 +30,6 @@ const LEADER_REWARDS = { // Daily time rewards in hours
 
 const getCost = (baseCost, costMultiplier, level, userRoles) => {
     let cost = baseCost;
-    // This is an inefficient way to calculate power cost; better to calculate final price
     let effectiveMultiplier = costMultiplier;
     let finalCost = BigInt(Math.ceil(Number(baseCost) * Math.pow(effectiveMultiplier, level)));
 
@@ -215,17 +214,17 @@ exports.handler = async function (event, context) {
                 const defenderTroopsBefore = deepCopy(defender.troops);
                 const defenderDefensesBefore = deepCopy(defender.defenses);
             
-                // --- POUVOIR DE BASE ---
-                let attackerBasePower = Number(attacker.power);
-                let defenderBasePower = Number(defender.power);
+                // --- POUVOIR DE BASE (gardé en BigInt) ---
+                const attackerBasePower = attacker.power;
+                const defenderBasePower = defender.power;
             
-                // --- APPLICATION DES BONUS DE RÔLE (KING, QUEEN, GENERAL) ---
+                // --- APPLICATION DES BONUS DE RÔLE ---
                 const getRole = (userId, category) => { const idx = tops[category].indexOf(userId); return idx === -1 ? null : (idx === 0 ? 'King' : (idx === 1 ? 'Queen' : 'General')); }
                 const attackerRole = getRole(attacker.discord_id, 'power');
                 const defenderRole = getRole(defender.discord_id, 'power');
             
-                let effectiveAttackerPower = attackerBasePower;
-                let effectiveDefenderPower = defenderBasePower;
+                let effectiveAttackerPower = Number(attackerBasePower);
+                let effectiveDefenderPower = Number(defenderBasePower);
 
                 if (attackerRole && LEADER_BONUSES.power[attackerRole]?.attack_power_multiplier) {
                     effectiveAttackerPower *= LEADER_BONUSES.power[attackerRole].attack_power_multiplier;
@@ -235,18 +234,20 @@ exports.handler = async function (event, context) {
                 }
             
                 // --- JET DE COMBAT AVEC FACTEUR ALÉATOIRE ---
-                const attackerRoll = effectiveAttackerPower * (Math.random() * 0.5 + 0.75); // Roll entre 75% et 125%
+                const attackerRoll = effectiveAttackerPower * (Math.random() * 0.5 + 0.75);
                 const defenderRoll = effectiveDefenderPower * (Math.random() * 0.5 + 0.75);
             
-                // --- NOUVELLE LOGIQUE DE CALCUL DES PERTES ---
-                // Les pertes sont proportionnelles à la puissance de l'adversaire par rapport à la sienne.
-                // On s'assure que la puissance de base n'est pas 0 pour éviter la division par zéro.
-                const attackerLossPercent = attackerBasePower > 0 ? Math.min(1, defenderRoll / attackerBasePower) : 1;
-                const defenderLossPercent = defenderBasePower > 0 ? Math.min(1, attackerRoll / defenderBasePower) : 1;
+                // --- NOUVELLE LOGIQUE DE CALCUL DES PERTES (AVEC HAUTE PRÉCISION) ---
+                const precision = 10000n; // Multiplicateur pour garder la précision
+                
+                const attackerLossPercent = attackerBasePower > 0n ? Number(BigInt(Math.round(defenderRoll)) * precision / attackerBasePower) / Number(precision) : 1;
+                const defenderLossPercent = defenderBasePower > 0n ? Number(BigInt(Math.round(attackerRoll)) * precision / defenderBasePower) / Number(precision) : 1;
+
+                const finalAttackerLoss = Math.min(1, attackerLossPercent);
+                const finalDefenderLoss = Math.min(1, defenderLossPercent);
 
                 const calculateLosses = (unitData, lossPercent) => {
                     if (!unitData || lossPercent <= 0) return unitData;
-                    // On ne peut pas perdre moins d'une troupe si on subit des dégâts, donc on arrondit au supérieur.
                     for (const unitId in unitData) {
                         const losses = Math.ceil(unitData[unitId].quantity * lossPercent);
                         unitData[unitId].quantity -= losses;
@@ -255,9 +256,9 @@ exports.handler = async function (event, context) {
                     return unitData;
                 };
                 
-                attacker.troops = calculateLosses(attacker.troops, attackerLossPercent);
-                defender.troops = calculateLosses(defender.troops, defenderLossPercent);
-                defender.defenses = calculateLosses(defender.defenses, defenderLossPercent); // Les défenses subissent les mêmes pertes que les troupes
+                attacker.troops = calculateLosses(attacker.troops, finalAttackerLoss);
+                defender.troops = calculateLosses(defender.troops, finalDefenderLoss);
+                defender.defenses = calculateLosses(defender.defenses, finalDefenderLoss);
 
                 // --- DÉTERMINATION DU VAINQUEUR POUR LE VOL ---
                 const attackerWins = attackerRoll > defenderRoll;
@@ -265,8 +266,7 @@ exports.handler = async function (event, context) {
                 let battleReport = '';
 
                 if (attackerWins) {
-                    // Calcul du butin
-                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n; // Vol de 10%
+                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n;
                     const attackerCoinRole = getRole(attacker.discord_id, 'coins');
                     if (attackerCoinRole === 'Queen' && LEADER_BONUSES.coins.Queen.steal_multiplier) {
                         stolenAmount = BigInt(Math.round(Number(stolenAmount) * LEADER_BONUSES.coins.Queen.steal_multiplier));
@@ -296,7 +296,7 @@ exports.handler = async function (event, context) {
                 
                 return { battleReport, attacker, defender };
             };
-            
+
             if (action === 'mark_history_read') { await client.query('UPDATE attack_logs SET is_read = TRUE WHERE defender_id = $1 AND is_read = FALSE', [id]); responseData.unreadAttackCount = 0; }
             else if (action === 'claim_daily_reward') {
                 if (!user.reward_available) throw new Error("No reward available to claim.");
