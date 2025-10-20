@@ -1,5 +1,3 @@
-/* Contenu pour: style.css */
-
 :root {
     --background-primary: #36393f;
     --background-secondary: #2f3136;
@@ -297,13 +295,6 @@ nav a.active {
     gap: 10px;
     margin-bottom: 15px;
 }
-#leaderboard-controls button[data-sort="rebirth"] {
-    background-color: var(--brand-purple);
-}
-#leaderboard-controls button[data-sort="rebirth"].active {
-    background-color: #7b4593;
-}
-
 .admin-table-container, .leaderboard-container {
     overflow-x: auto;
 }
@@ -367,7 +358,7 @@ nav a.active {
 }
 .rank-power { color: var(--brand-purple); }
 .rank-coins { color: var(--brand-yellow); }
-.rank-rebirth { color: var(--brand-blue); }
+.rank-prestige { color: var(--brand-blue); }
 
 
 /* ======================================= */
@@ -392,6 +383,7 @@ nav a.active {
     position: relative;
 }
 
+/* --- Overlay pour clé invalide --- */
 #kg-paused-overlay {
     position: absolute;
     top: 0;
@@ -572,24 +564,22 @@ nav a.active {
     justify-content: space-between;
     align-items: center;
 }
-.upgrade-info { display: flex; flex-direction: column; flex-grow: 1; }
+.upgrade-info { display: flex; flex-direction: column; flex-grow: 1;}
 .upgrade-info strong { color: var(--header-primary); }
 .upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
 .upgrade-info small { font-size: 12px; }
 
-.upgrade-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.upgrade-actions .secondary-btn {
-    min-width: 60px;
-    text-align: center;
-}
-
-
 #kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
 #kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
+
+.active-boosts-container {
+    background-color: var(--background-tertiary);
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: var(--border-radius);
+}
+.active-boosts-container h4 { margin: 0 0 5px 0; }
+.active-boosts-container p { margin: 2px 0; font-size: 14px; }
 
 .attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .attack-container h4, .send-coins-container h4 { margin: 0; }
@@ -656,59 +646,6 @@ nav a.active {
     padding-left: 10px;
 }
 
-/* --- Rebirth System Styles --- */
-#kg-rebirth-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    max-width: 250px;
-}
-#rebirth-req-text {
-    font-size: 12px;
-    font-weight: bold;
-    color: var(--text-muted);
-    margin: 0;
-}
-.progress-bar-container {
-    width: 100%;
-    height: 20px;
-    background-color: var(--background-tertiary);
-    border-radius: 10px;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-.progress-bar {
-    width: 0%;
-    height: 100%;
-    background-color: var(--brand-green);
-    border-radius: 10px;
-    transition: width 0.5s ease-in-out;
-}
-#rebirth-info-btn {
-    position: absolute;
-    right: 5px;
-    background: none;
-    border: 1px solid var(--text-normal);
-    color: var(--text-normal);
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    font-size: 12px;
-    line-height: 14px;
-    cursor: pointer;
-    text-align: center;
-}
-#rebirth-btn {
-    background-color: var(--brand-purple);
-}
-#rebirth-btn:hover {
-    background-color: #7b4593;
-}
-
-
 .kg-buy-time-container {
     display: flex;
     align-items: center;
@@ -774,14 +711,8 @@ nav a.active {
     gap: 10px;
 }
 
-.history-log-header h5 {
-    margin: 0;
-    font-size: 16px;
-}
-
-.history-log-header small {
-    color: var(--text-muted);
-}
+.history-log-header h5 { margin: 0; font-size: 16px; }
+.history-log-header small { color: var(--text-muted); }
 
 .history-log-details {
     display: grid;
@@ -791,27 +722,60 @@ nav a.active {
     margin-bottom: 15px;
 }
 
-.losses-section h6 {
-    margin: 0 0 5px 0;
-    color: var(--header-primary);
-}
+.losses-section h6 { margin: 0 0 5px 0; color: var(--header-primary); }
+.losses-section ul { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--text-muted); }
+.send-coins-container small { display: block; width: 100%; text-align: center; margin-top: 5px; color: var(--text-muted); }
 
-.losses-section ul {
-    list-style: none;
-    padding: 0;
+/* --- NOUVEAUX STYLES --- */
+.rebirth-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+.rebirth-section h4 {
     margin: 0;
-    font-size: 13px;
-    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-
-.send-coins-container small {
-    display: block;
+.progress-bar-container {
+    width: 100%;
+    background-color: var(--background-primary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    height: 24px;
+    position: relative;
+}
+.progress-bar {
+    height: 100%;
+    background-color: var(--brand-blue);
+    transition: width 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.progress-bar span {
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    position: absolute;
     width: 100%;
     text-align: center;
-    margin-top: 5px;
-    color: var(--text-muted);
+    left: 0;
 }
-
+.rebirth-info {
+    text-align: center;
+    margin-top: 5px;
+    min-height: 42px; /* Reserve space for the button */
+}
+.upgrade-item .button-group {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+/* --- FIN NOUVEAUX STYLES --- */
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN --- */
@@ -838,7 +802,7 @@ nav a.active {
         gap: 20px;
         align-items: stretch;
     }
-    .send-coins-container, .attack-container {
+    .send-coins-container, .attack-container, .rebirth-section {
         width: 100%;
         justify-content: center;
     }
