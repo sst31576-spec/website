@@ -30,6 +30,7 @@
                 <nav>
                     <a href="/" class="nav-link active" data-page="home">Home</a>
                     <a href="/get-key" class="nav-link" data-page="get-key">Get Key</a>
+                    <a href="/leaderboard" class="nav-link" data-page="leaderboard">Leaderboard</a>
                     <a href="/suggestion" class="nav-link" data-page="suggestion">Suggestion</a>
                     <a href="https://www.roblox.com/games/96049156219003/Key-Access" class="nav-link" target="_blank">Buy Perm</a>
                     <a href="/earn-time" class="nav-link" data-page="earn-time">Earn Time</a>
@@ -65,6 +66,20 @@
                 </div>
             </div>
 
+            <div id="page-leaderboard" class="page hidden">
+                 <div class="card-box" style="max-width: 900px; text-align: left;">
+                    <h2>Leaderboard</h2>
+                    <div id="leaderboard-controls">
+                        <button class="secondary-btn active" data-sort="power">Power</button>
+                        <button class="secondary-btn" data-sort="coins">Coins</button>
+                        <button class="secondary-btn" data-sort="prestige">Prestige</button>
+                    </div>
+                    <div id="leaderboard-container">
+                        <p>Loading leaderboard...</p>
+                    </div>
+                </div>
+            </div>
+
             <div id="page-suggestion" class="page hidden">
                 <div class="card-box">
                     <h2>Suggestions</h2>
@@ -92,7 +107,7 @@
 
             <div id="page-earn-time" class="page hidden">
                 <div class="card-box">
-                    <h2>Coin Empire & Conquest</h2>
+                    <h2>King Clicker</h2>
                     <p>Build your empire, raise an army, and conquer your rivals.</p>
                     <div id="earn-time-content">
                         <p>Loading your empire...</p>
