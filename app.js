@@ -149,15 +149,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power) }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'prestige') alert(`Congratulations on reaching Prestige Level ${kingGameState.prestige_level}! Your journey starts anew with powerful bonuses.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
     
     const handleMaxBuy = (event) => {
-        const { unitId, isTroop } = event.target.dataset;
+        const { id: unitId, isTroop } = event.target.dataset;
         const isTroopBool = isTroop === 'true';
         const unitData = isTroopBool ? kingGameState.troops : kingGameState.defenses;
         const currentQuantity = unitData[unitId]?.quantity || 0;
         let availableCoins = kingGameState.coins;
         let maxQuantity = 0;
         let totalCost = 0n;
-        // Safety break to prevent infinite loops in case of a logic error or huge coin amounts
-        const maxIterations = 5000; 
+        const maxIterations = 5000;
 
         for (let i = 0; i < maxIterations; i++) {
             const costOfNext = getUnitCost(unitId, currentQuantity + i, isTroopBool);
@@ -165,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalCost += costOfNext;
                 maxQuantity++;
             } else {
-                break; // Not enough money for the next one
+                break;
             }
         }
         
@@ -187,7 +186,69 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
              if (pausedOverlay) pausedOverlay.classList.remove('hidden');
         }
-        const claimBtn = document.getElementById('claim-reward-btn'); if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable); const renderList=(c,t,e,n)=>{c.innerHTML="";let o=!0;const r=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;for(const i in t){if(n&&SPECIAL_UNITS_CONFIG[i]){const l=["King","Queen","General"];let s=!1;switch(i){case"royal_guard":s="King"===kingGameState.userRoles.power;break;case"queens_guard":s="Queen"===kingGameState.userRoles.power;break;case"elite_soldier":s=l.includes(kingGameState.userRoles.power)}if(!s)continue}const d=t[i];let a,g,p;if(e){a=kingGameState.upgrades[i]||0,a<r&&(o=!1),g=getUpgradeCost(i,a)}else{const u=(n?kingGameState.troops:kingGameState.defenses)[i];p=u?.quantity||0,g=getUnitCost(i,p,n)}const f=document.createElement("div");f.className="upgrade-item";const canAfford=kingGameState.coins>=g;f.innerHTML=`\n <div class="upgrade-info">\n <strong>${d.name} ${e?`(Lvl ${a})`:`(x${p})`}</strong>\n <small class="desc">${e?d.description:`Power: ${d.power.toLocaleString("en-US")}`}</small>\n <small>Cost: ${formatBigNumber(g)}</small>\n </div>\n <div class="upgrade-actions">\n ${!e?`<button class="secondary-btn max-buy-btn" data-id="${i}" data-is-troop="${n}">Max</button>`:""}\n <button class="secondary-btn" data-id="${i}" ${canAfford?"":'disabled'}>Buy</button>\n </div>\n `;f.querySelector("button[data-id]").addEventListener("click",t=>{const a=t.target.dataset.id;if(e)handleKingGameAction("buy_upgrade",{upgradeId:a});else{const g=t.shiftKey?100:t.ctrlKey?10:1;handleKingGameAction(n?"buy_troop":"buy_defense",{unitId:a,quantity:g})}});const maxBtn=f.querySelector(".max-buy-btn");maxBtn&&maxBtn.addEventListener("click",handleMaxBuy),c.appendChild(f)}return o}; const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true); renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false); const gemShopContainer=document.getElementById("kg-gem-shop");gemShopContainer.innerHTML="";for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)} const prestigeContainer=document.getElementById("kg-prestige-container");const prestigeRequirement=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL?(prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for powerful new bonuses!")&&handleKingGameAction("prestige")})):kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL?prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>':prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${prestigeRequirement} on all buildings to prestige.</p>`;};
+        const claimBtn = document.getElementById('claim-reward-btn'); if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable); 
+        const renderList=(c,t,e,n)=>{ // c: container, t: config, e: isUpgrade, n: isTroop
+            c.innerHTML="";
+            let o=!0; // allMaxed
+            const r=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;
+            for(const i in t){ // i: unitId
+                if(n&&SPECIAL_UNITS_CONFIG[i]){
+                    const l=["King","Queen","General"];
+                    let s=!1;
+                    switch(i){
+                        case"royal_guard":s="King"===kingGameState.userRoles.power;break;
+                        case"queens_guard":s="Queen"===kingGameState.userRoles.power;break;
+                        case"elite_soldier":s=l.includes(kingGameState.userRoles.power)
+                    }
+                    if(!s)continue
+                }
+                const d=t[i]; // d: unitConfig
+                let a,g,p; // a: level, g: cost, p: quantity
+                if(e){ // isUpgrade
+                    a=kingGameState.upgrades[i]||0,a<r&&(o=!1),g=getUpgradeCost(i,a)
+                }else{
+                    const u=(n?kingGameState.troops:kingGameState.defenses)[i];
+                    p=u?.quantity||0,g=getUnitCost(i,p,n)
+                }
+                const f=document.createElement("div");f.className="upgrade-item";
+                const canAfford=kingGameState.coins>=g;
+                f.innerHTML=`
+                    <div class="upgrade-info">
+                        <strong>${d.name} ${e?`(Lvl ${a})`:`(x${p})`}</strong>
+                        <small class="desc">${e?d.description:`Power: ${d.power.toLocaleString("en-US")}`}</small>
+                        <small>Cost: ${formatBigNumber(g)}</small>
+                    </div>
+                    <div class="upgrade-actions">
+                        ${!e ? `<button class="secondary-btn max-buy-btn" data-id="${i}" data-is-troop="${n}">Max</button>` : ''}
+                        <button class="secondary-btn buy-btn" data-id="${i}" ${canAfford ? '' : 'disabled'}>Buy</button>
+                    </div>
+                `;
+                
+                const buyButton = f.querySelector('.buy-btn');
+                buyButton.addEventListener('click', (event) => {
+                    const unitId = event.target.dataset.id;
+                    if (e) {
+                        handleKingGameAction('buy_upgrade', { upgradeId: unitId });
+                    } else {
+                        const quantity = event.shiftKey ? 100 : event.ctrlKey ? 10 : 1;
+                        handleKingGameAction(n ? 'buy_troop' : 'buy_defense', { unitId: unitId, quantity: quantity });
+                    }
+                });
+        
+                const maxButton = f.querySelector('.max-buy-btn');
+                if (maxButton) {
+                    maxButton.addEventListener('click', handleMaxBuy);
+                }
+        
+                c.appendChild(f);
+            }
+            return o;
+        };
+        const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); 
+        renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true); 
+        renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false); 
+        const gemShopContainer=document.getElementById("kg-gem-shop");gemShopContainer.innerHTML="";for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)} const prestigeContainer=document.getElementById("kg-prestige-container");const prestigeRequirement=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL?(prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for powerful new bonuses!")&&handleKingGameAction("prestige")})):kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL?prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>':prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${prestigeRequirement} on all buildings to prestige.</p>`;
+    };
     const fetchUserList = async () => { try { const response = await fetch('/api/earn-time?action=get_users'); allUsers = await response.json(); } catch(e) { console.error("Failed to fetch user list", e); } };
     const setupUserSearch = (inputId, dropdownId, onSelect, contentGenerator, userList) => { const searchInput = document.getElementById(inputId); const dropdown = document.getElementById(dropdownId); if (!searchInput || !dropdown) return; let selectedUserId = null; let highlightedIndex = -1; const updateHighlight = () => { dropdown.querySelectorAll('a').forEach((item, index) => item.classList.toggle('highlighted', index === highlightedIndex)); }; const updateDropdown = () => { const query = searchInput.value.toLowerCase(); const sourceList = userList || allUsers; const filteredUsers = sourceList.filter(u => u.discord_username.toLowerCase().startsWith(query) && u.discord_id !== currentUser.discord_id); dropdown.innerHTML = ''; highlightedIndex = -1; if (filteredUsers.length > 0) { filteredUsers.slice(0, 5).forEach(user => { const item = document.createElement('a'); item.innerHTML = contentGenerator(user); item.addEventListener("mousedown", () => { searchInput.value = user.discord_username; selectedUserId = user.discord_id; dropdown.style.display = 'none'; onSelect(selectedUserId, searchInput); }); dropdown.appendChild(item); }); updateHighlight(); dropdown.style.display = 'block'; } else { dropdown.style.display = 'none'; } }; 
         searchInput.addEventListener('input', updateDropdown); 
