@@ -32,7 +32,8 @@ body {
     box-shadow: 0 8px 16px rgba(0,0,0,0.24);
     width: 100%;
     max-width: 400px;
-    margin: 20px auto;
+    margin: 20px;
+    box-sizing: border-box;
 }
 
 .logo { width: 80px; height: 80px; margin-bottom: 20px; }
@@ -218,7 +219,7 @@ nav a.active {
     margin: 20px auto 0 auto;
 }
 
-#key-display-area .discord-btn {
+#key-display-area .discord-btn, #key-display-area .secondary-btn {
     margin-left: auto;
     margin-right: auto;
 }
@@ -239,6 +240,8 @@ nav a.active {
 }
 .secondary-btn:hover:not(:disabled) { background-color: #63676d; }
 .secondary-btn:disabled { background-color: #484b51; color: #72767d; cursor: not-allowed; }
+.secondary-btn.active { background-color: var(--brand-blue); }
+
 
 .secondary-btn-red { 
     background-color: var(--brand-red); 
@@ -248,25 +251,30 @@ nav a.active {
     background-color: #d83d3d; 
 }
 
-/* --- Admin Table --- */
-.admin-table {
+/* --- Admin & Leaderboard Table --- */
+#leaderboard-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.admin-table, .leaderboard-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
     font-size: 14px;
 }
-.admin-table th, .admin-table td {
+.admin-table th, .admin-table td, .leaderboard-table th, .leaderboard-table td {
     border: 1px solid var(--background-primary);
     padding: 10px 8px;
     text-align: left;
 }
-.admin-table th {
+.admin-table th, .leaderboard-table th {
     background-color: var(--background-primary);
     color: var(--header-primary);
     font-weight: 700;
     text-transform: uppercase;
 }
-.admin-table tr:nth-child(even) {
+.admin-table tr:nth-child(even), .leaderboard-table tr:nth-child(even) {
     background-color: var(--background-tertiary);
 }
 .admin-table .actions-cell button {
@@ -297,16 +305,15 @@ nav a.active {
 
 
 /* ======================================= */
-/* --- NEW KING GAME STYLES --- */
+/* --- KING CLICKER GAME STYLES --- */
 /* ======================================= */
 
 #page-earn-time .card-box {
-    max-width: 1200px; /* Wider card for the full game */
+    max-width: 1200px;
 }
 
 .king-game-layout {
     display: grid;
-    /* NEW: Three-column layout */
     grid-template-columns: 280px 1fr 1fr;
     grid-template-rows: auto 1fr auto;
     gap: 20px;
@@ -356,6 +363,16 @@ nav a.active {
 }
 #kg-clicker-btn:active { transform: scale(0.95); }
 
+#kg-player-stats {
+    background-color: var(--background-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-top: 15px;
+    text-align: center;
+}
+#kg-player-stats h4 { margin: 0 0 10px 0; color: var(--header-primary); }
+#kg-player-stats p { margin: 4px 0; }
+
 .upgrades-container, .shop-container, .army-container, .defense-container {
     background-color: var(--background-tertiary);
     padding: 15px;
@@ -373,7 +390,7 @@ nav a.active {
 }
 
 #kg-upgrades-list, #kg-army-list, #kg-defenses-list {
-    max-height: 450px; /* Taller list */
+    max-height: 450px;
     overflow-y: auto;
     padding-right: 10px;
     flex-grow: 1;
@@ -405,7 +422,7 @@ nav a.active {
 .active-boosts-container h4 { margin: 0 0 5px 0; }
 .active-boosts-container p { margin: 2px 0; font-size: 14px; }
 
-.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; }
+.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .attack-container h4, .send-coins-container h4 { margin: 0; }
 #kg-recipient-search, #kg-send-amount, #kg-attack-target-search {
     background-color: var(--background-tertiary);
@@ -420,22 +437,26 @@ nav a.active {
     display: none;
     position: absolute;
     background-color: var(--background-secondary);
-    min-width: 160px;
+    min-width: 200px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
+    z-index: 10;
     border-radius: var(--border-radius);
     max-height: 150px;
     overflow-y: auto;
-    bottom: 100%; /* Position above the input */
+    bottom: 100%; 
     margin-bottom: 5px;
 }
 .user-dropdown-content a {
     color: var(--text-normal);
-    padding: 12px 16px;
+    padding: 10px 12px;
     text-decoration: none;
-    display: block;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .user-dropdown-content a:hover { background-color: var(--background-primary); }
+.user-dropdown-content a .power { font-size: 12px; color: var(--text-muted); }
+
 
 #kg-prestige-btn { background-color: var(--brand-green); }
 #kg-prestige-btn:hover { background-color: #3aa171; }
@@ -469,13 +490,13 @@ nav a.active {
     #mobile-nav-links { display: block; border-bottom: 1px solid var(--background-primary); margin-bottom: 5px; padding-bottom: 5px; }
     #mobile-nav-links a { color: var(--text-muted); font-weight: 500; }
     .content { padding: 16px; }
-    .card-box { margin: 10px auto; padding: 24px; max-width: 100%; }
-    #page-manage-keys .card-box { max-width: 100%; box-sizing: border-box; }
-    .admin-table { display: block; overflow-x: auto; white-space: nowrap; }
+    .card-box { margin: 10px; padding: 24px; max-width: 100%; }
+
+    .admin-table, .leaderboard-table { display: block; overflow-x: auto; white-space: nowrap; }
     
     .king-game-layout {
         grid-template-columns: 1fr;
-        grid-template-rows: auto; /* Let rows size automatically */
+        grid-template-rows: auto;
         grid-template-areas:
             "left"
             "middle"
@@ -486,6 +507,10 @@ nav a.active {
         flex-direction: column;
         gap: 20px;
         align-items: stretch;
+    }
+    .send-coins-container, .attack-container {
+        width: 100%;
+        justify-content: center;
     }
 }
 
