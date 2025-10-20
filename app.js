@@ -12,10 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
     const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
     const GEM_BOOSTS_CONFIG = { 'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 }, 'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },};
-    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0, rankBonus: 1.0 };
+    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0 };
     let kingGameInterval = null; let kingGameSyncInterval = null;
-    let leaderboardData = null; // Cache for leaderboard data
-
     const setupMobileNav = () => { const mainNav = document.querySelector('.top-bar-left nav'); const mobileNavContainer = document.getElementById('mobile-nav-links'); if (!mainNav || !mobileNavContainer || !dropdownMenu) return; mobileNavContainer.innerHTML = ''; mainNav.querySelectorAll('a').forEach(link => { const clone = link.cloneNode(true); clone.addEventListener('click', (e) => { if (clone.dataset.page) { e.preventDefault(); window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`); switchPage(clone.dataset.page); } dropdownMenu.classList.remove('show'); }); mobileNavContainer.appendChild(clone); }); };
     const checkUserStatus = async () => { try { const response = await fetch('/api/user'); if (response.status === 401) { showLoginView(); return; } if (response.status === 403) { showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du'); return; } if (!response.ok) throw new Error('Failed to fetch user data'); const user = await response.json(); currentUser = user; setupMainApp(user); } catch (error) { console.error(error); showLoginView('An error occurred. Please try again later.'); } };
     const showLoginView = (message = null, discordLink = null) => { loginContainer.classList.remove('hidden'); mainAppContainer.classList.add('hidden'); if (loginError) { loginError.textContent = message; const parent = loginError.closest('.card-box'); let existingBtn = document.getElementById('discord-join-btn'); if(existingBtn) existingBtn.remove(); if (message && discordLink) { const joinBtn = document.createElement('a'); joinBtn.id = 'discord-join-btn'; joinBtn.href = discordLink; joinBtn.target = '_blank'; joinBtn.className = 'discord-btn'; joinBtn.style.marginTop = '15px'; joinBtn.textContent = 'Click to join the Discord'; parent.appendChild(joinBtn); } } };
@@ -30,85 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleRemoveAllExpired = async () => { if (!confirm('Are you sure you want to delete ALL expired keys? This action cannot be undone.')) return; removeExpiredBtn.disabled = true; removeExpiredBtn.textContent = 'Deleting...'; try { const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_expired' }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Failed to delete expired keys.'); alert(result.message); renderAdminPanel(); } catch (error) { alert('Error: ' + error.message); } finally { removeExpiredBtn.disabled = false; removeExpiredBtn.textContent = 'Remove All Expired'; } };
     const handleDeleteKey = async (e) => { const row = e.target.closest('tr'); const keyId = row.dataset.keyId; if (confirm('Are you sure you want to delete this key permanently?')) { try { const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) }); if (!response.ok) throw new Error('Failed to delete.'); row.remove(); } catch (error) { alert('Error deleting key.'); } } };
     const handleEdit = async (e) => { const cell = e.target; const row = cell.closest('tr'); const keyId = row.dataset.keyId; const keyType = row.dataset.keyType; const isHwid = cell.classList.contains('hwid-cell'); const isExpires = cell.classList.contains('expires-cell'); if (isExpires && keyType.toLowerCase() !== 'temp') { alert("Only 'temp' keys can have their expiration date modified."); return; } let newHwid = undefined; let newExpiresAt = undefined; if (isHwid) { const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim(); const result = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid); if (result === null) return; newHwid = result.trim(); } else if (isExpires) { const result = prompt('Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):', '12h'); if (result === null) return; const input = result.trim().toLowerCase(); if (input === 'clear') { newExpiresAt = null; } else { const parseDuration = (str) => { const matchHours = str.match(/(\d+)h/); const matchMinutes = str.match(/(\d+)m/); let ms = 0; if (matchHours) ms += parseInt(matchHours[1]) * 3600000; if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60000; return ms; }; const durationMs = parseDuration(input); if (durationMs > 0) { newExpiresAt = new Date(Date.now() + durationMs).toISOString(); } else { alert('Invalid format. Use "24h", "90m", or "clear".'); return; } } } if (newHwid === undefined && newExpiresAt === undefined) return; try { cell.classList.add('loading'); const payload = { key_id: keyId }; if (newHwid !== undefined) payload.new_roblox_user_id = newHwid; if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt; const response = await fetch('/api/admin/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error('Failed to update.'); if (newHwid !== undefined) { cell.textContent = newHwid === '' ? 'Not Set' : newHwid; } if (newExpiresAt !== undefined) { const finalExpires = newExpiresAt === null ? '' : newExpiresAt; row.dataset.expiresAt = finalExpires; cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires); } cell.classList.remove('loading'); cell.classList.add('success-flash'); setTimeout(() => cell.classList.remove('success-flash'), 1000); } catch (error) { alert('Error updating key: ' + error.message); cell.classList.remove('loading'); } };
-    
-    const renderLeaderboardModal = () => {
-        const modal = document.getElementById('leaderboard-modal');
-        const container = document.getElementById('leaderboard-container');
-        const controls = document.getElementById('leaderboard-controls');
-        if (!modal || !container || !controls) return;
-
-        const renderTable = (players, sortBy) => {
-            if (!leaderboardData) return;
-
-            const getPlayerTitles = (playerId) => {
-                const titles = [];
-                const ranks = ['King', 'Queen', 'General'];
-                for (const category of ['power', 'coins', 'prestige']) {
-                    const rankIndex = leaderboardData.tops[category].indexOf(playerId);
-                    if (rankIndex !== -1) {
-                        const title = `(${ranks[rankIndex]} of ${category.charAt(0).toUpperCase() + category.slice(1)})`;
-                        titles.push(`<span class="rank-title rank-${category}">${title}</span>`);
-                    }
-                }
-                return titles.join(' ');
-            };
-            
-            let sortedPlayers = [...players];
-            switch (sortBy) {
-                case 'coins':
-                    sortedPlayers.sort((a, b) => BigInt(b.king_game_coins || '0') - BigInt(a.king_game_coins || '0'));
-                    break;
-                case 'prestige':
-                    sortedPlayers.sort((a, b) => (b.prestige_level || 0) - (a.prestige_level || 0) || BigInt(b.power || '0') - BigInt(a.power || '0'));
-                    break;
-                case 'power':
-                default:
-                    // Already sorted by power from the API, but we re-sort to be safe
-                    sortedPlayers.sort((a, b) => BigInt(b.power || '0') - BigInt(a.power || '0'));
-                    break;
-            }
-
-            container.innerHTML = `<div class="leaderboard-table-container"><table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Power</th><th>Coins</th><th>Prestige</th></tr></thead><tbody>${
-                sortedPlayers.map((p, index) => {
-                    const titles = getPlayerTitles(p.discord_id);
-                    return `<tr><td>${index + 1}</td><td><div class="player-cell">${p.discord_username} ${titles}</div></td><td>${formatBigNumber(p.power)}</td><td>${formatBigNumber(p.king_game_coins)}</td><td>${p.prestige_level || 0}</td></tr>`
-                }).join('')
-            }</tbody></table></div>`;
-        };
-
-        const fetchAndDisplay = async (sortBy = 'power') => {
-            controls.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.sort === sortBy));
-            
-            if (leaderboardData) {
-                renderTable(leaderboardData.players, sortBy);
-                return;
-            }
-
-            container.innerHTML = '<p>Loading leaderboard...</p>';
-            try {
-                const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'get_leaderboard' }) });
-                if (!response.ok) throw new Error('Failed to fetch leaderboard data.');
-                
-                leaderboardData = await response.json();
-                
-                if (!leaderboardData.players || leaderboardData.players.length === 0) {
-                    container.innerHTML = '<p>No players to display.</p>';
-                    return;
-                }
-                renderTable(leaderboardData.players, sortBy);
-            } catch (error) {
-                container.innerHTML = `<p class="error-message">${error.message}</p>`;
-            }
-        };
-
-        controls.querySelectorAll('button').forEach(button => {
-            button.onclick = () => fetchAndDisplay(button.dataset.sort);
-        });
-
-        fetchAndDisplay('power');
-        modal.classList.remove('hidden');
-    };
-
+    const renderLeaderboardModal = () => { const modal = document.getElementById('leaderboard-modal'); const container = document.getElementById('leaderboard-container'); const controls = document.getElementById('leaderboard-controls'); if (!modal || !container || !controls) return; const fetchAndDisplay = async (sortBy = 'power') => { container.innerHTML = '<p>Loading leaderboard...</p>'; try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'get_leaderboard', sortBy }) }); if (!response.ok) throw new Error('Failed to fetch leaderboard data.'); const players = await response.json(); controls.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.sort === sortBy)); if (players.length === 0) { container.innerHTML = '<p>No players to display.</p>'; return; } container.innerHTML = `<div class="leaderboard-table-container"><table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Power</th><th>Coins</th><th>Prestige</th></tr></thead><tbody>${players.map((p, index) => { let name = p.discord_username; if (sortBy === 'power') { if (index === 0) name = `👑 (King) ${name}`; else if (index === 1) name = `⭐ (Queen) ${name}`; else if (index === 2) name = `⚔️ (General) ${name}`; } return `<tr><td>${index + 1}</td><td>${name}</td><td>${formatBigNumber(p.power)}</td><td>${formatBigNumber(p.king_game_coins)}</td><td>${p.prestige_level}</td></tr>` }).join('')}</tbody></table></div>`; } catch (error) { container.innerHTML = `<p class="error-message">${error.message}</p>`; } }; controls.querySelectorAll('button').forEach(button => { button.onclick = () => fetchAndDisplay(button.dataset.sort); }); fetchAndDisplay('power'); modal.classList.remove('hidden'); };
     const renderHistoryModal = async () => {
         const modal = document.getElementById('history-modal');
         const container = document.getElementById('history-container');
@@ -133,13 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             container.innerHTML = history.map(log => {
+                // FIX: Coerce both IDs to strings for a reliable comparison
                 const userWasAttacker = String(log.attacker_id) === String(currentUser.discord_id);
                 const stolenAmount = BigInt(log.coins_stolen);
 
                 if (userWasAttacker) {
                     const victory = log.attacker_wins;
                     return `
-                    <div class="history-log-item ${victory ? 'victory' : ''}">
+                    <div class="history-log-item ${victory ? 'victory' : 'defeat'}">
                         <div class="history-log-header">
                             <h5>ATTACK on ${log.defender_name || 'Unknown'} (${victory ? 'VICTORY' : 'DEFEAT'})</h5>
                             <small>${new Date(log.timestamp).toLocaleString()}</small>
@@ -153,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else { // User was defender
                     const victory = !log.attacker_wins;
                     return `
-                    <div class="history-log-item ${victory ? 'victory' : ''}">
+                    <div class="history-log-item ${victory ? 'victory' : 'defeat'}">
                         <div class="history-log-header">
                             <h5>DEFENSE against ${log.attacker_name || 'Unknown'} (${victory ? 'VICTORY' : 'DEFEAT'})</h5>
                             <small>${new Date(log.timestamp).toLocaleString()}</small>
@@ -183,100 +104,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const getUnitCost=(u,c,i)=>{const t=i?ALL_TROOPS_CONFIG[u]:DEFENSES_CONFIG[u];return BigInt(Math.ceil(t.cost*Math.pow(t.costMultiplier,c)))};const getUpgradeCost=(u,c)=>{const t=KING_GAME_UPGRADES_CONFIG[u];let e=BigInt(Math.ceil(Number(BigInt(t.baseCost))*Math.pow(t.costMultiplier,c)));return kingGameState.active_boosts.half_cost&&new Date(kingGameState.active_boosts.half_cost)>new Date&&(e/=2n),e};
-    const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power), rankBonus: data.rankBonus || 1.0 }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'prestige') alert(`Congratulations on reaching Prestige Level ${kingGameState.prestige_level}! You've earned 2 gems and your journey starts anew with a permanent coin bonus.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
-    const updateKingGameUI = () => {
-        if (!document.getElementById('king-game-container')) return;
-        document.getElementById('kg-coin-count').textContent = formatBigNumber(kingGameState.coins);
-        document.getElementById('kg-cps-count').textContent = `${formatBigNumber(kingGameState.cps)} coins/sec`;
-        
-        const bonusEl = document.getElementById('kg-bonus-display');
-        bonusEl.textContent = `Prestige Bonus: x${Math.pow(2,kingGameState.prestige_level||0).toLocaleString("en-US")}`;
-        bonusEl.style.display = kingGameState.prestige_level > 0 ? 'block' : 'none';
-        
-        const rankBonusEl = document.getElementById('kg-rank-bonus-display');
-        if (rankBonusEl) {
-            if (kingGameState.rankBonus && kingGameState.rankBonus > 1.0) {
-                rankBonusEl.textContent = `Rank Bonus: x${kingGameState.rankBonus.toFixed(1)}`;
-                rankBonusEl.classList.remove('hidden');
-            } else {
-                rankBonusEl.classList.add('hidden');
-            }
-        }
-
-        document.getElementById('kg-player-power').textContent = formatBigNumber(kingGameState.power);
-        const titleEl = document.getElementById('kg-player-title');
-        const rankEl = document.getElementById('kg-player-rank');
-        if (kingGameState.title) {
-            titleEl.textContent = kingGameState.title;
-            titleEl.parentElement.classList.remove('hidden');
-            rankEl.textContent = kingGameState.rank;
-        } else {
-            titleEl.parentElement.classList.add('hidden');
-            rankEl.textContent = kingGameState.rank;
-        }
-
-        document.getElementById('kg-gem-count').textContent = `${kingGameState.gems || 0} Gems`;
-        const claimBtn = document.getElementById('claim-reward-btn');
-        if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable);
-
-        const renderList=(c,t,e,n)=>{c.innerHTML="";let o=!0;for(const i in t){if(n&&SPECIAL_UNITS_CONFIG[i]){const r=["King","Queen","General"];let l=!1;switch(i){case"royal_guard":l="King"===kingGameState.title;break;case"queens_guard":l="Queen"===kingGameState.title;break;case"elite_soldier":l=r.includes(kingGameState.title)}if(!l)continue}const s=t[i];let d,a,g;if(e){d=kingGameState.upgrades[i]||0,d<PRESTIGE_REQUIREMENT_LEVEL&&(o=!1),a=getUpgradeCost(i,d)}else{const p=(n?kingGameState.troops:kingGameState.defenses)[i];g=p?.quantity||0,a=getUnitCost(i,g,n)}const u=document.createElement("div");u.className="upgrade-item",u.innerHTML=`\n <div class="upgrade-info">\n <strong>${s.name} ${e?`(Lvl ${d})`:`(x${g})`}</strong>\n <small class="desc">${e?s.description:`Power: ${s.power.toLocaleString("en-US")}`}</small>\n <small>Cost: ${formatBigNumber(a)}</small>\n </div>\n <button class="secondary-btn" data-id="${i}" ${kingGameState.coins<a?"disabled":""}>Buy</button>\n `,u.querySelector("button").addEventListener("click",t=>{const d=t.target.dataset.id;if(e)handleKingGameAction("buy_upgrade",{upgradeId:d});else{const a=t.shiftKey?100:t.ctrlKey?10:1;handleKingGameAction(n?"buy_troop":"buy_defense",{unitId:d,quantity:a})}}),c.appendChild(u)}return o};
-        const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false);
-        renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true);
-        renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false);
-
-        const gemShopContainer=document.getElementById("kg-gem-shop");
-        gemShopContainer.innerHTML="";
-        for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)}
-
-        const prestigeContainer=document.getElementById("kg-prestige-container");
-        if(allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL){prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for a permanent x2 coin multiplier and 2 gems!")&&handleKingGameAction("prestige")})}else if(kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL){prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>'}else{prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${PRESTIGE_REQUIREMENT_LEVEL} on all buildings to prestige.</p>`}
-    };
-
+    const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power) }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'prestige') alert(`Congratulations on reaching Prestige Level ${kingGameState.prestige_level}! You've earned 2 gems and your journey starts anew with a permanent coin bonus.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
+    const updateKingGameUI = () => { if (!document.getElementById('king-game-container')) return; document.getElementById('kg-coin-count').textContent = formatBigNumber(kingGameState.coins); document.getElementById('kg-cps-count').textContent = `${formatBigNumber(kingGameState.cps)} coins/sec`; const bonusEl = document.getElementById('kg-bonus-display'); bonusEl.textContent = `Prestige Bonus: x${Math.pow(2,kingGameState.prestige_level||0).toLocaleString("en-US")}`; bonusEl.style.display = kingGameState.prestige_level > 0 ? 'block' : 'none'; document.getElementById('kg-player-power').textContent = formatBigNumber(kingGameState.power); const titleEl = document.getElementById('kg-player-title'); const rankEl = document.getElementById('kg-player-rank'); if (kingGameState.title) { titleEl.textContent = kingGameState.title; titleEl.parentElement.classList.remove('hidden'); rankEl.textContent = kingGameState.rank; } else { titleEl.parentElement.classList.add('hidden'); rankEl.textContent = kingGameState.rank; } document.getElementById('kg-gem-count').textContent = `${kingGameState.gems || 0} Gems`; const claimBtn = document.getElementById('claim-reward-btn'); if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable); const renderList=(c,t,e,n)=>{c.innerHTML="";let o=!0;for(const i in t){if(n&&SPECIAL_UNITS_CONFIG[i]){const r=["King","Queen","General"];let l=!1;switch(i){case"royal_guard":l="King"===kingGameState.title;break;case"queens_guard":l="Queen"===kingGameState.title;break;case"elite_soldier":l=r.includes(kingGameState.title)}if(!l)continue}const s=t[i];let d,a,g;if(e){d=kingGameState.upgrades[i]||0,d<PRESTIGE_REQUIREMENT_LEVEL&&(o=!1),a=getUpgradeCost(i,d)}else{const p=(n?kingGameState.troops:kingGameState.defenses)[i];g=p?.quantity||0,a=getUnitCost(i,g,n)}const u=document.createElement("div");u.className="upgrade-item",u.innerHTML=`\n <div class="upgrade-info">\n <strong>${s.name} ${e?`(Lvl ${d})`:`(x${g})`}</strong>\n <small class="desc">${e?s.description:`Power: ${s.power.toLocaleString("en-US")}`}</small>\n <small>Cost: ${formatBigNumber(a)}</small>\n </div>\n <button class="secondary-btn" data-id="${i}" ${kingGameState.coins<a?"disabled":""}>Buy</button>\n `,u.querySelector("button").addEventListener("click",t=>{const d=t.target.dataset.id;if(e)handleKingGameAction("buy_upgrade",{upgradeId:d});else{const a=t.shiftKey?100:t.ctrlKey?10:1;handleKingGameAction(n?"buy_troop":"buy_defense",{unitId:d,quantity:a})}}),c.appendChild(u)}return o}; const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true); renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false); const gemShopContainer=document.getElementById("kg-gem-shop");gemShopContainer.innerHTML="";for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)} const prestigeContainer=document.getElementById("kg-prestige-container");allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL?(prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for a permanent x2 coin multiplier and 2 gems!")&&handleKingGameAction("prestige")})):kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL?prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>':prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${PRESTIGE_REQUIREMENT_LEVEL} on all buildings to prestige.</p>`;};
+    const fetchUserList = async () => { try { const response = await fetch('/api/earn-time?action=get_users'); allUsers = await response.json(); } catch(e) { console.error("Failed to fetch user list", e); } };
+    const setupUserSearch = (inputId, dropdownId, onSelect, contentGenerator, userList) => { const searchInput = document.getElementById(inputId); const dropdown = document.getElementById(dropdownId); if (!searchInput || !dropdown) return; let selectedUserId = null; let highlightedIndex = -1; const updateHighlight = () => { dropdown.querySelectorAll('a').forEach((item, index) => item.classList.toggle('highlighted', index === highlightedIndex)); }; const updateDropdown = () => { const query = searchInput.value.toLowerCase(); const sourceList = userList || allUsers; const filteredUsers = sourceList.filter(u => u.discord_username.toLowerCase().startsWith(query) && u.discord_id !== currentUser.discord_id); dropdown.innerHTML = ''; highlightedIndex = -1; if (filteredUsers.length > 0) { filteredUsers.slice(0, 5).forEach(user => { const item = document.createElement('a'); item.innerHTML = contentGenerator(user); item.addEventListener("mousedown", () => { searchInput.value = user.discord_username; selectedUserId = user.discord_id; dropdown.style.display = 'none'; onSelect(selectedUserId, searchInput); }); dropdown.appendChild(item); }); updateHighlight(); dropdown.style.display = 'block'; } else { dropdown.style.display = 'none'; } }; 
+        searchInput.addEventListener('input', updateDropdown); 
+        searchInput.addEventListener('keyup', updateDropdown);
+        searchInput.addEventListener('focus', updateDropdown);
+        searchInput.addEventListener('blur', () => setTimeout(() => dropdown.style.display = 'none', 200)); 
+        searchInput.addEventListener('keydown', (e) => { const items = dropdown.querySelectorAll('a'); if (items.length === 0) return; if (e.key === 'ArrowDown') { e.preventDefault(); highlightedIndex = (highlightedIndex + 1) % items.length; updateHighlight(); } else if (e.key === 'ArrowUp') { e.preventDefault(); highlightedIndex = (highlightedIndex - 1 + items.length) % items.length; updateHighlight(); } else if (e.key === 'Enter' || e.key === 'Tab') { if (highlightedIndex !== -1) { e.preventDefault(); items[highlightedIndex].dispatchEvent(new MouseEvent('mousedown')); } } }); };
+    const openGiftingModal = async () => { const modal = document.getElementById('gifting-modal'); const dropdown = document.getElementById('gift-recipient-dropdown'); dropdown.innerHTML = '<li>Loading players...</li>'; modal.classList.remove('hidden'); try { const response = await fetch('/api/earn-time?action=get_giftable_users'); if (!response.ok) throw new Error('Could not load player list.'); const giftableUsers = await response.json(); let giftRecipientId = null; const setGiftRecipient = (id) => { giftRecipientId = id; document.getElementById('gift-reward-btn').disabled = !id; }; setupUserSearch( 'gift-recipient-search', 'gift-recipient-dropdown', setGiftRecipient, user => `<span>${user.discord_username}</span><span class="key-time">🕒 ${formatTimeRemaining(user.expires_at)}</span>`, giftableUsers ); document.getElementById('gift-reward-btn').onclick = () => { if (giftRecipientId) { handleKingGameAction('claim_daily_reward', { recipientId: giftRecipientId }); modal.classList.add('hidden'); document.getElementById('gift-recipient-search').value = ''; giftRecipientId = null; } else { alert('Please select a player to gift the reward to.'); } }; } catch (error) { dropdown.innerHTML = `<li>${error.message}</li>`; } };
     const renderKingGame = async () => {
         await fetchUserList();
+
         const container = document.getElementById('earn-time-content'); 
-        container.innerHTML = `
-            <div id="king-game-container" class="king-game-layout">
-                <div class="kg-left-panel">
-                    <div class="history-btn-container"><button id="history-btn" class="secondary-btn">History</button><span id="history-ping" class="ping hidden">0</span></div>
-                    <button id="claim-reward-btn" class="reward-chest hidden">🎁</button>
-                    <div class="coin-display">
-                        <h2 id="kg-coin-count">0</h2>
-                        <p id="kg-cps-count">0 coins/sec</p>
-                        <p id="kg-bonus-display" class="bonus-text"></p>
-                    </div>
-                    <div class="clicker-area"><button id="kg-clicker-btn">👑</button></div>
-                    <div id="kg-player-stats">
-                        <h4>Your Stats <button id="rank-privileges-btn" class="info-btn">ⓘ</button></h4>
-                        <p class="hidden"><strong>Title:</strong> <span id="kg-player-title"></span></p>
-                        <p><strong>Power:</strong> <span id="kg-player-power">0</span></p>
-                        <p><strong>Rank:</strong> <span id="kg-player-rank">Unranked</span></p>
-                        <p id="kg-rank-bonus-display" class="bonus-text hidden"></p>
-                    </div>
-                    <div class="shop-container">
-                        <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4>
-                        <div id="kg-gem-shop"></div>
-                    </div>
-                </div>
-                <div class="kg-middle-panel"><div class="upgrades-container"><h4>Buildings</h4><div id="kg-upgrades-list"></div></div></div>
-                <div class="kg-right-panel"><div class="army-container"><h4>Army</h4><div id="kg-army-list"></div></div><div class="defense-container"><h4>Defenses</h4><div id="kg-defenses-list"></div></div></div>
-                <div class="kg-bottom-panel">
-                    <button id="leaderboard-btn" class="secondary-btn">View Leaderboard</button>
-                    <div id="kg-buy-time-container" class="kg-buy-time-container">
-                        <select id="kg-buy-time-select"><option value="1">1 Hour</option><option value="6">6 Hours</option><option value="12">12 Hours</option><option value="24">24 Hours</option></select>
-                        <button id="kg-buy-time-btn" class="secondary-btn" disabled>Buy Time</button><small id="kg-buy-time-cost-display">Cost: ...</small>
-                    </div>
-                    <div class="send-coins-container"><h4>Send Coins</h4><div class="user-select-wrapper"><input type="text" id="kg-recipient-search" placeholder="Player name..."><div id="kg-recipient-dropdown" class="user-dropdown-content"></div></div><input type="number" id="kg-send-amount" placeholder="Amount" min="1"><button id="kg-send-btn" class="secondary-btn">Send</button><small id="send-fee-info"></small></div>
-                    <div id="kg-prestige-container"></div>
-                    <div class="attack-container"><h4>Attack</h4><div class="user-select-wrapper"><input type="text" id="kg-attack-target-search" placeholder="Player name..."><div id="kg-attack-target-dropdown" class="user-dropdown-content"></div></div><button id="kg-attack-btn" class="secondary-btn-red">Attack</button></div>
-                </div>
-            </div>`;
-
-        if (currentUser?.user_status === 'Perm') {
-            const buyTimeContainer = document.getElementById('kg-buy-time-container');
-            if (buyTimeContainer) buyTimeContainer.classList.add('hidden');
-        }
-
+        container.innerHTML = ` <div id="king-game-container" class="king-game-layout"> <div class="kg-left-panel"> <div class="history-btn-container"><button id="history-btn" class="secondary-btn">History</button><span id="history-ping" class="ping hidden">0</span></div> <button id="claim-reward-btn" class="reward-chest hidden">🎁</button> <div class="coin-display"> <h2 id="kg-coin-count">0</h2> <p id="kg-cps-count">0 coins/sec</p> <p id="kg-bonus-display" style="display: none;"></p> </div> <div class="clicker-area"><button id="kg-clicker-btn">👑</button></div> <div id="kg-player-stats"> <h4>Your Stats <button id="rank-privileges-btn" class="info-btn">ⓘ</button></h4> <p class="hidden"><strong>Title:</strong> <span id="kg-player-title"></span></p> <p><strong>Power:</strong> <span id="kg-player-power">0</span></p> <p><strong>Rank:</strong> <span id="kg-player-rank">Unranked</span></p> </div> <div class="shop-container"> <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4> <div id="kg-gem-shop"></div> </div> </div> <div class="kg-middle-panel"><div class="upgrades-container"><h4>Buildings</h4><div id="kg-upgrades-list"></div></div></div> <div class="kg-right-panel"><div class="army-container"><h4>Army</h4><div id="kg-army-list"></div></div><div class="defense-container"><h4>Defenses</h4><div id="kg-defenses-list"></div></div></div> <div class="kg-bottom-panel"> <button id="leaderboard-btn" class="secondary-btn">View Leaderboard</button> <div id="kg-buy-time-container" class="kg-buy-time-container"> <select id="kg-buy-time-select"><option value="1">1 Hour</option><option value="6">6 Hours</option><option value="12">12 Hours</option><option value="24">24 Hours</option></select> <button id="kg-buy-time-btn" class="secondary-btn" disabled>Buy Time</button><small id="kg-buy-time-cost-display">Cost: ...</small> </div> <div class="send-coins-container"><h4>Send Coins</h4><div class="user-select-wrapper"><input type="text" id="kg-recipient-search" placeholder="Player name..."><div id="kg-recipient-dropdown" class="user-dropdown-content"></div></div><input type="number" id="kg-send-amount" placeholder="Amount" min="1"><button id="kg-send-btn" class="secondary-btn">Send</button><small id="send-fee-info"></small></div> <div id="kg-prestige-container"></div> <div class="attack-container"><h4>Attack</h4><div class="user-select-wrapper"><input type="text" id="kg-attack-target-search" placeholder="Player name..."><div id="kg-attack-target-dropdown" class="user-dropdown-content"></div></div><button id="kg-attack-btn" class="secondary-btn-red">Attack</button></div> </div> </div>`; 
+        if (currentUser?.user_status === 'Perm') document.getElementById('kg-buy-time-container')?.classList.add('hidden'); 
         document.getElementById('kg-clicker-btn').addEventListener('click', () => handleKingGameAction('click')); 
         const buyTimeSelect = document.getElementById('kg-buy-time-select'); 
         const buyTimeCostDisplay = document.getElementById('kg-buy-time-cost-display'); 
@@ -286,26 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
         let sendRecipientId = null; let attackTargetId = null;
         const setSendRecipient = (id) => { sendRecipientId = id; }; const setAttackTarget = (id) => { attackTargetId = id; };
         
-        setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span class="username">${user.discord_username}</span>`);
-        setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span class="username">${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
+        setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span>${user.discord_username}</span>`);
+        setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span>${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
         
         const sendAmountInput = document.getElementById('kg-send-amount'); const feeInfo = document.getElementById('send-fee-info'); if (sendAmountInput && feeInfo) { sendAmountInput.addEventListener('input', () => { const amount = BigInt(sendAmountInput.value || 0); if (amount > 0) { const fee = amount * 30n / 100n; const net = amount - fee; feeInfo.textContent = `Fee (30%): ${formatBigNumber(fee)}. Recipient gets: ${formatBigNumber(net)}.`; } else { feeInfo.textContent = ''; } }); }
         document.getElementById('kg-send-btn').addEventListener('click', () => { const a = BigInt(document.getElementById('kg-send-amount').value || 0); if (sendRecipientId && a > 0) { const fee = a * 30n / 100n; const net = a - fee; if(confirm(`You are about to send ${formatBigNumber(a)} coins.\nA 30% fee (${formatBigNumber(fee)}) will be applied.\nThe recipient will receive ${formatBigNumber(net)} coins.\n\nDo you want to proceed?`)) handleKingGameAction('send_coins', { recipientId: sendRecipientId, amount: a.toString() }); } else { alert("Please select a valid user and enter a positive amount."); } });
         document.getElementById('kg-attack-btn').addEventListener('click', () => { if (attackTargetId) handleKingGameAction('attack_player', { targetId: attackTargetId }); else alert("Please select a valid player to attack."); });
-        
-        document.getElementById('leaderboard-btn').addEventListener('click', () => {
-            leaderboardData = null; // Reset cache on modal open
-            renderLeaderboardModal();
-        });
-
+        document.getElementById('leaderboard-btn').addEventListener('click', renderLeaderboardModal); 
         document.getElementById('history-btn').addEventListener('click', () => { renderHistoryModal(); handleKingGameAction('mark_history_read'); });
-        document.getElementById('rank-privileges-btn').addEventListener('click', () => { document.getElementById('privileges-modal').classList.remove('hidden'); });
+        document.getElementById('rank-privileges-btn').addEventListener('click', () => { const modal = document.getElementById('privileges-modal'); modal.querySelectorAll('li').forEach(li => li.classList.remove('highlight')); if (kingGameState.title) { const rankEl = document.getElementById(`privilege-${kingGameState.title.toLowerCase()}`); if (rankEl) rankEl.classList.add('highlight'); } modal.classList.remove('hidden'); });
         document.getElementById('claim-reward-btn').addEventListener('click', () => { if (currentUser.user_status === 'Perm') { openGiftingModal(); } else { if (confirm('Claim your daily time reward?')) handleKingGameAction('claim_daily_reward'); } });
         if (kingGameInterval) clearInterval(kingGameInterval); 
         kingGameInterval = setInterval(() => { if (!document.getElementById('king-game-container')) return clearInterval(kingGameInterval); kingGameState.coins += kingGameState.cps; updateKingGameUI(); }, 1000); 
         handleKingGameAction('load'); 
     };
-    
     const renderEarnTimePage = async () => { const container = document.getElementById('earn-time-content'); if (!container || !currentUser) return; container.innerHTML = '<p>Loading your empire...</p>'; try { await renderKingGame(); } catch (error) { container.innerHTML = `<p class="error-message">Could not load game data. Only users with an active key can play.</p><a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>`; } };
     if (suggestionForm) suggestionForm.addEventListener('submit', async (e) => { e.preventDefault(); const suggestionTextarea = document.getElementById('suggestion-textarea'); const gameNameInput = document.getElementById('game-name-input'); const gameLinkInput = document.getElementById('game-link-input'); const suggestionStatus = document.getElementById('suggestion-status'); if (!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return; const suggestion = suggestionTextarea.value.trim(); const gameName = gameNameInput.value.trim(); const gameLink = gameLinkInput.value.trim(); if (gameName === '' || gameLink === '' || suggestion === '') { suggestionStatus.className = 'status-message error'; suggestionStatus.textContent = 'Please fill all fields.'; return; } const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Sending...'; suggestionStatus.textContent = ''; try { const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion, gameName, gameLink }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); suggestionStatus.className = 'status-message success'; suggestionStatus.textContent = 'Suggestion sent!'; suggestionForm.reset(); } catch (error) { suggestionStatus.className = 'status-message error'; suggestionStatus.textContent = error.message || 'Failed to send.'; } finally { btn.disabled = false; btn.textContent = 'Send Suggestion'; } });
     if (removeExpiredBtn) removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
