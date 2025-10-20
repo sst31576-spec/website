@@ -53,7 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             container.innerHTML = history.map(log => {
-                const userWasAttacker = log.attacker_id === currentUser.discord_id;
+                // FIX: Coerce both IDs to strings for a reliable comparison
+                const userWasAttacker = String(log.attacker_id) === String(currentUser.discord_id);
                 const stolenAmount = BigInt(log.coins_stolen);
 
                 if (userWasAttacker) {
