@@ -1,153 +1,766 @@
-function formatTimeRemaining(expiryDate) { if (!expiryDate) return 'N/A'; const expiry = new Date(expiryDate); const now = new Date(); const diff = expiry - now; if (diff <= 0) return 'Expired'; const hours = Math.floor(diff / 3600000); const minutes = Math.floor((diff % 3600000) / 60000); return `${hours}h ${minutes}m`; }
-function formatBigNumber(num) { if (num==null)return"0";const t=typeof num=="bigint"?num:BigInt(num);if(t<1000000)return t.toLocaleString("en-US");const o=["","K","M","B","T","q","Q","s","S","o","n","d","ud","dd","td","qd","Qd","sd","Sd","od","nd"],e=Math.floor((t.toString().length-1)/3);if(e>=o.length)return t.toExponential(2);const r=BigInt("1"+"0".repeat(3*e)),a=parseFloat(t/r);let l;return l=a>=100?a.toFixed(1):a>=10?a.toFixed(2):a.toFixed(2),l.replace(/\.0+$/,"")+o[e]}
-document.addEventListener('DOMContentLoaded', () => {
-    const loginContainer = document.getElementById('login-container'); const mainAppContainer = document.getElementById('main-app'); const loginError = document.getElementById('login-error-message'); const userNameEl = document.getElementById('user-name'); const homeUserNameEl = document.getElementById('home-username'); const userAvatarEl = document.getElementById('user-avatar'); const userStatusBadgeEl = document.getElementById('user-status-badge'); const navLinks = document.querySelectorAll('.nav-link'); const pages = document.querySelectorAll('.page'); const userProfileToggle = document.getElementById('user-profile-toggle'); const dropdownMenu = document.getElementById('dropdown-menu'); const manageKeysLink = document.getElementById('manage-keys-link'); const suggestionForm = document.getElementById('suggestion-form'); const removeExpiredBtn = document.getElementById('remove-expired-btn'); let currentUser = null; let allUsers = [];
-    const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20; const COST_PER_HOUR = BigInt('77045760000');
-    const KING_GAME_UPGRADES_CONFIG = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1, description: 'Increases coins per click.' }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1, description: 'Generates 1 coin/sec.' }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8, description: 'Generates 8 coins/sec.' }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35, description: 'Generates 35 coins/sec.' }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150, description: 'Generates 150 coins/sec.' }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720, description: 'Generates 720 coins/sec.' }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800, description: 'Generates 3.8K coins/sec.' }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000, description: 'Generates 21K coins/sec.' }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000, description: 'Generates 115K coins/sec.' }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000, description: 'Generates 650K coins/sec.' }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6, description: 'Generates 3.4M coins/sec.' }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7, description: 'Generates 20M coins/sec.' }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8, description: 'Generates 110M coins/sec.' }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8, description: 'Generates 600M coins/sec.' }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9, description: 'Generates 3.5B coins/sec.' }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10, description: 'Generates 22B coins/sec.' }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11, description: 'Generates 150B coins/sec.' }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11, description: 'Generates 900B coins/sec.' }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12, description: 'Generates 5.5T coins/sec.' }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13, description: 'Generates 30T coins/sec.' }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14, description: 'Generates 180T coins/sec.' } };
-    const highTierNames = [ 'Quantum Forge', 'Nebula Reactor', 'Stargate Hub', 'Galactic Exchange', 'Celestial Spire', 'Ethereal Nexus', 'Singularity Core', 'Hyperspace Beacon', 'Chrono-Synth Factory', 'Void Matter Extractor', 'Cosmic Oracle', 'Stellar Shipyard', 'Dimension Weaver', 'Reality Engine', 'Genesis Chamber', 'Omega Citadel', 'Astro-Observatory', 'Dark Matter Plant', 'Supernova Catalyst', 'Infinity Gate', 'Celestial Forge', 'Stardust Silo', 'Event Horizon Lab', 'Galaxy Brain Nexus', 'Time Dilation Spire', 'Reality Bender', 'The Omniverse', 'Finality Point', 'The Great Attractor', 'The Void' ];
-    let lastCpsClient = BigInt('180000000000000'); let lastCostClient = BigInt('800000000000000000');
-    for (let i = 21; i <= 50; i++) { const cpsMultiplier = BigInt(Math.round((5 + i * 0.1) * 10)); const costMultiplier = BigInt(Math.round((6 + i * 0.15) * 100)); lastCpsClient = (lastCpsClient * cpsMultiplier) / 10n; lastCostClient = (lastCostClient * costMultiplier) / 100n; const name = highTierNames[i - 21] || `Cosmic Entity #${i - 20}`; KING_GAME_UPGRADES_CONFIG[`b${i}`] = { name: name, baseCost: lastCostClient, costMultiplier: 1.23 + (i * 0.002), cps: lastCpsClient, description: `Generates ${formatBigNumber(lastCpsClient)} coins/sec.` };}
-    const TROOPS_CONFIG = { 'warrior': { name: 'Warrior', cost: 10000, power: 10, costMultiplier: 1.05 }, 'archer': { name: 'Archer', cost: 50000, power: 45, costMultiplier: 1.06 }, 'knight': { name: 'Knight', cost: 250000, power: 220, costMultiplier: 1.07 }, 'mage': { name: 'Mage', cost: 1200000, power: 1100, costMultiplier: 1.08 }, 'dragon': { name: 'Dragon', cost: 8000000, power: 6500, costMultiplier: 1.1 },};
-    const SPECIAL_UNITS_CONFIG = { 'elite_soldier': { name: 'Elite Soldier', cost: 5000000, power: 3000, costMultiplier: 1.12 }, 'queens_guard': { name: 'Queen\'s Guard', cost: 25000000, power: 12000, costMultiplier: 1.15 }, 'royal_guard': { name: 'Royal Guard', cost: 100000000, power: 50000, costMultiplier: 1.2 },};
-    const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
-    const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
-    const GEM_BOOSTS_CONFIG = { 'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 }, 'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },};
-    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0 };
-    let kingGameInterval = null; let kingGameSyncInterval = null;
-    const setupMobileNav = () => { const mainNav = document.querySelector('.top-bar-left nav'); const mobileNavContainer = document.getElementById('mobile-nav-links'); if (!mainNav || !mobileNavContainer || !dropdownMenu) return; mobileNavContainer.innerHTML = ''; mainNav.querySelectorAll('a').forEach(link => { const clone = link.cloneNode(true); clone.addEventListener('click', (e) => { if (clone.dataset.page) { e.preventDefault(); window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`); switchPage(clone.dataset.page); } dropdownMenu.classList.remove('show'); }); mobileNavContainer.appendChild(clone); }); };
-    const checkUserStatus = async () => { try { const response = await fetch('/api/user'); if (response.status === 401) { showLoginView(); return; } if (response.status === 403) { showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du'); return; } if (!response.ok) throw new Error('Failed to fetch user data'); const user = await response.json(); currentUser = user; setupMainApp(user); } catch (error) { console.error(error); showLoginView('An error occurred. Please try again later.'); } };
-    const showLoginView = (message = null, discordLink = null) => { loginContainer.classList.remove('hidden'); mainAppContainer.classList.add('hidden'); if (loginError) { loginError.textContent = message; const parent = loginError.closest('.card-box'); let existingBtn = document.getElementById('discord-join-btn'); if(existingBtn) existingBtn.remove(); if (message && discordLink) { const joinBtn = document.createElement('a'); joinBtn.id = 'discord-join-btn'; joinBtn.href = discordLink; joinBtn.target = '_blank'; joinBtn.className = 'discord-btn'; joinBtn.style.marginTop = '15px'; joinBtn.textContent = 'Click to join the Discord'; parent.appendChild(joinBtn); } } };
-    const setupMainApp = (user) => { loginContainer.classList.add('hidden'); mainAppContainer.classList.remove('hidden'); userNameEl.textContent = user.discord_username; if (homeUserNameEl) homeUserNameEl.textContent = user.discord_username; userAvatarEl.src = user.discord_avatar || 'assets/logo.png'; const displayStatus = user.isAdmin ? 'Admin' : user.user_status; userStatusBadgeEl.textContent = displayStatus; userStatusBadgeEl.className = 'status-badge ' + displayStatus.toLowerCase(); if (user.isAdmin) { manageKeysLink.classList.remove('hidden'); } handleRouting(); };
-    const switchPage = (pageId) => { if (kingGameInterval) clearInterval(kingGameInterval); if (kingGameSyncInterval) clearInterval(kingGameSyncInterval); pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`)); navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === pageId)); if (pageId === 'get-key') renderGetKeyPage(); if (pageId === 'manage-keys' && currentUser && currentUser.isAdmin) renderAdminPanel(); if (pageId === 'earn-time') renderEarnTimePage(); };
-    const handleRouting = () => { const path = window.location.pathname.replace(/\/$/, ""); let pageId = 'home'; if (path === '/get-key') pageId = 'get-key'; if (path === '/suggestion') pageId = 'suggestion'; if (path === '/manage-keys') pageId = 'manage-keys'; if (path === '/earn-time') pageId = 'earn-time'; if (pageId === 'home' && path !== '' && path !== '/') { window.history.replaceState({page: pageId}, '', '/'); } switchPage(pageId); };
-    const renderGetKeyPage = async () => { const container = document.getElementById('key-generation-content'); if (!container || !currentUser) return; container.innerHTML = `<p>Checking for an existing key...</p>`; try { const response = await fetch('/api/generate-key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); const data = await response.json(); if (response.ok) { displayKey(data); return; } const urlParams = new URLSearchParams(window.location.search); const hash = urlParams.get('hash'); if (hash) { container.innerHTML = ` <p>Thank you! You can now get your key.</p> <button id="generate-key-btn" class="discord-btn">Get Key</button> <div id="key-display-area" class="hidden"></div> <div id="generate-error" class="error-message" style="margin-top: 8px;"></div> `; document.getElementById('generate-key-btn').addEventListener('click', () => handleGenerateKey(hash)); } else { container.innerHTML = ` <p>To get your 12-hour key, please complete the task below.</p> <a href="https://link-hub.net/1409420/j5AokQm937Cf" class="discord-btn">Start Task</a> <p class="text-muted" style="margin-top: 1rem; font-size: 14px;">After completing the task, you will be redirected back here to claim your key.</p> `; } } catch (error) { console.error(error); container.innerHTML = `<p class="error-message">${error.message}</p>`; } };
-    const handleGenerateKey = async (hash = null) => { const btn = document.getElementById('generate-key-btn'); if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; } const errorEl = document.getElementById('generate-error'); if (errorEl) errorEl.textContent = ''; try { const response = await fetch('/api/generate-key', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hash ? { hash } : {}) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not generate key.'); displayKey(data); } catch (error) { if (errorEl) errorEl.textContent = error.message; if (btn) { btn.disabled = false; btn.textContent = 'Get Key'; } } };
-    const displayKey = (data) => { const container = document.getElementById('key-generation-content'); if (!container) return; container.innerHTML = ` <div id="key-display-area"> <h4>Your key is ready:</h4> <div class="key-container"> <input type="text" value="${data.key}" readonly id="generated-key-input" /> <button id="copy-key-btn" class="secondary-btn">Copy</button> </div> <button id="get-script-btn" class="discord-btn">Get Script</button> <button id="reset-hwid-btn" class="secondary-btn">Reset HWID (24h Cooldown)</button> <div id="hwid-status" class="status-message"></div> ${data.type === 'temp' ? `<p>Expires in: <strong>${formatTimeRemaining(data.expires)}</strong></p>` : ''} </div> `; document.getElementById('copy-key-btn').addEventListener('click', () => { const input = document.getElementById('generated-key-input'); const btn = document.getElementById('copy-key-btn'); input.select(); document.execCommand('copy'); btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }); document.getElementById('get-script-btn').addEventListener('click', (e) => { const scriptToCopy = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/DoggyKing/king-gen-hub/refs/heads/main/keyhub",true))()'; const btn = e.target; navigator.clipboard.writeText(scriptToCopy).then(() => { btn.textContent = 'Copied!'; btn.style.backgroundColor = 'var(--brand-green)'; setTimeout(() => { btn.textContent = 'Get Script'; btn.style.backgroundColor = 'var(--brand-blue)'; }, 2000); }).catch(err => { console.error('Failed to copy script: ', err); btn.textContent = 'Error'; btn.style.backgroundColor = 'var(--brand-red)'; setTimeout(() => { btn.textContent = 'Get Script'; btn.style.backgroundColor = 'var(--brand-blue)'; }, 2000); }); }); document.getElementById('reset-hwid-btn').addEventListener('click', handleResetHwid); };
-    const handleResetHwid = async () => { const btn = document.getElementById('reset-hwid-btn'); const statusEl = document.getElementById('hwid-status'); if (!btn || !statusEl) return; btn.disabled = true; statusEl.textContent = 'Resetting...'; try { const response = await fetch('/api/reset-hwid', { method: 'POST' }); const result = await response.json(); if (!response.ok) throw new Error(result.error); statusEl.className = 'status-message success'; statusEl.textContent = result.message; } catch (error) { statusEl.className = 'status-message error'; statusEl.textContent = error.message || 'Failed to reset HWID.'; } finally { setTimeout(() => { btn.disabled = false; }, 2000); } };
-    const renderAdminPanel = async () => { const container = document.getElementById('admin-key-list'); const searchInput = document.getElementById('admin-search-input'); if (!container || !searchInput) return; container.innerHTML = '<p>Loading keys...</p>'; try { const response = await fetch('/api/admin/keys'); if (!response.ok) throw new Error('Failed to fetch keys.'); const keys = await response.json(); container.innerHTML = `<div class="admin-table-container"><table class="admin-table"><thead><tr><th>Key</th><th>Type</th><th>Owner</th><th>HWID (Roblox ID)</th><th>Expires In</th><th>Action</th></tr></thead><tbody>${keys.length === 0 ? '<tr><td colspan="6" style="text-align: center;">No keys found.</td></tr>' : keys.map(key => ` <tr data-key-id="${key.id}" data-key-type="${key.key_type}" data-expires-at="${key.expires_at || ''}"> <td class="key-value">${key.key_value}</td> <td><span class="key-badge ${key.key_type}">${key.key_type}</span></td> <td class="owner-name">${key.discord_username || 'N/A'}</td> <td class="hwid-cell editable">${key.roblox_user_id || 'Not Set'}</td> <td class="expires-cell editable">${key.key_type === 'temp' ? formatTimeRemaining(key.expires_at) : 'N/A'}</td> <td class="actions-cell"><button class="delete-key-btn secondary-btn-red">Delete</button></td> </tr>`).join('')}</tbody></table></div>`; const tableRows = container.querySelectorAll('tbody tr'); searchInput.oninput = () => { const searchTerm = searchInput.value.toLowerCase(); tableRows.forEach(row => { const keyValue = row.querySelector('.key-value').textContent.toLowerCase(); const ownerName = row.querySelector('.owner-name').textContent.toLowerCase(); row.style.display = (keyValue.includes(searchTerm) || ownerName.includes(searchTerm)) ? '' : 'none'; }); }; container.querySelectorAll('.delete-key-btn').forEach(btn => btn.addEventListener('click', handleDeleteKey)); container.querySelectorAll('.hwid-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit)); container.querySelectorAll('.expires-cell.editable').forEach(cell => cell.addEventListener('click', handleEdit)); } catch (error) { container.innerHTML = `<p class="error-message">${error.message}</p>`; } };
-    const handleRemoveAllExpired = async () => { if (!confirm('Are you sure you want to delete ALL expired keys? This action cannot be undone.')) return; removeExpiredBtn.disabled = true; removeExpiredBtn.textContent = 'Deleting...'; try { const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_expired' }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Failed to delete expired keys.'); alert(result.message); renderAdminPanel(); } catch (error) { alert('Error: ' + error.message); } finally { removeExpiredBtn.disabled = false; removeExpiredBtn.textContent = 'Remove All Expired'; } };
-    const handleDeleteKey = async (e) => { const row = e.target.closest('tr'); const keyId = row.dataset.keyId; if (confirm('Are you sure you want to delete this key permanently?')) { try { const response = await fetch('/api/admin/keys', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_id: keyId }) }); if (!response.ok) throw new Error('Failed to delete.'); row.remove(); } catch (error) { alert('Error deleting key.'); } } };
-    const handleEdit = async (e) => { const cell = e.target; const row = cell.closest('tr'); const keyId = row.dataset.keyId; const keyType = row.dataset.keyType; const isHwid = cell.classList.contains('hwid-cell'); const isExpires = cell.classList.contains('expires-cell'); if (isExpires && keyType.toLowerCase() !== 'temp') { alert("Only 'temp' keys can have their expiration date modified."); return; } let newHwid = undefined; let newExpiresAt = undefined; if (isHwid) { const currentHwid = cell.textContent.trim() === 'Not Set' ? '' : cell.textContent.trim(); const result = prompt('Enter the new Roblox User ID (leave blank to clear HWID):', currentHwid); if (result === null) return; newHwid = result.trim(); } else if (isExpires) { const result = prompt('Enter the time to ADD to the key (e.g., "24h" for 24 hours, "90m" for 90 minutes, or "clear" to remove expiry):', '12h'); if (result === null) return; const input = result.trim().toLowerCase(); if (input === 'clear') { newExpiresAt = null; } else { const parseDuration = (str) => { const matchHours = str.match(/(\d+)h/); const matchMinutes = str.match(/(\d+)m/); let ms = 0; if (matchHours) ms += parseInt(matchHours[1]) * 3600000; if (matchMinutes) ms += parseInt(matchMinutes[1]) * 60000; return ms; }; const durationMs = parseDuration(input); if (durationMs > 0) { newExpiresAt = new Date(Date.now() + durationMs).toISOString(); } else { alert('Invalid format. Use "24h", "90m", or "clear".'); return; } } } if (newHwid === undefined && newExpiresAt === undefined) return; try { cell.classList.add('loading'); const payload = { key_id: keyId }; if (newHwid !== undefined) payload.new_roblox_user_id = newHwid; if (newExpiresAt !== undefined) payload.new_expires_at = newExpiresAt; const response = await fetch('/api/admin/keys', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error('Failed to update.'); if (newHwid !== undefined) { cell.textContent = newHwid === '' ? 'Not Set' : newHwid; } if (newExpiresAt !== undefined) { const finalExpires = newExpiresAt === null ? '' : newExpiresAt; row.dataset.expiresAt = finalExpires; cell.textContent = finalExpires === '' ? 'N/A' : formatTimeRemaining(finalExpires); } cell.classList.remove('loading'); cell.classList.add('success-flash'); setTimeout(() => cell.classList.remove('success-flash'), 1000); } catch (error) { alert('Error updating key: ' + error.message); cell.classList.remove('loading'); } };
-    const renderLeaderboardModal = () => { const modal = document.getElementById('leaderboard-modal'); const container = document.getElementById('leaderboard-container'); const controls = document.getElementById('leaderboard-controls'); if (!modal || !container || !controls) return; const fetchAndDisplay = async (sortBy = 'power') => { container.innerHTML = '<p>Loading leaderboard...</p>'; try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'get_leaderboard', sortBy }) }); if (!response.ok) throw new Error('Failed to fetch leaderboard data.'); const players = await response.json(); controls.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.sort === sortBy)); if (players.length === 0) { container.innerHTML = '<p>No players to display.</p>'; return; } container.innerHTML = `<div class="leaderboard-table-container"><table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Power</th><th>Coins</th><th>Prestige</th></tr></thead><tbody>${players.map((p, index) => { let name = p.discord_username; if (sortBy === 'power') { if (index === 0) name = `👑 (King) ${name}`; else if (index === 1) name = `⭐ (Queen) ${name}`; else if (index === 2) name = `⚔️ (General) ${name}`; } return `<tr><td>${index + 1}</td><td>${name}</td><td>${formatBigNumber(p.power)}</td><td>${formatBigNumber(p.king_game_coins)}</td><td>${p.prestige_level}</td></tr>` }).join('')}</tbody></table></div>`; } catch (error) { container.innerHTML = `<p class="error-message">${error.message}</p>`; } }; controls.querySelectorAll('button').forEach(button => { button.onclick = () => fetchAndDisplay(button.dataset.sort); }); fetchAndDisplay('power'); modal.classList.remove('hidden'); };
-    const renderHistoryModal = async () => {
-        const modal = document.getElementById('history-modal');
-        const container = document.getElementById('history-container');
-        if (!modal || !container || !currentUser) return;
+:root {
+    --background-primary: #36393f;
+    --background-secondary: #2f3136;
+    --background-tertiary: #202225;
+    --header-primary: #ffffff;
+    --text-normal: #dcddde;
+    --text-muted: #72767d;
+    --brand-red: #f04747;
+    --brand-green: #43b581;
+    --brand-blue: #5865f2;
+    --brand-yellow: #faa61a;
+    --border-radius: 8px;
+}
 
-        container.innerHTML = '<p>Loading your combat history...</p>';
-        modal.classList.remove('hidden');
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    margin: 0;
+}
 
-        try {
-            const response = await fetch('/api/earn-time?action=get_attack_history');
-            const history = await response.json();
+.hidden { display: none !important; }
 
-            if (!response.ok) throw new Error(history.error || 'Could not load history.');
-            if (history.length === 0) {
-                container.innerHTML = '<p>You have no combat history yet.</p>';
-                return;
-            }
+/* --- General Views --- */
+.view-container { width: 100%; min-height: 100vh; }
+#login-container { display: flex; justify-content: center; align-items: center; }
 
-            const formatLosses = (losses) => {
-                if (!losses || Object.keys(losses).length === 0) return '<li>No losses</li>';
-                return Object.entries(losses).map(([unit, count]) => `<li>${count.toLocaleString('en-US')} ${ALL_TROOPS_CONFIG[unit]?.name || DEFENSES_CONFIG[unit]?.name || unit}</li>`).join('');
-            };
+.card-box {
+    background-color: var(--background-secondary);
+    padding: 32px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    width: 100%;
+    max-width: 400px;
+    margin: 20px;
+    box-sizing: border-box;
+}
 
-            container.innerHTML = history.map(log => {
-                // FIX: Coerce both IDs to strings for a reliable comparison
-                const userWasAttacker = String(log.attacker_id) === String(currentUser.discord_id);
-                const stolenAmount = BigInt(log.coins_stolen);
+.logo { width: 80px; height: 80px; margin-bottom: 20px; }
+.card-box h1 { color: var(--header-primary); font-size: 24px; margin-bottom: 10px; }
+.card-box p { color: var(--text-normal); margin-bottom: 20px; }
 
-                if (userWasAttacker) {
-                    const victory = log.attacker_wins;
-                    return `
-                    <div class="history-log-item ${victory ? 'victory' : 'defeat'}">
-                        <div class="history-log-header">
-                            <h5>ATTACK on ${log.defender_name || 'Unknown'} (${victory ? 'VICTORY' : 'DEFEAT'})</h5>
-                            <small>${new Date(log.timestamp).toLocaleString()}</small>
-                        </div>
-                        <p>${victory ? `You attacked and stole <strong>${formatBigNumber(stolenAmount)}</strong> coins.` : `Your attack was repelled.`}</p>
-                        <div class="history-log-details">
-                            <div class="losses-section"><h6>Your Losses</h6><ul>${formatLosses(log.attacker_losses)}</ul></div>
-                            <div class="losses-section"><h6>Enemy's Losses</h6><ul>${formatLosses(log.defender_losses)}</ul></div>
-                        </div>
-                    </div>`;
-                } else { // User was defender
-                    const victory = !log.attacker_wins;
-                    return `
-                    <div class="history-log-item ${victory ? 'victory' : 'defeat'}">
-                        <div class="history-log-header">
-                            <h5>DEFENSE against ${log.attacker_name || 'Unknown'} (${victory ? 'VICTORY' : 'DEFEAT'})</h5>
-                            <small>${new Date(log.timestamp).toLocaleString()}</small>
-                        </div>
-                        <p>${victory ? `You successfully defended your empire!` : `${log.attacker_name} stole <strong>${formatBigNumber(stolenAmount)}</strong> coins from you.`}</p>
-                        <div class="history-log-details">
-                            <div class="losses-section"><h6>Your Losses</h6><ul>${formatLosses(log.defender_losses)}</ul></div>
-                            <div class="losses-section"><h6>Attacker's Losses</h6><ul>${formatLosses(log.attacker_losses)}</ul></div>
-                        </div>
-                        <button class="secondary-btn revenge-btn" data-log-id="${log.id}" ${log.revenge_used ? 'disabled' : ''}>
-                            ${log.revenge_used ? 'Revenge Used' : 'Revenge'}
-                        </button>
-                    </div>`;
-                }
-            }).join('');
+/* --- Buttons --- */
+.discord-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--brand-blue);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    gap: 8px;
+}
+.discord-btn:hover { background-color: #4e5d94; }
+.discord-btn:active { transform: translateY(1px); }
+.discord-btn:disabled { background-color: #72767d; cursor: not-allowed; }
 
-            container.querySelectorAll('.revenge-btn:not(:disabled)').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    if (confirm('Are you sure you want to use your one-time revenge on this player? This will not have a 24h cooldown.')) {
-                        handleKingGameAction('revenge_attack', { logId: btn.dataset.logId });
-                        modal.classList.add('hidden');
-                    }
-                });
-            });
-        } catch (error) {
-            container.innerHTML = `<p class="error-message">${error.message}</p>`;
-        }
-    };
-    const getUnitCost=(u,c,i)=>{const t=i?ALL_TROOPS_CONFIG[u]:DEFENSES_CONFIG[u];return BigInt(Math.ceil(t.cost*Math.pow(t.costMultiplier,c)))};const getUpgradeCost=(u,c)=>{const t=KING_GAME_UPGRADES_CONFIG[u];let e=BigInt(Math.ceil(Number(BigInt(t.baseCost))*Math.pow(t.costMultiplier,c)));return kingGameState.active_boosts.half_cost&&new Date(kingGameState.active_boosts.half_cost)>new Date&&(e/=2n),e};
-    const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power) }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'prestige') alert(`Congratulations on reaching Prestige Level ${kingGameState.prestige_level}! You've earned 2 gems and your journey starts anew with a permanent coin bonus.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
-    const updateKingGameUI = () => { if (!document.getElementById('king-game-container')) return; document.getElementById('kg-coin-count').textContent = formatBigNumber(kingGameState.coins); document.getElementById('kg-cps-count').textContent = `${formatBigNumber(kingGameState.cps)} coins/sec`; const bonusEl = document.getElementById('kg-bonus-display'); bonusEl.textContent = `Prestige Bonus: x${Math.pow(2,kingGameState.prestige_level||0).toLocaleString("en-US")}`; bonusEl.style.display = kingGameState.prestige_level > 0 ? 'block' : 'none'; document.getElementById('kg-player-power').textContent = formatBigNumber(kingGameState.power); const titleEl = document.getElementById('kg-player-title'); const rankEl = document.getElementById('kg-player-rank'); if (kingGameState.title) { titleEl.textContent = kingGameState.title; titleEl.parentElement.classList.remove('hidden'); rankEl.textContent = kingGameState.rank; } else { titleEl.parentElement.classList.add('hidden'); rankEl.textContent = kingGameState.rank; } document.getElementById('kg-gem-count').textContent = `${kingGameState.gems || 0} Gems`; const claimBtn = document.getElementById('claim-reward-btn'); if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable); const renderList=(c,t,e,n)=>{c.innerHTML="";let o=!0;for(const i in t){if(n&&SPECIAL_UNITS_CONFIG[i]){const r=["King","Queen","General"];let l=!1;switch(i){case"royal_guard":l="King"===kingGameState.title;break;case"queens_guard":l="Queen"===kingGameState.title;break;case"elite_soldier":l=r.includes(kingGameState.title)}if(!l)continue}const s=t[i];let d,a,g;if(e){d=kingGameState.upgrades[i]||0,d<PRESTIGE_REQUIREMENT_LEVEL&&(o=!1),a=getUpgradeCost(i,d)}else{const p=(n?kingGameState.troops:kingGameState.defenses)[i];g=p?.quantity||0,a=getUnitCost(i,g,n)}const u=document.createElement("div");u.className="upgrade-item",u.innerHTML=`\n <div class="upgrade-info">\n <strong>${s.name} ${e?`(Lvl ${d})`:`(x${g})`}</strong>\n <small class="desc">${e?s.description:`Power: ${s.power.toLocaleString("en-US")}`}</small>\n <small>Cost: ${formatBigNumber(a)}</small>\n </div>\n <button class="secondary-btn" data-id="${i}" ${kingGameState.coins<a?"disabled":""}>Buy</button>\n `,u.querySelector("button").addEventListener("click",t=>{const d=t.target.dataset.id;if(e)handleKingGameAction("buy_upgrade",{upgradeId:d});else{const a=t.shiftKey?100:t.ctrlKey?10:1;handleKingGameAction(n?"buy_troop":"buy_defense",{unitId:d,quantity:a})}}),c.appendChild(u)}return o}; const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true); renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false); const gemShopContainer=document.getElementById("kg-gem-shop");gemShopContainer.innerHTML="";for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)} const prestigeContainer=document.getElementById("kg-prestige-container");allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL?(prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for a permanent x2 coin multiplier and 2 gems!")&&handleKingGameAction("prestige")})):kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL?prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>':prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${PRESTIGE_REQUIREMENT_LEVEL} on all buildings to prestige.</p>`;};
-    const fetchUserList = async () => { try { const response = await fetch('/api/earn-time?action=get_users'); allUsers = await response.json(); } catch(e) { console.error("Failed to fetch user list", e); } };
-    const setupUserSearch = (inputId, dropdownId, onSelect, contentGenerator, userList) => { const searchInput = document.getElementById(inputId); const dropdown = document.getElementById(dropdownId); if (!searchInput || !dropdown) return; let selectedUserId = null; let highlightedIndex = -1; const updateHighlight = () => { dropdown.querySelectorAll('a').forEach((item, index) => item.classList.toggle('highlighted', index === highlightedIndex)); }; const updateDropdown = () => { const query = searchInput.value.toLowerCase(); const sourceList = userList || allUsers; const filteredUsers = sourceList.filter(u => u.discord_username.toLowerCase().startsWith(query) && u.discord_id !== currentUser.discord_id); dropdown.innerHTML = ''; highlightedIndex = -1; if (filteredUsers.length > 0) { filteredUsers.slice(0, 5).forEach(user => { const item = document.createElement('a'); item.innerHTML = contentGenerator(user); item.addEventListener("mousedown", () => { searchInput.value = user.discord_username; selectedUserId = user.discord_id; dropdown.style.display = 'none'; onSelect(selectedUserId, searchInput); }); dropdown.appendChild(item); }); updateHighlight(); dropdown.style.display = 'block'; } else { dropdown.style.display = 'none'; } }; 
-        searchInput.addEventListener('input', updateDropdown); 
-        searchInput.addEventListener('keyup', updateDropdown);
-        searchInput.addEventListener('focus', updateDropdown);
-        searchInput.addEventListener('blur', () => setTimeout(() => dropdown.style.display = 'none', 200)); 
-        searchInput.addEventListener('keydown', (e) => { const items = dropdown.querySelectorAll('a'); if (items.length === 0) return; if (e.key === 'ArrowDown') { e.preventDefault(); highlightedIndex = (highlightedIndex + 1) % items.length; updateHighlight(); } else if (e.key === 'ArrowUp') { e.preventDefault(); highlightedIndex = (highlightedIndex - 1 + items.length) % items.length; updateHighlight(); } else if (e.key === 'Enter' || e.key === 'Tab') { if (highlightedIndex !== -1) { e.preventDefault(); items[highlightedIndex].dispatchEvent(new MouseEvent('mousedown')); } } }); };
-    const openGiftingModal = async () => { const modal = document.getElementById('gifting-modal'); const dropdown = document.getElementById('gift-recipient-dropdown'); dropdown.innerHTML = '<li>Loading players...</li>'; modal.classList.remove('hidden'); try { const response = await fetch('/api/earn-time?action=get_giftable_users'); if (!response.ok) throw new Error('Could not load player list.'); const giftableUsers = await response.json(); let giftRecipientId = null; const setGiftRecipient = (id) => { giftRecipientId = id; document.getElementById('gift-reward-btn').disabled = !id; }; setupUserSearch( 'gift-recipient-search', 'gift-recipient-dropdown', setGiftRecipient, user => `<span>${user.discord_username}</span><span class="key-time">🕒 ${formatTimeRemaining(user.expires_at)}</span>`, giftableUsers ); document.getElementById('gift-reward-btn').onclick = () => { if (giftRecipientId) { handleKingGameAction('claim_daily_reward', { recipientId: giftRecipientId }); modal.classList.add('hidden'); document.getElementById('gift-recipient-search').value = ''; giftRecipientId = null; } else { alert('Please select a player to gift the reward to.'); } }; } catch (error) { dropdown.innerHTML = `<li>${error.message}</li>`; } };
-    const renderKingGame = async () => {
-        await fetchUserList();
 
-        const container = document.getElementById('earn-time-content'); 
-        container.innerHTML = ` <div id="king-game-container" class="king-game-layout"> <div class="kg-left-panel"> <div class="history-btn-container"><button id="history-btn" class="secondary-btn">History</button><span id="history-ping" class="ping hidden">0</span></div> <button id="claim-reward-btn" class="reward-chest hidden">🎁</button> <div class="coin-display"> <h2 id="kg-coin-count">0</h2> <p id="kg-cps-count">0 coins/sec</p> <p id="kg-bonus-display" style="display: none;"></p> </div> <div class="clicker-area"><button id="kg-clicker-btn">👑</button></div> <div id="kg-player-stats"> <h4>Your Stats <button id="rank-privileges-btn" class="info-btn">ⓘ</button></h4> <p class="hidden"><strong>Title:</strong> <span id="kg-player-title"></span></p> <p><strong>Power:</strong> <span id="kg-player-power">0</span></p> <p><strong>Rank:</strong> <span id="kg-player-rank">Unranked</span></p> </div> <div class="shop-container"> <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4> <div id="kg-gem-shop"></div> </div> </div> <div class="kg-middle-panel"><div class="upgrades-container"><h4>Buildings</h4><div id="kg-upgrades-list"></div></div></div> <div class="kg-right-panel"><div class="army-container"><h4>Army</h4><div id="kg-army-list"></div></div><div class="defense-container"><h4>Defenses</h4><div id="kg-defenses-list"></div></div></div> <div class="kg-bottom-panel"> <button id="leaderboard-btn" class="secondary-btn">View Leaderboard</button> <div id="kg-buy-time-container" class="kg-buy-time-container"> <select id="kg-buy-time-select"><option value="1">1 Hour</option><option value="6">6 Hours</option><option value="12">12 Hours</option><option value="24">24 Hours</option></select> <button id="kg-buy-time-btn" class="secondary-btn" disabled>Buy Time</button><small id="kg-buy-time-cost-display">Cost: ...</small> </div> <div class="send-coins-container"><h4>Send Coins</h4><div class="user-select-wrapper"><input type="text" id="kg-recipient-search" placeholder="Player name..."><div id="kg-recipient-dropdown" class="user-dropdown-content"></div></div><input type="number" id="kg-send-amount" placeholder="Amount" min="1"><button id="kg-send-btn" class="secondary-btn">Send</button><small id="send-fee-info"></small></div> <div id="kg-prestige-container"></div> <div class="attack-container"><h4>Attack</h4><div class="user-select-wrapper"><input type="text" id="kg-attack-target-search" placeholder="Player name..."><div id="kg-attack-target-dropdown" class="user-dropdown-content"></div></div><button id="kg-attack-btn" class="secondary-btn-red">Attack</button></div> </div> </div>`; 
-        if (currentUser?.user_status === 'Perm') document.getElementById('kg-buy-time-container')?.classList.add('hidden'); 
-        document.getElementById('kg-clicker-btn').addEventListener('click', () => handleKingGameAction('click')); 
-        const buyTimeSelect = document.getElementById('kg-buy-time-select'); 
-        const buyTimeCostDisplay = document.getElementById('kg-buy-time-cost-display'); 
-        const updateCostDisplay = () => { if (!buyTimeSelect || !buyTimeCostDisplay) return; const h = parseInt(buyTimeSelect.value, 10); const c = COST_PER_HOUR * BigInt(h); buyTimeCostDisplay.textContent = `Cost: ${formatBigNumber(c)}`; }; 
-        if(buyTimeSelect) { buyTimeSelect.addEventListener('change', updateCostDisplay); document.getElementById('kg-buy-time-btn').addEventListener('click', () => { const h = parseInt(buyTimeSelect.value, 10); const c = COST_PER_HOUR * BigInt(h); if (confirm(`Are you sure you want to spend ${formatBigNumber(c)} coins to add ${h} hour(s) to your key?`)) handleKingGameAction('buy_time', { hours: h }); }); updateCostDisplay(); } 
-        
-        let sendRecipientId = null; let attackTargetId = null;
-        const setSendRecipient = (id) => { sendRecipientId = id; }; const setAttackTarget = (id) => { attackTargetId = id; };
-        
-        setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span>${user.discord_username}</span>`);
-        setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span>${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
-        
-        const sendAmountInput = document.getElementById('kg-send-amount'); const feeInfo = document.getElementById('send-fee-info'); if (sendAmountInput && feeInfo) { sendAmountInput.addEventListener('input', () => { const amount = BigInt(sendAmountInput.value || 0); if (amount > 0) { const fee = amount * 30n / 100n; const net = amount - fee; feeInfo.textContent = `Fee (30%): ${formatBigNumber(fee)}. Recipient gets: ${formatBigNumber(net)}.`; } else { feeInfo.textContent = ''; } }); }
-        document.getElementById('kg-send-btn').addEventListener('click', () => { const a = BigInt(document.getElementById('kg-send-amount').value || 0); if (sendRecipientId && a > 0) { const fee = a * 30n / 100n; const net = a - fee; if(confirm(`You are about to send ${formatBigNumber(a)} coins.\nA 30% fee (${formatBigNumber(fee)}) will be applied.\nThe recipient will receive ${formatBigNumber(net)} coins.\n\nDo you want to proceed?`)) handleKingGameAction('send_coins', { recipientId: sendRecipientId, amount: a.toString() }); } else { alert("Please select a valid user and enter a positive amount."); } });
-        document.getElementById('kg-attack-btn').addEventListener('click', () => { if (attackTargetId) handleKingGameAction('attack_player', { targetId: attackTargetId }); else alert("Please select a valid player to attack."); });
-        document.getElementById('leaderboard-btn').addEventListener('click', renderLeaderboardModal); 
-        document.getElementById('history-btn').addEventListener('click', () => { renderHistoryModal(); handleKingGameAction('mark_history_read'); });
-        document.getElementById('rank-privileges-btn').addEventListener('click', () => { const modal = document.getElementById('privileges-modal'); modal.querySelectorAll('li').forEach(li => li.classList.remove('highlight')); if (kingGameState.title) { const rankEl = document.getElementById(`privilege-${kingGameState.title.toLowerCase()}`); if (rankEl) rankEl.classList.add('highlight'); } modal.classList.remove('hidden'); });
-        document.getElementById('claim-reward-btn').addEventListener('click', () => { if (currentUser.user_status === 'Perm') { openGiftingModal(); } else { if (confirm('Claim your daily time reward?')) handleKingGameAction('claim_daily_reward'); } });
-        if (kingGameInterval) clearInterval(kingGameInterval); 
-        kingGameInterval = setInterval(() => { if (!document.getElementById('king-game-container')) return clearInterval(kingGameInterval); kingGameState.coins += kingGameState.cps; updateKingGameUI(); }, 1000); 
-        handleKingGameAction('load'); 
-    };
-    const renderEarnTimePage = async () => { const container = document.getElementById('earn-time-content'); if (!container || !currentUser) return; container.innerHTML = '<p>Loading your empire...</p>'; try { await renderKingGame(); } catch (error) { container.innerHTML = `<p class="error-message">Could not load game data. Only users with an active key can play.</p><a href="/get-key" class="discord-btn" style="margin-top: 15px;">Get a Key</a>`; } };
-    if (suggestionForm) suggestionForm.addEventListener('submit', async (e) => { e.preventDefault(); const suggestionTextarea = document.getElementById('suggestion-textarea'); const gameNameInput = document.getElementById('game-name-input'); const gameLinkInput = document.getElementById('game-link-input'); const suggestionStatus = document.getElementById('suggestion-status'); if (!suggestionTextarea || !suggestionStatus || !gameNameInput || !gameLinkInput) return; const suggestion = suggestionTextarea.value.trim(); const gameName = gameNameInput.value.trim(); const gameLink = gameLinkInput.value.trim(); if (gameName === '' || gameLink === '' || suggestion === '') { suggestionStatus.className = 'status-message error'; suggestionStatus.textContent = 'Please fill all fields.'; return; } const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Sending...'; suggestionStatus.textContent = ''; try { const response = await fetch('/api/send-suggestion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ suggestion, gameName, gameLink }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); suggestionStatus.className = 'status-message success'; suggestionStatus.textContent = 'Suggestion sent!'; suggestionForm.reset(); } catch (error) { suggestionStatus.className = 'status-message error'; suggestionStatus.textContent = error.message || 'Failed to send.'; } finally { btn.disabled = false; btn.textContent = 'Send Suggestion'; } });
-    if (removeExpiredBtn) removeExpiredBtn.addEventListener('click', handleRemoveAllExpired);
-    navLinks.forEach(link=>{link.addEventListener("click",e=>{const pageId=e.target.dataset.page;pageId&&(e.preventDefault(),window.history.pushState({page:pageId},"",`/${"home"===pageId?"":pageId}`),switchPage(pageId))})}),manageKeysLink&&manageKeysLink.addEventListener("click",e=>{e.preventDefault(),window.history.pushState({page:"manage-keys"},"","/manage-keys"),switchPage("manage-keys"),dropdownMenu.classList.remove("show")}),userProfileToggle&&userProfileToggle.addEventListener("click",()=>dropdownMenu.classList.toggle("show")),window.addEventListener("click",e=>{userProfileToggle&&!userProfileToggle.contains(e.target)&&!dropdownMenu.contains(e.target)&&dropdownMenu.classList.remove("show")});
-    const modals = document.querySelectorAll('.modal-overlay'); modals.forEach(modal => { modal.querySelector('.modal-close-btn').addEventListener('click', () => modal.classList.add('hidden')); modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); }); });
-    setupMobileNav();
-    checkUserStatus();
-});
+/* --- Top Bar & Navigation --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--background-tertiary);
+    padding: 0 32px;
+    height: 60px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.header-logo {
+    width: 40px;
+    height: 40px;
+}
+
+nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 18px 12px;
+    transition: color 0.2s, background-color 0.2s;
+    font-weight: 500;
+}
+nav a:hover {
+    color: var(--text-normal);
+}
+nav a.active {
+    color: var(--header-primary);
+    border-bottom: 3px solid var(--brand-blue);
+}
+
+/* --- User Profile & Dropdown --- */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.status-badge.admin { background-color: var(--brand-red); color: white; }
+.status-badge.perm { background-color: var(--brand-blue); color: white; }
+.status-badge.free { background-color: var(--text-muted); color: white; }
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s;
+}
+.user-profile:hover {
+    background-color: var(--background-secondary);
+}
+#user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background-color: var(--background-secondary);
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: var(--border-radius);
+    z-index: 100;
+    display: none;
+    overflow: hidden;
+}
+.dropdown-content.show { display: block; }
+.dropdown-content a {
+    color: var(--text-normal);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+.dropdown-content a:hover {
+    background-color: var(--background-primary);
+}
+
+/* --- Main Content --- */
+.content {
+    padding: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; 
+    min-height: calc(100vh - 60px); 
+}
+
+.page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-content {
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close-btn:hover {
+    color: var(--text-normal);
+}
+
+
+/* --- Forms & Inputs --- */
+#suggestion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+    margin-top: 16px;
+}
+#suggestion-form input,
+#suggestion-form textarea {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 12px;
+}
+#suggestion-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.status-message { margin-top: 8px; font-weight: 500; }
+.status-message.success { color: var(--brand-green); }
+.status-message.error { color: var(--brand-red); }
+
+/* --- Get Key Page --- */
+.key-container { display: flex; gap: 8px; margin-bottom: 16px; }
+#generated-key-input {
+    flex-grow: 1;
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    text-align: center;
+}
+
+#generate-key-btn {
+    display: block; 
+    margin: 20px auto 0 auto;
+}
+
+#key-display-area .discord-btn, #key-display-area .secondary-btn {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#key-display-area button {
+    margin-top: 10px;
+}
+
+.secondary-btn {
+    padding: 10px 16px;
+    border: none;
+    background-color: var(--text-muted);
+    color: white; 
+    border-radius: var(--border-radius); 
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s; 
+}
+.secondary-btn:hover:not(:disabled) { background-color: #63676d; }
+.secondary-btn:disabled { background-color: #484b51; color: #72767d; cursor: not-allowed; }
+.secondary-btn.active { background-color: var(--brand-blue); }
+
+
+.secondary-btn-red { 
+    background-color: var(--brand-red); 
+    color: white; 
+}
+.secondary-btn-red:hover { 
+    background-color: #d83d3d; 
+}
+
+/* --- Admin & Leaderboard Table --- */
+#leaderboard-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.admin-table-container, .leaderboard-container {
+    overflow-x: auto;
+}
+.admin-table, .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
+.admin-table th, .admin-table td, .leaderboard-table th, .leaderboard-table td {
+    border: 1px solid var(--background-primary);
+    padding: 10px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+.admin-table th, .leaderboard-table th {
+    background-color: var(--background-primary);
+    color: var(--header-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.admin-table tr:nth-child(even), .leaderboard-table tr:nth-child(even) {
+    background-color: var(--background-tertiary);
+}
+.admin-table .actions-cell button {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+#admin-search-input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+.key-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.key-badge.temp { background-color: var(--brand-red); color: white; }
+.key-badge.perm { background-color: var(--brand-green); color: white; }
+
+#mobile-nav-links { display: none; }
+
+
+/* --- Leaderboard Rank Title Colors --- */
+.rank-title {
+    font-weight: bold;
+    margin-left: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.rank-power { color: var(--brand-red); }
+.rank-coins { color: var(--brand-yellow); }
+.rank-prestige { color: var(--brand-blue); }
+
+
+/* ======================================= */
+/* --- KING CLICKER GAME STYLES --- */
+/* ======================================= */
+
+#page-earn-time .card-box {
+    max-width: 1200px;
+}
+
+.king-game-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 20px;
+    grid-template-areas:
+        "left middle right"
+        "left middle right"
+        "bottom bottom bottom";
+    text-align: left;
+    width: 100%;
+}
+
+.kg-left-panel { grid-area: left; position: relative; }
+.kg-middle-panel { grid-area: middle; }
+.kg-right-panel { grid-area: right; }
+.kg-bottom-panel { 
+    grid-area: bottom; 
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center; 
+    border-top: 1px solid var(--background-tertiary); 
+    padding-top: 15px; 
+    margin-top: 15px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.coin-display, .clicker-area { text-align: center; }
+#kg-coin-count { 
+    font-size: 28px; 
+    font-weight: bold; 
+    color: var(--header-primary); 
+    margin: 0;
+    word-wrap: break-word;
+}
+#kg-cps-count { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; }
+#kg-bonus-display { color: var(--brand-green); font-weight: bold; }
+
+#kg-clicker-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--brand-blue);
+    background-color: var(--background-secondary);
+    cursor: pointer;
+    transition: transform 0.1s;
+    font-size: 48px;
+}
+#kg-clicker-btn:active { transform: scale(0.95); }
+
+#kg-player-stats {
+    background-color: var(--background-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-top: 15px;
+    text-align: center;
+}
+#kg-player-stats h4 { 
+    margin: 0 0 10px 0; 
+    color: var(--header-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+#kg-player-stats p { margin: 4px 0; }
+#kg-player-title { font-weight: bold; color: var(--brand-green); }
+
+.info-btn {
+    background: none;
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+}
+.info-btn:hover {
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+}
+.privileges-list {
+    list-style: none;
+    padding: 0;
+    text-align: left;
+}
+.privileges-list > li {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+.privileges-list > li.highlight {
+    border-color: var(--brand-green);
+    background-color: rgba(67, 181, 129, 0.1);
+}
+.privileges-list > li.highlight > strong {
+    color: var(--brand-green);
+}
+
+.privileges-list ul {
+    list-style-type: '✓  ';
+    padding-left: 20px;
+    margin-top: 5px;
+}
+.privileges-list ul li {
+    color: var(--text-normal);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.reward-chest {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 50px;
+    height: 50px;
+    font-size: 28px;
+    background-color: #a97100;
+    border: 2px solid #ffc700;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(255, 199, 0, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0); }
+}
+
+
+.upgrades-container, .shop-container, .army-container, .defense-container {
+    background-color: var(--background-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.upgrades-container h4, .shop-container h4, .army-container h4, .defense-container h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: var(--header-primary);
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--background-primary);
+}
+
+#kg-upgrades-list, #kg-army-list, #kg-defenses-list {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 10px;
+    flex-grow: 1;
+}
+
+.upgrade-item {
+    background-color: var(--background-primary);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.upgrade-info { display: flex; flex-direction: column; }
+.upgrade-info strong { color: var(--header-primary); }
+.upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
+.upgrade-info small { font-size: 12px; }
+
+#kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
+#kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
+
+.active-boosts-container {
+    background-color: var(--background-tertiary);
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: var(--border-radius);
+}
+.active-boosts-container h4 { margin: 0 0 5px 0; }
+.active-boosts-container p { margin: 2px 0; font-size: 14px; }
+
+.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.attack-container h4, .send-coins-container h4 { margin: 0; }
+#kg-recipient-search, #kg-send-amount, #kg-attack-target-search, #gift-recipient-search {
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.user-select-wrapper { position: relative; width: 180px; }
+.user-select-wrapper.gift-search { width: 100%; margin-bottom: 15px; }
+
+.user-dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--background-secondary);
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 10;
+    border-radius: var(--border-radius);
+    max-height: 150px;
+    overflow-y: auto;
+    bottom: 100%; 
+    margin-bottom: 5px;
+    width: 100%;
+}
+.user-select-wrapper.gift-search .user-dropdown-content {
+    bottom: auto;
+    top: 100%;
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+.user-dropdown-content a {
+    color: var(--text-normal);
+    padding: 10px 12px;
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden; /* Added for truncation */
+}
+.user-dropdown-content a:hover, .user-dropdown-content a.highlighted { 
+    background-color: var(--brand-blue); 
+    color: white;
+}
+.user-dropdown-content a .power, .user-dropdown-content a .key-time { font-size: 12px; color: var(--text-muted); }
+.user-dropdown-content a:hover .power, .user-dropdown-content a.highlighted .power,
+.user-dropdown-content a:hover .key-time, .user-dropdown-content a.highlighted .key-time { color: white; }
+
+/* FIX: Truncate long usernames in dropdowns */
+.user-dropdown-content a .username {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    min-width: 0;
+}
+.user-dropdown-content a .power {
+    flex-shrink: 0;
+    padding-left: 10px;
+}
+
+
+#kg-prestige-btn { background-color: var(--brand-green); }
+#kg-prestige-btn:hover { background-color: #3aa171; }
+.max-prestige-msg { font-weight: bold; color: var(--brand-green); }
+
+
+.kg-buy-time-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#kg-buy-time-select {
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
+}
+.kg-buy-time-container small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.history-btn-container {
+    position: relative;
+}
+
+.ping {
+    position: absolute;
+    top: 0px;
+    right: 5px;
+    background-color: var(--brand-red);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+    transform: translate(50%, -50%);
+}
+
+#history-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 15px;
+    padding-right: 10px;
+}
+
+.history-log-item {
+    background-color: var(--background-primary);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 5px solid var(--brand-red); /* Red for a loss from your perspective */
+}
+
+.history-log-item.victory {
+    border-left-color: var(--brand-green); /* Green for a victory from your perspective */
+}
+
+.history-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.history-log-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.history-log-header small {
+    color: var(--text-muted);
+}
+
+.history-log-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.losses-section h6 {
+    margin: 0 0 5px 0;
+    color: var(--header-primary);
+}
+
+.losses-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.send-coins-container small {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 5px;
+    color: var(--text-muted);
+}
+
+
+/* ======================================= */
+/* --- RESPONSIVE DESIGN --- */
+/* ======================================= */
+
+@media (max-width: 900px) {
+    .top-bar-left nav { display: none; }
+    #mobile-nav-links { display: block; border-bottom: 1px solid var(--background-primary); margin-bottom: 5px; padding-bottom: 5px; }
+    #mobile-nav-links a { color: var(--text-muted); font-weight: 500; }
+    .content { padding: 16px; }
+    .card-box { margin: 10px; padding: 24px; max-width: 100%; }
+    
+    .king-game-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        grid-template-areas:
+            "left"
+            "middle"
+            "right"
+            "bottom";
+    }
+    .kg-bottom-panel {
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+    }
+    .send-coins-container, .attack-container {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 500px) {
+    .top-bar { padding: 0 10px; height: 50px; }
+    .header-logo, #user-avatar { width: 30px; height: 30px; }
+    #user-name { display: none; }
+    .dropdown-content { top: 45px; }
+    .key-container { flex-direction: column; gap: 10px; }
+}
