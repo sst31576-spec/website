@@ -612,6 +612,89 @@ nav a.active {
     font-size: 12px;
 }
 
+/* NOUVEAUX STYLES POUR L'HISTORIQUE */
+.history-btn-container {
+    position: relative;
+}
+
+.ping {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--brand-red);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+#history-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+.history-log-item {
+    background-color: var(--background-primary);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 5px solid var(--brand-red); /* Rouge par défaut pour une défaite (de votre point de vue) */
+}
+
+.history-log-item.victory {
+    border-left-color: var(--brand-green); /* Vert pour une victoire (de votre point de vue) */
+}
+
+.history-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.history-log-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.history-log-header small {
+    color: var(--text-muted);
+}
+
+.history-log-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.losses-section h6 {
+    margin: 0 0 5px 0;
+    color: var(--header-primary);
+}
+
+.losses-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.send-coins-container small {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 5px;
+    color: var(--text-muted);
+}
+
 
 /* ======================================= */
 /* --- RESPONSIVE DESIGN --- */
