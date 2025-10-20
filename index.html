@@ -1,155 +1,766 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KingGen Web</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="/assets/logo.png" type="image/png">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
+:root {
+    --background-primary: #36393f;
+    --background-secondary: #2f3136;
+    --background-tertiary: #202225;
+    --header-primary: #ffffff;
+    --text-normal: #dcddde;
+    --text-muted: #72767d;
+    --brand-red: #f04747;
+    --brand-green: #43b581;
+    --brand-blue: #5865f2;
+    --brand-yellow: #faa61a;
+    --border-radius: 8px;
+}
 
-    <div id="login-container" class="view-container">
-        <div class="card-box">
-            <img src="/assets/logo.png" alt="Logo" class="logo">
-            <h1>Welcome to KingGen HUB</h1>
-            <p>Please connect with Discord to continue.</p>
-            <a href="/auth/discord" class="discord-btn">
-                <svg width="24" height="24" viewBox="0 0 24 24" class="icon"><path fill="currentColor" d="M20.317 4.431c-1.457-.793-3.04-1.28-4.707-1.42-.14.417-.27.83-.393 1.243-1.84-.277-3.72-.277-5.552 0-.12-.413-.253-.826-.394-1.243-1.667.14-3.25.627-4.707 1.42C.802 11.233-.564 15.66.24 19.34c3.414 2.1 6.83 2.106 10.232 0 .804-3.68 5.707-8.107 9.845-14.909zM15.4 16.59c-.99.53-2.093.53-3.084 0-.113.394-.236.788-.367 1.182.88.2 1.76.2 2.64 0 .02-.417.153-.834.33-1.182zM12 17.65c-.88-.2-1.76-.2-2.64 0-.177.348-.307.765-.33 1.182.99.53 2.093.53 3.084 0 .12-.394.243-.788.367-1.182zM12 16.632c-1.84.34-3.68.34-5.52 0-.25-.806-.38-1.64-.38-2.51 0-3.37 2.92-6.102 6.5-6.102s6.5 2.73 6.5 6.102c0 .87-.13 1.704-.38 2.51-1.84.34-3.68.34-5.52 0zM12 7.74c1.155 0 2.097.94 2.097 2.097s-.94 2.097-2.097-2.097-2.097-.94-2.097-2.097.94-2.097 2.097-2.097z"/></svg>
-                Connect with Discord
-            </a>
-            <p id="login-error-message" class="error-message"></p>
-        </div>
-    </div>
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    margin: 0;
+}
 
-    <div id="main-app" class="view-container hidden">
-        <header class="top-bar">
-            <div class="top-bar-left">
-                <img src="/assets/logo.png" alt="Logo" class="header-logo">
-                <nav>
-                    <a href="/" class="nav-link active" data-page="home">Home</a>
-                    <a href="/get-key" class="nav-link" data-page="get-key">Get Key</a>
-                    <a href="/suggestion" class="nav-link" data-page="suggestion">Suggestion</a>
-                    <a href="https://www.roblox.com/games/96049156219003/Key-Access" class="nav-link" target="_blank">Buy Perm</a>
-                    <a href="/earn-time" class="nav-link" data-page="earn-time">Earn Time</a>
-                </nav>
-            </div>
-            <div class="top-bar-right">
-                <span id="user-status-badge" class="status-badge free">Free</span>
-                <div class="user-profile" id="user-profile-toggle">
-                    <span id="user-name">User</span>
-                    <img id="user-avatar" src="/assets/logo.png" alt="Avatar">
-                </div>
-                <div class="dropdown-content" id="dropdown-menu">
-                    <div id="mobile-nav-links"></div>
-                    <a href="/manage-keys" id="manage-keys-link" class="hidden">Admin Panel</a>
-                    <a href="/auth/logout">Logout</a>
-                </div>
-            </div>
-        </header>
+.hidden { display: none !important; }
 
-        <main class="content">
-            <div id="page-home" class="page">
-                 <div class="card-box">
-                    <h2>Welcome back, <span id="home-username"></span>!</h2>
-                    <p>We hope you enjoy the script.</p>
-                    <a href="/get-key" class="discord-btn" style="background-color: var(--brand-green);">Get Your Key Now</a>
-                </div>
-            </div>
+/* --- General Views --- */
+.view-container { width: 100%; min-height: 100vh; }
+#login-container { display: flex; justify-content: center; align-items: center; }
 
-            <div id="page-get-key" class="page hidden">
-                <div class="card-box">
-                    <h2>Get Your Key</h2>
-                    <div id="key-generation-content"></div>
-                </div>
-            </div>
+.card-box {
+    background-color: var(--background-secondary);
+    padding: 32px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    width: 100%;
+    max-width: 400px;
+    margin: 20px;
+    box-sizing: border-box;
+}
 
-            <div id="page-suggestion" class="page hidden">
-                <div class="card-box">
-                    <h2>Suggestions</h2>
-                    <p>Have an idea to improve our script? Let us know below!</p>
-                    <form id="suggestion-form">
-                        <input type="text" id="game-name-input" placeholder="Game Name (e.g., Blox Fruits)" required>
-                        <input type="url" id="game-link-input" placeholder="Roblox Game Link (e.g., https://www.roblox.com/games/...)" required>
-                        <textarea id="suggestion-textarea" placeholder="Type your detailed suggestion here..." required></textarea>
-                        <button type="submit" class="discord-btn">Send Suggestion</button>
-                        <div id="suggestion-status" class="status-message"></div>
-                    </form>
-                </div>
-            </div>
-            
-            <div id="page-manage-keys" class="page hidden">
-                <div class="card-box" style="max-width: 900px; text-align: left;">
-                    <h2>Manage Keys</h2>
-                    <div class="admin-controls">
-                        <input type="search" id="admin-search-input" placeholder="Search by key or username..." autocomplete="off">
-                        <button id="remove-expired-btn" class="secondary-btn-red">Remove All Expired</button>
-                    </div>
-                    <div id="admin-key-list"></div>
-                </div>
-            </div>
+.logo { width: 80px; height: 80px; margin-bottom: 20px; }
+.card-box h1 { color: var(--header-primary); font-size: 24px; margin-bottom: 10px; }
+.card-box p { color: var(--text-normal); margin-bottom: 20px; }
 
-            <div id="page-earn-time" class="page hidden">
-                <div class="card-box">
-                    <h2>King Clicker</h2>
-                    <p>Build your empire, raise an army, and conquer your rivals.</p>
-                    <div id="earn-time-content">
-                        <p>Loading your empire...</p>
-                    </div>
-                </div>
-            </div>
+/* --- Buttons --- */
+.discord-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--brand-blue);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    gap: 8px;
+}
+.discord-btn:hover { background-color: #4e5d94; }
+.discord-btn:active { transform: translateY(1px); }
+.discord-btn:disabled { background-color: #72767d; cursor: not-allowed; }
 
-        </main>
-    </div>
 
-    <div id="leaderboard-modal" class="modal-overlay hidden">
-        <div class="modal-content card-box" style="max-width: 900px; text-align: left;">
-            <button class="modal-close-btn">&times;</button>
-            <h2>Leaderboard</h2>
-            <div id="leaderboard-controls">
-                <button class="secondary-btn active" data-sort="power">Power</button>
-                <button class="secondary-btn" data-sort="coins">Coins</button>
-                <button class="secondary-btn" data-sort="prestige">Prestige</button>
-            </div>
-            <div id="leaderboard-container"></div>
-        </div>
-    </div>
+/* --- Top Bar & Navigation --- */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--background-tertiary);
+    padding: 0 32px;
+    height: 60px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
-    <div id="privileges-modal" class="modal-overlay hidden">
-        <div class="modal-content card-box" style="max-width: 600px;">
-            <button class="modal-close-btn">&times;</button>
-            <h2>Top 3 Rank Privileges</h2>
-            <ul class="privileges-list">
-                <li id="privilege-king"><strong>King (Rank 1):</strong><ul><li>+3 Hours of free key time daily</li><li>+100% Power bonus in battles</li><li>x1.5 Coin bonus from all sources</li><li>Can recruit Royal Guards</li></ul></li>
-                <li id="privilege-queen"><strong>Queen (Rank 2):</strong><ul><li>+2 Hours of free key time daily</li><li>Cannot be attacked</li><li>x2 Coin bonus from all sources</li><li>Can recruit Queen's Guards</li></ul></li>
-                <li id="privilege-general"><strong>General (Rank 3):</strong><ul><li>+1 Hour of free key time daily</li><li>+50% Power bonus in battles</li><li>Can recruit Elite Soldiers</li></ul></li>
-            </ul>
-        </div>
-    </div>
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
 
-    <div id="gifting-modal" class="modal-overlay hidden">
-        <div class="modal-content card-box" style="max-width: 500px;">
-            <button class="modal-close-btn">&times;</button>
-            <h2>Gift Your Daily Reward</h2>
-            <p>As a 'Perm' user, you can gift your daily time reward to another player with a temporary key.</p>
-            <div class="user-select-wrapper gift-search">
-                <input type="text" id="gift-recipient-search" placeholder="Search for a player...">
-                <div id="gift-recipient-dropdown" class="user-dropdown-content"></div>
-            </div>
-            <button id="gift-reward-btn" class="discord-btn" disabled>Gift Reward</button>
-        </div>
-    </div>
+.header-logo {
+    width: 40px;
+    height: 40px;
+}
 
-    <div id="history-modal" class="modal-overlay hidden">
-        <div class="modal-content card-box" style="max-width: 900px; text-align: left;">
-            <button class="modal-close-btn">&times;</button>
-            <h2>Attack History</h2>
-            <p class="text-muted">Here are the last 30 attacks against you.</p>
-            <div id="history-container"></div>
-        </div>
-    </div>
+nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 18px 12px;
+    transition: color 0.2s, background-color 0.2s;
+    font-weight: 500;
+}
+nav a:hover {
+    color: var(--text-normal);
+}
+nav a.active {
+    color: var(--header-primary);
+    border-bottom: 3px solid var(--brand-blue);
+}
 
-    <script src="app.js"></script>
-</body>
-</html>
+/* --- User Profile & Dropdown --- */
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.status-badge.admin { background-color: var(--brand-red); color: white; }
+.status-badge.perm { background-color: var(--brand-blue); color: white; }
+.status-badge.free { background-color: var(--text-muted); color: white; }
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s;
+}
+.user-profile:hover {
+    background-color: var(--background-secondary);
+}
+#user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.dropdown-content {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background-color: var(--background-secondary);
+    min-width: 120px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    border-radius: var(--border-radius);
+    z-index: 100;
+    display: none;
+    overflow: hidden;
+}
+.dropdown-content.show { display: block; }
+.dropdown-content a {
+    color: var(--text-normal);
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+}
+.dropdown-content a:hover {
+    background-color: var(--background-primary);
+}
+
+/* --- Main Content --- */
+.content {
+    padding: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; 
+    min-height: calc(100vh - 60px); 
+}
+
+.page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* --- MODAL STYLES --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.modal-content {
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close-btn:hover {
+    color: var(--text-normal);
+}
+
+
+/* --- Forms & Inputs --- */
+#suggestion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+    margin-top: 16px;
+}
+#suggestion-form input,
+#suggestion-form textarea {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 12px;
+}
+#suggestion-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.status-message { margin-top: 8px; font-weight: 500; }
+.status-message.success { color: var(--brand-green); }
+.status-message.error { color: var(--brand-red); }
+
+/* --- Get Key Page --- */
+.key-container { display: flex; gap: 8px; margin-bottom: 16px; }
+#generated-key-input {
+    flex-grow: 1;
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    text-align: center;
+}
+
+#generate-key-btn {
+    display: block; 
+    margin: 20px auto 0 auto;
+}
+
+#key-display-area .discord-btn, #key-display-area .secondary-btn {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#key-display-area button {
+    margin-top: 10px;
+}
+
+.secondary-btn {
+    padding: 10px 16px;
+    border: none;
+    background-color: var(--text-muted);
+    color: white; 
+    border-radius: var(--border-radius); 
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s; 
+}
+.secondary-btn:hover:not(:disabled) { background-color: #63676d; }
+.secondary-btn:disabled { background-color: #484b51; color: #72767d; cursor: not-allowed; }
+.secondary-btn.active { background-color: var(--brand-blue); }
+
+
+.secondary-btn-red { 
+    background-color: var(--brand-red); 
+    color: white; 
+}
+.secondary-btn-red:hover { 
+    background-color: #d83d3d; 
+}
+
+/* --- Admin & Leaderboard Table --- */
+#leaderboard-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.admin-table-container, .leaderboard-container {
+    overflow-x: auto;
+}
+.admin-table, .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
+.admin-table th, .admin-table td, .leaderboard-table th, .leaderboard-table td {
+    border: 1px solid var(--background-primary);
+    padding: 10px 8px;
+    text-align: left;
+    white-space: nowrap;
+}
+.admin-table th, .leaderboard-table th {
+    background-color: var(--background-primary);
+    color: var(--header-primary);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.admin-table tr:nth-child(even), .leaderboard-table tr:nth-child(even) {
+    background-color: var(--background-tertiary);
+}
+.admin-table .actions-cell button {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+#admin-search-input {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-tertiary);
+    border-radius: var(--border-radius);
+    color: var(--text-normal);
+    font-size: 16px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+.key-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+}
+.key-badge.temp { background-color: var(--brand-red); color: white; }
+.key-badge.perm { background-color: var(--brand-green); color: white; }
+
+#mobile-nav-links { display: none; }
+
+
+/* --- Leaderboard Rank Title Colors --- */
+.rank-title {
+    font-weight: bold;
+    margin-left: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.rank-power { color: var(--brand-red); }
+.rank-coins { color: var(--brand-yellow); }
+.rank-prestige { color: var(--brand-blue); }
+
+
+/* ======================================= */
+/* --- KING CLICKER GAME STYLES --- */
+/* ======================================= */
+
+#page-earn-time .card-box {
+    max-width: 1200px;
+}
+
+.king-game-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 20px;
+    grid-template-areas:
+        "left middle right"
+        "left middle right"
+        "bottom bottom bottom";
+    text-align: left;
+    width: 100%;
+}
+
+.kg-left-panel { grid-area: left; position: relative; }
+.kg-middle-panel { grid-area: middle; }
+.kg-right-panel { grid-area: right; }
+.kg-bottom-panel { 
+    grid-area: bottom; 
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center; 
+    border-top: 1px solid var(--background-tertiary); 
+    padding-top: 15px; 
+    margin-top: 15px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.coin-display, .clicker-area { text-align: center; }
+#kg-coin-count { 
+    font-size: 28px; 
+    font-weight: bold; 
+    color: var(--header-primary); 
+    margin: 0;
+    word-wrap: break-word;
+}
+#kg-cps-count { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; }
+#kg-bonus-display { color: var(--brand-green); font-weight: bold; }
+
+#kg-clicker-btn {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--brand-blue);
+    background-color: var(--background-secondary);
+    cursor: pointer;
+    transition: transform 0.1s;
+    font-size: 48px;
+}
+#kg-clicker-btn:active { transform: scale(0.95); }
+
+#kg-player-stats {
+    background-color: var(--background-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-top: 15px;
+    text-align: center;
+}
+#kg-player-stats h4 { 
+    margin: 0 0 10px 0; 
+    color: var(--header-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+#kg-player-stats p { margin: 4px 0; }
+#kg-player-title { font-weight: bold; color: var(--brand-green); }
+
+.info-btn {
+    background: none;
+    border: 1px solid var(--text-muted);
+    color: var(--text-muted);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+}
+.info-btn:hover {
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+}
+.privileges-list {
+    list-style: none;
+    padding: 0;
+    text-align: left;
+}
+.privileges-list > li {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+.privileges-list > li.highlight {
+    border-color: var(--brand-green);
+    background-color: rgba(67, 181, 129, 0.1);
+}
+.privileges-list > li.highlight > strong {
+    color: var(--brand-green);
+}
+
+.privileges-list ul {
+    list-style-type: '✓  ';
+    padding-left: 20px;
+    margin-top: 5px;
+}
+.privileges-list ul li {
+    color: var(--text-normal);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.reward-chest {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 50px;
+    height: 50px;
+    font-size: 28px;
+    background-color: #a97100;
+    border: 2px solid #ffc700;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(255, 199, 0, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0); }
+}
+
+
+.upgrades-container, .shop-container, .army-container, .defense-container {
+    background-color: var(--background-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.upgrades-container h4, .shop-container h4, .army-container h4, .defense-container h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: var(--header-primary);
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--background-primary);
+}
+
+#kg-upgrades-list, #kg-army-list, #kg-defenses-list {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 10px;
+    flex-grow: 1;
+}
+
+.upgrade-item {
+    background-color: var(--background-primary);
+    padding: 10px;
+    border-radius: var(--border-radius);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.upgrade-info { display: flex; flex-direction: column; }
+.upgrade-info strong { color: var(--header-primary); }
+.upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
+.upgrade-info small { font-size: 12px; }
+
+#kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
+#kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
+
+.active-boosts-container {
+    background-color: var(--background-tertiary);
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: var(--border-radius);
+}
+.active-boosts-container h4 { margin: 0 0 5px 0; }
+.active-boosts-container p { margin: 2px 0; font-size: 14px; }
+
+.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.attack-container h4, .send-coins-container h4 { margin: 0; }
+#kg-recipient-search, #kg-send-amount, #kg-attack-target-search, #gift-recipient-search {
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.user-select-wrapper { position: relative; width: 180px; }
+.user-select-wrapper.gift-search { width: 100%; margin-bottom: 15px; }
+
+.user-dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: var(--background-secondary);
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 10;
+    border-radius: var(--border-radius);
+    max-height: 150px;
+    overflow-y: auto;
+    bottom: 100%; 
+    margin-bottom: 5px;
+    width: 100%;
+}
+.user-select-wrapper.gift-search .user-dropdown-content {
+    bottom: auto;
+    top: 100%;
+    margin-top: 5px;
+    margin-bottom: 0;
+}
+.user-dropdown-content a {
+    color: var(--text-normal);
+    padding: 10px 12px;
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    overflow: hidden; /* Added for truncation */
+}
+.user-dropdown-content a:hover, .user-dropdown-content a.highlighted { 
+    background-color: var(--brand-blue); 
+    color: white;
+}
+.user-dropdown-content a .power, .user-dropdown-content a .key-time { font-size: 12px; color: var(--text-muted); }
+.user-dropdown-content a:hover .power, .user-dropdown-content a.highlighted .power,
+.user-dropdown-content a:hover .key-time, .user-dropdown-content a.highlighted .key-time { color: white; }
+
+/* FIX: Truncate long usernames in dropdowns */
+.user-dropdown-content a .username {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    min-width: 0;
+}
+.user-dropdown-content a .power {
+    flex-shrink: 0;
+    padding-left: 10px;
+}
+
+
+#kg-prestige-btn { background-color: var(--brand-green); }
+#kg-prestige-btn:hover { background-color: #3aa171; }
+.max-prestige-msg { font-weight: bold; color: var(--brand-green); }
+
+
+.kg-buy-time-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#kg-buy-time-select {
+    background-color: var(--background-tertiary);
+    border: 1px solid var(--background-primary);
+    color: var(--text-normal);
+    padding: 8px;
+    border-radius: var(--border-radius);
+}
+.kg-buy-time-container small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.history-btn-container {
+    position: relative;
+}
+
+.ping {
+    position: absolute;
+    top: 0px;
+    right: 5px;
+    background-color: var(--brand-red);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+    transform: translate(50%, -50%);
+}
+
+#history-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 15px;
+    padding-right: 10px;
+}
+
+.history-log-item {
+    background-color: var(--background-primary);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 5px solid var(--brand-red); /* Red for a loss from your perspective */
+}
+
+.history-log-item.victory {
+    border-left-color: var(--brand-green); /* Green for a victory from your perspective */
+}
+
+.history-log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.history-log-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.history-log-header small {
+    color: var(--text-muted);
+}
+
+.history-log-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.losses-section h6 {
+    margin: 0 0 5px 0;
+    color: var(--header-primary);
+}
+
+.losses-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.send-coins-container small {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 5px;
+    color: var(--text-muted);
+}
+
+
+/* ======================================= */
+/* --- RESPONSIVE DESIGN --- */
+/* ======================================= */
+
+@media (max-width: 900px) {
+    .top-bar-left nav { display: none; }
+    #mobile-nav-links { display: block; border-bottom: 1px solid var(--background-primary); margin-bottom: 5px; padding-bottom: 5px; }
+    #mobile-nav-links a { color: var(--text-muted); font-weight: 500; }
+    .content { padding: 16px; }
+    .card-box { margin: 10px; padding: 24px; max-width: 100%; }
+    
+    .king-game-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        grid-template-areas:
+            "left"
+            "middle"
+            "right"
+            "bottom";
+    }
+    .kg-bottom-panel {
+        flex-direction: column;
+        gap: 20px;
+        align-items: stretch;
+    }
+    .send-coins-container, .attack-container {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 500px) {
+    .top-bar { padding: 0 10px; height: 50px; }
+    .header-logo, #user-avatar { width: 30px; height: 30px; }
+    #user-name { display: none; }
+    .dropdown-content { top: 45px; }
+    .key-container { flex-direction: column; gap: 10px; }
+}
