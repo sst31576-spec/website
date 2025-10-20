@@ -4,7 +4,7 @@ function formatTimeRemaining(expiryDate) { if (!expiryDate) return 'N/A'; const 
 function formatBigNumber(num) { if (num==null)return"0";const t=typeof num=="bigint"?num:BigInt(num);if(t<1000000)return t.toLocaleString("en-US");const o=["","K","M","B","T","q","Q","s","S","o","n","d","ud","dd","td","qd","Qd","sd","Sd","od","nd"],e=Math.floor((t.toString().length-1)/3);if(e>=o.length)return t.toExponential(2);const r=BigInt("1"+"0".repeat(3*e)),a=parseFloat(t/r);let l;return l=a>=100?a.toFixed(1):a>=10?a.toFixed(2):a.toFixed(2),l.replace(/\.0+$/,"")+o[e]}
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container'); const mainAppContainer = document.getElementById('main-app'); const loginError = document.getElementById('login-error-message'); const userNameEl = document.getElementById('user-name'); const homeUserNameEl = document.getElementById('home-username'); const userAvatarEl = document.getElementById('user-avatar'); const userStatusBadgeEl = document.getElementById('user-status-badge'); const navLinks = document.querySelectorAll('.nav-link'); const pages = document.querySelectorAll('.page'); const userProfileToggle = document.getElementById('user-profile-toggle'); const dropdownMenu = document.getElementById('dropdown-menu'); const manageKeysLink = document.getElementById('manage-keys-link'); const suggestionForm = document.getElementById('suggestion-form'); const removeExpiredBtn = document.getElementById('remove-expired-btn'); let currentUser = null; let allUsers = [];
-    const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20; const BASE_COST_PER_HOUR = 1000000000n; // 1 Billion
+    const BASE_COST_PER_HOUR = 1000000000n; // 1 Billion
     const KING_GAME_UPGRADES_CONFIG = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1, description: 'Increases coins per click.' }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1, description: 'Generates 1 coin/sec.' }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8, description: 'Generates 8 coins/sec.' }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35, description: 'Generates 35 coins/sec.' }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150, description: 'Generates 150 coins/sec.' }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720, description: 'Generates 720 coins/sec.' }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800, description: 'Generates 3.8K coins/sec.' }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000, description: 'Generates 21K coins/sec.' }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000, description: 'Generates 115K coins/sec.' }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000, description: 'Generates 650K coins/sec.' }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6, description: 'Generates 3.4M coins/sec.' }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7, description: 'Generates 20M coins/sec.' }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8, description: 'Generates 110M coins/sec.' }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8, description: 'Generates 600M coins/sec.' }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9, description: 'Generates 3.5B coins/sec.' }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10, description: 'Generates 22B coins/sec.' }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11, description: 'Generates 150B coins/sec.' }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11, description: 'Generates 900B coins/sec.' }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12, description: 'Generates 5.5T coins/sec.' }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13, description: 'Generates 30T coins/sec.' }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14, description: 'Generates 180T coins/sec.' } };
     const highTierNames = [ 'Quantum Forge', 'Nebula Reactor', 'Stargate Hub', 'Galactic Exchange', 'Celestial Spire', 'Ethereal Nexus', 'Singularity Core', 'Hyperspace Beacon', 'Chrono-Synth Factory', 'Void Matter Extractor', 'Cosmic Oracle', 'Stellar Shipyard', 'Dimension Weaver', 'Reality Engine', 'Genesis Chamber', 'Omega Citadel', 'Astro-Observatory', 'Dark Matter Plant', 'Supernova Catalyst', 'Infinity Gate', 'Celestial Forge', 'Stardust Silo', 'Event Horizon Lab', 'Galaxy Brain Nexus', 'Time Dilation Spire', 'Reality Bender', 'The Omniverse', 'Finality Point', 'The Great Attractor', 'The Void' ];
     let lastCpsClient = BigInt('180000000000000'); let lastCostClient = BigInt('800000000000000000');
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
     const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
     const GEM_BOOSTS_CONFIG = { 'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 }, 'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },};
-    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, userRoles: {}, totalBonus: 1.0, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0, has_active_key: false, time_purchase_count: 0 };
+    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, rebirth_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, userRoles: {}, totalBonus: 1.0, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0, has_active_key: false, time_purchase_count: 0 };
     let kingGameInterval = null; let kingGameSyncInterval = null; let leaderboardInterval = null;
     const setupMobileNav = () => { const mainNav = document.querySelector('.top-bar-left nav'); const mobileNavContainer = document.getElementById('mobile-nav-links'); if (!mainNav || !mobileNavContainer || !dropdownMenu) return; mobileNavContainer.innerHTML = ''; mainNav.querySelectorAll('a').forEach(link => { const clone = link.cloneNode(true); clone.addEventListener('click', (e) => { if (clone.dataset.page) { e.preventDefault(); window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`); switchPage(clone.dataset.page); } dropdownMenu.classList.remove('show'); }); mobileNavContainer.appendChild(clone); }); };
     const checkUserStatus = async () => { try { const response = await fetch('/api/user'); if (response.status === 401) { showLoginView(); return; } if (response.status === 403) { showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du'); return; } if (!response.ok) throw new Error('Failed to fetch user data'); const user = await response.json(); currentUser = user; setupMainApp(user); } catch (error) { console.error(error); showLoginView('An error occurred. Please try again later.'); } };
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentSortBy = 'power';
         const fetchAndDisplay = async (sortBy) => {
             currentSortBy = sortBy; 
-            if(modal.classList.contains('hidden')) return; // Don't refresh if modal is closed
+            if(modal.classList.contains('hidden')) return;
             try {
                 const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'get_leaderboard', sortBy }) });
                 if (!response.ok) throw new Error('Failed to fetch leaderboard data.');
@@ -43,13 +43,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 controls.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.sort === sortBy));
                 if (data.players.length === 0) { container.innerHTML = '<p>No players to display.</p>'; return; }
                 
-                container.innerHTML = `<div class="leaderboard-table-container"><table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Power</th><th>Coins</th><th>Prestige</th></tr></thead><tbody>${data.players.map((p, index) => {
+                container.innerHTML = `<div class="leaderboard-table-container"><table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Power</th><th>Coins</th><th>Rebirth</th></tr></thead><tbody>${data.players.map((p, index) => {
                     let title = ''; 
                     let titleClass = `rank-${sortBy}`;
 
                     if (p.isEmperor) {
                         title = '⚜️ Emperor';
-                        titleClass = 'rank-emperor'; // Special class for emperor
+                        titleClass = 'rank-emperor';
                     } else {
                         const top3 = data.tops[sortBy] || [];
                         const rankIndex = top3.indexOf(p.discord_id);
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             else if (rankIndex === 2) title = '⚔️ General';
                         }
                     }
-                    return `<tr><td>${index + 1}</td><td class="leaderboard-name-cell">${p.discord_username} ${title ? `<span class="rank-title ${titleClass}">${title}</span>` : ''}</td><td>${formatBigNumber(p.power)}</td><td>${formatBigNumber(p.king_game_coins)}</td><td>${p.prestige_level}</td></tr>`
+                    return `<tr><td>${index + 1}</td><td class="leaderboard-name-cell">${p.discord_username} ${title ? `<span class="rank-title ${titleClass}">${title}</span>` : ''}</td><td>${formatBigNumber(p.power)}</td><td>${formatBigNumber(p.king_game_coins)}</td><td>${p.rebirth_level}</td></tr>`
                 }).join('')}</tbody></table></div>`;
             } catch (error) { container.innerHTML = `<p class="error-message">${error.message}</p>`; }
         };
@@ -146,35 +146,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const getCost = (baseCost, costMultiplier, level, userRoles) => { let finalCost = BigInt(Math.ceil(Number(baseCost) * Math.pow(costMultiplier, level))); if (userRoles.coins === 'General') { finalCost = finalCost * 90n / 100n; } return finalCost;};
     const getUpgradeCost=(u,c)=>{const t=KING_GAME_UPGRADES_CONFIG[u];let o=getCost(BigInt(t.baseCost),t.costMultiplier,c,kingGameState.userRoles);return kingGameState.active_boosts.half_cost&&new Date(kingGameState.active_boosts.half_cost)>new Date&&(o/=2n),o};
     const getUnitCost=(u,c,i)=>{const t=i?ALL_TROOPS_CONFIG[u]:DEFENSES_CONFIG[u];return getCost(BigInt(t.cost),t.costMultiplier,c,kingGameState.userRoles)};
-    const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power) }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'prestige') alert(`Congratulations on reaching Prestige Level ${kingGameState.prestige_level}! Your journey starts anew with powerful bonuses.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
+    const handleKingGameAction = async (action, params = {}) => { try { const response = await fetch('/api/earn-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...params }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Game action failed.'); kingGameState = { ...kingGameState, ...data, coins: BigInt(data.coins), cps: BigInt(data.cps), clickValue: BigInt(data.clickValue), power: BigInt(data.power) }; if (data.unreadAttackCount !== undefined) { kingGameState.unreadAttackCount = data.unreadAttackCount; const ping = document.getElementById('history-ping'); if (ping) { if (kingGameState.unreadAttackCount > 0) { ping.textContent = kingGameState.unreadAttackCount; ping.classList.remove('hidden'); } else { ping.classList.add('hidden'); } } } if (data.message) alert(data.message); if (data.notifications && Array.isArray(data.notifications)) { data.notifications.forEach(notification => alert(notification)); } if (data.battleReport) alert(data.battleReport); if (action === 'rebirth') alert(`Congratulations on reaching Rebirth Level ${kingGameState.rebirth_level}! Your journey starts anew with powerful new bonuses.`); if (action === 'buy_boost') alert(`Boost purchased successfully!`); if (action === 'send_coins') { alert("Coins sent successfully!"); document.getElementById('kg-send-amount').value = ''; document.getElementById('send-fee-info').textContent = ''; document.getElementById('kg-recipient-search').value = ''; } if (action === 'buy_time' && data.newExpiresAt) { const hours = params.hours || 1; alert(`Successfully added ${hours} hour(s) to your key! It now expires on: ${new Date(data.newExpiresAt).toLocaleString()}`); if(!document.getElementById('page-get-key').classList.contains('hidden')) renderGetKeyPage(); } updateKingGameUI(); } catch (error) { alert(`Error: ${error.message}`); } };
     
     const handleMaxBuy = (event) => {
-        const { id: unitId, isTroop } = event.target.dataset;
+        const { id: unitId, isUpgrade, isTroop } = event.target.dataset;
+        const isUpgradeBool = isUpgrade === 'true';
         const isTroopBool = isTroop === 'true';
-        const unitData = isTroopBool ? kingGameState.troops : kingGameState.defenses;
-        const currentQuantity = unitData[unitId]?.quantity || 0;
         let availableCoins = kingGameState.coins;
         let maxQuantity = 0;
         let totalCost = 0n;
         const maxIterations = 5000;
 
-        for (let i = 0; i < maxIterations; i++) {
-            const costOfNext = getUnitCost(unitId, currentQuantity + i, isTroopBool);
-            if (totalCost + costOfNext <= availableCoins) {
-                totalCost += costOfNext;
-                maxQuantity++;
-            } else {
-                break;
+        if (isUpgradeBool) {
+            const currentLevel = kingGameState.upgrades[unitId] || 0;
+            for (let i = 0; i < maxIterations; i++) {
+                const costOfNext = getUpgradeCost(unitId, currentLevel + i);
+                if (totalCost + costOfNext <= availableCoins) {
+                    totalCost += costOfNext;
+                    maxQuantity++;
+                } else {
+                    break;
+                }
             }
-        }
-        
-        if (maxQuantity > 0) {
-            const action = isTroopBool ? 'buy_troop' : 'buy_defense';
-            if (confirm(`Buy ${maxQuantity} ${ (isTroopBool ? ALL_TROOPS_CONFIG : DEFENSES_CONFIG)[unitId].name }(s) for ${formatBigNumber(totalCost)} coins?`)) {
-                handleKingGameAction(action, { unitId: unitId, quantity: maxQuantity });
+            if (maxQuantity > 0) {
+                if (confirm(`Buy ${maxQuantity} level(s) of ${KING_GAME_UPGRADES_CONFIG[unitId].name} for ${formatBigNumber(totalCost)} coins?`)) {
+                    handleKingGameAction('buy_upgrade', { upgradeId: unitId, quantity: maxQuantity });
+                }
+            } else {
+                alert("You cannot afford the next level.");
             }
         } else {
-            alert("You cannot afford any more of this unit.");
+            const unitData = isTroopBool ? kingGameState.troops : kingGameState.defenses;
+            const currentQuantity = unitData[unitId]?.quantity || 0;
+            for (let i = 0; i < maxIterations; i++) {
+                const costOfNext = getUnitCost(unitId, currentQuantity + i, isTroopBool);
+                if (totalCost + costOfNext <= availableCoins) {
+                    totalCost += costOfNext;
+                    maxQuantity++;
+                } else {
+                    break;
+                }
+            }
+            if (maxQuantity > 0) {
+                const action = isTroopBool ? 'buy_troop' : 'buy_defense';
+                if (confirm(`Buy ${maxQuantity} ${ (isTroopBool ? ALL_TROOPS_CONFIG : DEFENSES_CONFIG)[unitId].name }(s) for ${formatBigNumber(totalCost)} coins?`)) {
+                    handleKingGameAction(action, { unitId: unitId, quantity: maxQuantity });
+                }
+            } else {
+                alert("You cannot afford any more of this unit.");
+            }
         }
     };
 
@@ -187,43 +207,43 @@ document.addEventListener('DOMContentLoaded', () => {
              if (pausedOverlay) pausedOverlay.classList.remove('hidden');
         }
         const claimBtn = document.getElementById('claim-reward-btn'); if (claimBtn) claimBtn.classList.toggle('hidden', !kingGameState.isRewardAvailable); 
-        const renderList=(c,t,e,n)=>{ // c: container, t: config, e: isUpgrade, n: isTroop
-            c.innerHTML="";
-            let o=!0; // allMaxed
-            const r=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;
-            for(const i in t){ // i: unitId
-                if(n&&SPECIAL_UNITS_CONFIG[i]){
-                    const l=["King","Queen","General"];
-                    let s=!1;
-                    switch(i){
-                        case"royal_guard":s="King"===kingGameState.userRoles.power;break;
-                        case"queens_guard":s="Queen"===kingGameState.userRoles.power;break;
-                        case"elite_soldier":s=l.includes(kingGameState.userRoles.power)
+        const renderList = (c, t, e, n) => {
+            c.innerHTML = "";
+            for (const i in t) {
+                if (n && SPECIAL_UNITS_CONFIG[i]) {
+                    const l = ["King", "Queen", "General"];
+                    let s = false;
+                    switch (i) {
+                        case "royal_guard": s = "King" === kingGameState.userRoles.power; break;
+                        case "queens_guard": s = "Queen" === kingGameState.userRoles.power; break;
+                        case "elite_soldier": s = l.includes(kingGameState.userRoles.power); break;
                     }
-                    if(!s)continue
+                    if (!s) continue;
                 }
-                const d=t[i]; // d: unitConfig
-                let a,g,p; // a: level, g: cost, p: quantity
-                if(e){ // isUpgrade
-                    a=kingGameState.upgrades[i]||0,a<r&&(o=!1),g=getUpgradeCost(i,a)
-                }else{
-                    const u=(n?kingGameState.troops:kingGameState.defenses)[i];
-                    p=u?.quantity||0,g=getUnitCost(i,p,n)
+                const d = t[i];
+                let a, g, p;
+                if (e) {
+                    a = kingGameState.upgrades[i] || 0;
+                    g = getUpgradeCost(i, a);
+                } else {
+                    const u = (n ? kingGameState.troops : kingGameState.defenses)[i];
+                    p = u?.quantity || 0;
+                    g = getUnitCost(i, p, n);
                 }
-                const f=document.createElement("div");f.className="upgrade-item";
-                const canAfford=kingGameState.coins>=g;
-                f.innerHTML=`
+                const f = document.createElement("div");
+                f.className = "upgrade-item";
+                const canAfford = kingGameState.coins >= g;
+                f.innerHTML = `
                     <div class="upgrade-info">
-                        <strong>${d.name} ${e?`(Lvl ${a})`:`(x${p})`}</strong>
-                        <small class="desc">${e?d.description:`Power: ${d.power.toLocaleString("en-US")}`}</small>
+                        <strong>${d.name} ${e ? `(Lvl ${a})` : `(x${p})`}</strong>
+                        <small class="desc">${e ? d.description : `Power: ${d.power.toLocaleString("en-US")}`}</small>
                         <small>Cost: ${formatBigNumber(g)}</small>
                     </div>
                     <div class="upgrade-actions">
-                        ${!e ? `<button class="secondary-btn max-buy-btn" data-id="${i}" data-is-troop="${n}">Max</button>` : ''}
+                        <button class="secondary-btn max-buy-btn" data-id="${i}" data-is-upgrade="${e}" data-is-troop="${n}">Max</button>
                         <button class="secondary-btn buy-btn" data-id="${i}" ${canAfford ? '' : 'disabled'}>Buy</button>
                     </div>
                 `;
-                
                 const buyButton = f.querySelector('.buy-btn');
                 buyButton.addEventListener('click', (event) => {
                     const unitId = event.target.dataset.id;
@@ -234,20 +254,75 @@ document.addEventListener('DOMContentLoaded', () => {
                         handleKingGameAction(n ? 'buy_troop' : 'buy_defense', { unitId: unitId, quantity: quantity });
                     }
                 });
-        
                 const maxButton = f.querySelector('.max-buy-btn');
-                if (maxButton) {
-                    maxButton.addEventListener('click', handleMaxBuy);
-                }
-        
+                maxButton.addEventListener('click', handleMaxBuy);
                 c.appendChild(f);
             }
-            return o;
         };
-        const allMaxed = renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); 
+        renderList(document.getElementById('kg-upgrades-list'), KING_GAME_UPGRADES_CONFIG, true, false); 
         renderList(document.getElementById('kg-army-list'), ALL_TROOPS_CONFIG, false, true); 
         renderList(document.getElementById('kg-defenses-list'), DEFENSES_CONFIG, false, false); 
-        const gemShopContainer=document.getElementById("kg-gem-shop");gemShopContainer.innerHTML="";for(const id in GEM_BOOSTS_CONFIG){const config=GEM_BOOSTS_CONFIG[id],isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date(),btn=document.createElement("button");btn.className="secondary-btn",btn.textContent=`${config.name} (${config.cost} Gems)`,btn.disabled=isActive||kingGameState.gems<config.cost,btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id})),gemShopContainer.appendChild(btn)} const prestigeContainer=document.getElementById("kg-prestige-container");const prestigeRequirement=kingGameState.userRoles.prestige==="Queen"?PRESTIGE_REQUIREMENT_LEVEL-5:PRESTIGE_REQUIREMENT_LEVEL;allMaxed&&kingGameState.prestige_level<MAX_PRESTIGE_LEVEL?(prestigeContainer.innerHTML=`<button id="kg-prestige-btn" class="discord-btn">Prestige (Level ${kingGameState.prestige_level+1})</button>`,prestigeContainer.querySelector("#kg-prestige-btn").addEventListener("click",()=>{confirm("Are you sure you want to prestige? This will reset your coins and building levels for powerful new bonuses!")&&handleKingGameAction("prestige")})):kingGameState.prestige_level>=MAX_PRESTIGE_LEVEL?prestigeContainer.innerHTML='<p class="max-prestige-msg">You have reached the max prestige level!</p>':prestigeContainer.innerHTML=`<p class="text-muted">Reach Lvl ${prestigeRequirement} on all buildings to prestige.</p>`;
+        
+        const gemShopContainer=document.getElementById("kg-gem-shop");
+        gemShopContainer.innerHTML="";
+        for(const id in GEM_BOOSTS_CONFIG){
+            const config=GEM_BOOSTS_CONFIG[id];
+            const isActive=kingGameState.active_boosts[id]&&new Date(kingGameState.active_boosts[id])>new Date();
+            const btn=document.createElement("button");
+            btn.className="secondary-btn";
+            btn.textContent=`${config.name} (${config.cost} Gems)`;
+            btn.disabled=isActive||kingGameState.gems<config.cost;
+            btn.addEventListener("click",()=>handleKingGameAction("buy_boost",{boostId:id}));
+            gemShopContainer.appendChild(btn);
+        }
+        
+        // --- Rebirth UI Logic ---
+        const rebirthContainer = document.getElementById('kg-rebirth-container');
+        const currentRebirth = kingGameState.rebirth_level || 0;
+        
+        let requiredLevel, requiredPercent;
+        if (currentRebirth < 10) {
+            requiredLevel = (currentRebirth + 1) * 10;
+            requiredPercent = (currentRebirth + 1) * 0.1;
+        } else {
+            requiredLevel = 100 + (currentRebirth - 9) * 50;
+            requiredPercent = 1;
+        }
+
+        const buildingKeys = Object.keys(KING_GAME_UPGRADES_CONFIG).filter(k => k !== 'click');
+        const totalBuildings = buildingKeys.length;
+        const buildingsNeeded = Math.ceil(totalBuildings * requiredPercent);
+
+        let buildingsMeetingRequirement = 0;
+        let missingBuildings = [];
+        for (const key of buildingKeys) {
+            const currentLevel = kingGameState.upgrades[key] || 0;
+            if (currentLevel >= requiredLevel) {
+                buildingsMeetingRequirement++;
+            } else {
+                missingBuildings.push(`${KING_GAME_UPGRADES_CONFIG[key].name}: Lvl ${currentLevel} / ${requiredLevel}`);
+            }
+        }
+        
+        const progress = buildingsNeeded > 0 ? (buildingsMeetingRequirement / buildingsNeeded) * 100 : 0;
+        
+        const reqTextEl = document.getElementById('rebirth-req-text');
+        const progressBarEl = document.getElementById('rebirth-progress-bar');
+        const rebirthBtnEl = document.getElementById('rebirth-btn');
+        const infoBtnEl = document.getElementById('rebirth-info-btn');
+        
+        reqTextEl.textContent = `Rebirth ${currentRebirth + 1}: Lvl ${requiredLevel} on ${buildingsNeeded} buildings.`;
+        progressBarEl.style.width = `${progress}%`;
+        
+        if (progress >= 100) {
+            rebirthBtnEl.classList.remove('hidden');
+            progressBarEl.parentElement.classList.add('hidden');
+            infoBtnEl.classList.add('hidden');
+        } else {
+            rebirthBtnEl.classList.add('hidden');
+            progressBarEl.parentElement.classList.remove('hidden');
+            infoBtnEl.classList.remove('hidden');
+        }
     };
     const fetchUserList = async () => { try { const response = await fetch('/api/earn-time?action=get_users'); allUsers = await response.json(); } catch(e) { console.error("Failed to fetch user list", e); } };
     const setupUserSearch = (inputId, dropdownId, onSelect, contentGenerator, userList) => { const searchInput = document.getElementById(inputId); const dropdown = document.getElementById(dropdownId); if (!searchInput || !dropdown) return; let selectedUserId = null; let highlightedIndex = -1; const updateHighlight = () => { dropdown.querySelectorAll('a').forEach((item, index) => item.classList.toggle('highlighted', index === highlightedIndex)); }; const updateDropdown = () => { const query = searchInput.value.toLowerCase(); const sourceList = userList || allUsers; const filteredUsers = sourceList.filter(u => u.discord_username.toLowerCase().startsWith(query) && u.discord_id !== currentUser.discord_id); dropdown.innerHTML = ''; highlightedIndex = -1; if (filteredUsers.length > 0) { filteredUsers.slice(0, 5).forEach(user => { const item = document.createElement('a'); item.innerHTML = contentGenerator(user); item.addEventListener("mousedown", () => { searchInput.value = user.discord_username; selectedUserId = user.discord_id; dropdown.style.display = 'none'; onSelect(selectedUserId, searchInput); }); dropdown.appendChild(item); }); updateHighlight(); dropdown.style.display = 'block'; } else { dropdown.style.display = 'none'; } }; 
@@ -261,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchUserList();
 
         const container = document.getElementById('earn-time-content'); 
-        container.innerHTML = ` <div id="king-game-container" class="king-game-layout"> <div id="kg-paused-overlay" class="hidden"><h3>Game Paused</h3><p>You need an active key to play. Your progress is saved.</p><a href="/get-key" class="discord-btn">Get a Key</a></div> <div class="kg-left-panel"> <div class="history-btn-container"><button id="history-btn" class="secondary-btn">History</button><span id="history-ping" class="ping hidden">0</span></div> <button id="claim-reward-btn" class="reward-chest hidden">🎁</button> <div class="coin-display"> <h2 id="kg-coin-count">0</h2> <p id="kg-cps-count">0 coins/sec</p> </div> <div class="clicker-area"><button id="kg-clicker-btn">👑</button></div> <div id="kg-player-stats"> <h4>Your Stats <button id="rank-privileges-btn" class="info-btn">ⓘ</button></h4> <p class="hidden"><strong>Title:</strong> <span id="kg-player-title"></span></p> <p><strong>Power:</strong> <span id="kg-player-power">0</span></p> <p><strong>Rank:</strong> <span id="kg-player-rank">Unranked</span></p> <p style="color: var(--brand-green);"><strong>Total Bonus:</strong> <span id="kg-player-total-bonus">x1.0</span></p> </div> <div class="shop-container"> <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4> <div id="kg-gem-shop"></div> </div> </div> <div class="kg-middle-panel"><div class="upgrades-container"><h4>Buildings</h4><div id="kg-upgrades-list"></div></div></div> <div class="kg-right-panel"><div class="army-container"><h4>Army</h4><div id="kg-army-list"></div></div><div class="defense-container"><h4>Defenses</h4><div id="kg-defenses-list"></div></div></div> <div class="kg-bottom-panel"> <button id="leaderboard-btn" class="secondary-btn">View Leaderboard</button> <div id="kg-buy-time-container" class="kg-buy-time-container"> <select id="kg-buy-time-select"><option value="1">1 Hour</option><option value="6">6 Hours</option><option value="12">12 Hours</option><option value="24">24 Hours</option></select> <button id="kg-buy-time-btn" class="secondary-btn">Buy Time</button><small id="kg-buy-time-cost-display">Cost: ...</small> </div> <div class="send-coins-container"><h4>Send Coins</h4><div class="user-select-wrapper"><input type="text" id="kg-recipient-search" placeholder="Player name..."><div id="kg-recipient-dropdown" class="user-dropdown-content"></div></div><input type="number" id="kg-send-amount" placeholder="Amount" min="1"><button id="kg-send-btn" class="secondary-btn">Send</button><small id="send-fee-info"></small></div> <div id="kg-prestige-container"></div> <div class="attack-container"><h4>Attack</h4><div class="user-select-wrapper"><input type="text" id="kg-attack-target-search" placeholder="Player name..."><div id="kg-attack-target-dropdown" class="user-dropdown-content"></div></div><button id="kg-attack-btn" class="secondary-btn-red">Attack</button></div> </div> </div>`; 
+        container.innerHTML = ` <div id="king-game-container" class="king-game-layout"> <div id="kg-paused-overlay" class="hidden"><h3>Game Paused</h3><p>You need an active key to play. Your progress is saved.</p><a href="/get-key" class="discord-btn">Get a Key</a></div> <div class="kg-left-panel"> <div class="history-btn-container"><button id="history-btn" class="secondary-btn">History</button><span id="history-ping" class="ping hidden">0</span></div> <button id="claim-reward-btn" class="reward-chest hidden">🎁</button> <div class="coin-display"> <h2 id="kg-coin-count">0</h2> <p id="kg-cps-count">0 coins/sec</p> </div> <div class="clicker-area"><button id="kg-clicker-btn">👑</button></div> <div id="kg-player-stats"> <h4>Your Stats <button id="rank-privileges-btn" class="info-btn">ⓘ</button></h4> <p class="hidden"><strong>Title:</strong> <span id="kg-player-title"></span></p> <p><strong>Power:</strong> <span id="kg-player-power">0</span></p> <p><strong>Rank:</strong> <span id="kg-player-rank">Unranked</span></p> <p style="color: var(--brand-green);"><strong>Total Bonus:</strong> <span id="kg-player-total-bonus">x1.0</span></p> </div> <div class="shop-container"> <h4>Gem Shop (<span id="kg-gem-count">0</span>)</h4> <div id="kg-gem-shop"></div> </div> </div> <div class="kg-middle-panel"><div class="upgrades-container"><h4>Buildings</h4><div id="kg-upgrades-list"></div></div></div> <div class="kg-right-panel"><div class="army-container"><h4>Army</h4><div id="kg-army-list"></div></div><div class="defense-container"><h4>Defenses</h4><div id="kg-defenses-list"></div></div></div> <div class="kg-bottom-panel"> <button id="leaderboard-btn" class="secondary-btn">View Leaderboard</button> <div id="kg-buy-time-container" class="kg-buy-time-container"> <select id="kg-buy-time-select"><option value="1">1 Hour</option><option value="6">6 Hours</option><option value="12">12 Hours</option><option value="24">24 Hours</option></select> <button id="kg-buy-time-btn" class="secondary-btn">Buy Time</button><small id="kg-buy-time-cost-display">Cost: ...</small> </div> <div class="send-coins-container"><h4>Send Coins</h4><div class="user-select-wrapper"><input type="text" id="kg-recipient-search" placeholder="Player name..."><div id="kg-recipient-dropdown" class="user-dropdown-content"></div></div><input type="number" id="kg-send-amount" placeholder="Amount" min="1"><button id="kg-send-btn" class="secondary-btn">Send</button><small id="send-fee-info"></small></div> <div id="kg-rebirth-container"><p id="rebirth-req-text">Requirement: ...</p><div class="progress-bar-container"><div id="rebirth-progress-bar" class="progress-bar"></div><span id="rebirth-info-btn">?</span></div><button id="rebirth-btn" class="discord-btn hidden">Rebirth</button></div> <div class="attack-container"><h4>Attack</h4><div class="user-select-wrapper"><input type="text" id="kg-attack-target-search" placeholder="Player name..."><div id="kg-attack-target-dropdown" class="user-dropdown-content"></div></div><button id="kg-attack-btn" class="secondary-btn-red">Attack</button></div> </div> </div>`; 
         if (currentUser?.user_status === 'Perm') document.getElementById('kg-buy-time-container')?.classList.add('hidden'); 
         document.getElementById('kg-clicker-btn').addEventListener('click', () => handleKingGameAction('click')); 
         const buyTimeSelect = document.getElementById('kg-buy-time-select'); 
@@ -292,10 +367,38 @@ document.addEventListener('DOMContentLoaded', () => {
         setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span class="username">${user.discord_username}</span>`);
         setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span class="username">${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
         
-        const sendAmountInput = document.getElementById('kg-send-amount'); const feeInfo = document.getElementById('send-fee-info'); if (sendAmountInput && feeInfo) { sendAmountInput.addEventListener('input', () => { const amount = BigInt(sendAmountInput.value || 0); const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 30; if (amount > 0) { const fee = amount * BigInt(feePercent) / 100n; const net = amount - fee; feeInfo.textContent = `Fee (${feePercent}%): ${formatBigNumber(fee)}. Recipient gets: ${formatBigNumber(net)}.`; } else { feeInfo.textContent = ''; } }); }
-        document.getElementById('kg-send-btn').addEventListener('click', () => { const a = BigInt(document.getElementById('kg-send-amount').value || 0); if (sendRecipientId && a > 0) { const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 30; const fee = a * BigInt(feePercent) / 100n; const net = a - fee; if(confirm(`You are about to send ${formatBigNumber(a)} coins.\nA ${feePercent}% fee (${formatBigNumber(fee)}) will be applied.\nThe recipient will receive ${formatBigNumber(net)} coins.\n\nDo you want to proceed?`)) handleKingGameAction('send_coins', { recipientId: sendRecipientId, amount: a.toString() }); } else { alert("Please select a valid user and enter a positive amount."); } });
+        const sendAmountInput = document.getElementById('kg-send-amount'); const feeInfo = document.getElementById('send-fee-info'); if (sendAmountInput && feeInfo) { sendAmountInput.addEventListener('input', () => { const amount = BigInt(sendAmountInput.value || 0); const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 70; if (amount > 0) { const fee = amount * BigInt(feePercent) / 100n; const net = amount - fee; feeInfo.textContent = `Fee (${feePercent}%): ${formatBigNumber(fee)}. Recipient gets: ${formatBigNumber(net)}.`; } else { feeInfo.textContent = ''; } }); }
+        document.getElementById('kg-send-btn').addEventListener('click', () => { const a = BigInt(document.getElementById('kg-send-amount').value || 0); if (sendRecipientId && a > 0) { const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 70; const fee = a * BigInt(feePercent) / 100n; const net = a - fee; if(confirm(`You are about to send ${formatBigNumber(a)} coins.\nA ${feePercent}% fee (${formatBigNumber(fee)}) will be applied.\nThe recipient will receive ${formatBigNumber(net)} coins.\n\nDo you want to proceed?`)) handleKingGameAction('send_coins', { recipientId: sendRecipientId, amount: a.toString() }); } else { alert("Please select a valid user and enter a positive amount."); } });
         document.getElementById('kg-attack-btn').addEventListener('click', () => { if (attackTargetId) handleKingGameAction('attack_player', { targetId: attackTargetId }); else alert("Please select a valid player to attack."); });
         
+        document.getElementById('rebirth-btn').addEventListener('click', () => {
+            if (confirm("Are you sure you want to Rebirth? This will reset your coins and building levels for a powerful new bonus!")) {
+                handleKingGameAction('rebirth');
+            }
+        });
+        document.getElementById('rebirth-info-btn').addEventListener('click', () => {
+            const currentRebirth = kingGameState.rebirth_level || 0;
+            let requiredLevel, requiredPercent;
+            if (currentRebirth < 10) {
+                requiredLevel = (currentRebirth + 1) * 10;
+            } else {
+                requiredLevel = 100 + (currentRebirth - 9) * 50;
+            }
+            const buildingKeys = Object.keys(KING_GAME_UPGRADES_CONFIG).filter(k => k !== 'click');
+            let missingBuildings = [];
+            for (const key of buildingKeys) {
+                const currentLevel = kingGameState.upgrades[key] || 0;
+                if (currentLevel < requiredLevel) {
+                    missingBuildings.push(`${KING_GAME_UPGRADES_CONFIG[key].name} (Lvl ${currentLevel}/${requiredLevel})`);
+                }
+            }
+            if (missingBuildings.length > 0) {
+                alert(`Missing requirements for next Rebirth:\n\n${missingBuildings.join('\n')}`);
+            } else {
+                alert("You meet all requirements to Rebirth!");
+            }
+        });
+
         const showPrivileges = (category) => {
             const modal = document.getElementById('privileges-modal');
             const modalTitle = document.getElementById('privileges-title');
