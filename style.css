@@ -8,6 +8,7 @@
     --brand-red: #f04747;
     --brand-green: #43b581;
     --brand-blue: #5865f2;
+    --brand-yellow: #faa61a;
     --border-radius: 8px;
 }
 
@@ -344,6 +345,18 @@ nav a.active {
 #mobile-nav-links { display: none; }
 
 
+/* --- Leaderboard Rank Title Colors --- */
+.rank-title {
+    font-weight: bold;
+    margin-left: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.rank-power { color: var(--brand-red); }
+.rank-coins { color: var(--brand-yellow); }
+.rank-prestige { color: var(--brand-blue); }
+
+
 /* ======================================= */
 /* --- KING CLICKER GAME STYLES --- */
 /* ======================================= */
@@ -580,6 +593,7 @@ nav a.active {
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
+    overflow: hidden; /* Added for truncation */
 }
 .user-dropdown-content a:hover, .user-dropdown-content a.highlighted { 
     background-color: var(--brand-blue); 
@@ -588,6 +602,19 @@ nav a.active {
 .user-dropdown-content a .power, .user-dropdown-content a .key-time { font-size: 12px; color: var(--text-muted); }
 .user-dropdown-content a:hover .power, .user-dropdown-content a.highlighted .power,
 .user-dropdown-content a:hover .key-time, .user-dropdown-content a.highlighted .key-time { color: white; }
+
+/* FIX: Truncate long usernames in dropdowns */
+.user-dropdown-content a .username {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    min-width: 0;
+}
+.user-dropdown-content a .power {
+    flex-shrink: 0;
+    padding-left: 10px;
+}
 
 
 #kg-prestige-btn { background-color: var(--brand-green); }
@@ -644,11 +671,11 @@ nav a.active {
     border-radius: var(--border-radius);
     padding: 15px;
     margin-bottom: 10px;
-    border-left: 5px solid var(--brand-red); /* Rouge par défaut pour une défaite (de votre point de vue) */
+    border-left: 5px solid var(--brand-red); /* Red for a loss from your perspective */
 }
 
 .history-log-item.victory {
-    border-left-color: var(--brand-green); /* Vert pour une victoire (de votre point de vue) */
+    border-left-color: var(--brand-green); /* Green for a victory from your perspective */
 }
 
 .history-log-header {
