@@ -112,12 +112,38 @@
                 <button class="secondary-btn" data-sort="coins">Coins</button>
                 <button class="secondary-btn" data-sort="prestige">Prestige</button>
             </div>
-            <div id="leaderboard-container">
-                <p>Loading leaderboard...</p>
-            </div>
+            <div id="leaderboard-container"></div>
         </div>
     </div>
 
+    <div id="privileges-modal" class="modal-overlay hidden">
+        <div class="modal-content card-box" style="max-width: 600px;">
+            <button class="modal-close-btn">&times;</button>
+            <h2>Top 3 Rank Privileges</h2>
+            <ul class="privileges-list">
+                <li><strong>King (Rank 1):</strong>
+                    <ul>
+                        <li>+3 Hours of free key time daily</li>
+                        <li>+100% Power bonus in battles</li>
+                        <li>x1.5 Coin bonus from all sources</li>
+                    </ul>
+                </li>
+                <li><strong>Queen (Rank 2):</strong>
+                    <ul>
+                        <li>+2 Hours of free key time daily</li>
+                        <li>Cannot be attacked</li>
+                        <li>x2 Coin bonus from all sources</li>
+                    </ul>
+                </li>
+                <li><strong>General (Rank 3):</strong>
+                    <ul>
+                        <li>+1 Hour of free key time daily</li>
+                        <li>+50% Power bonus in battles</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
