@@ -35,7 +35,6 @@ exports.handler = async function (event, context) {
         if (action === 'get_users') {
              try { const { rows } = await db.query('SELECT discord_id, discord_username, power FROM users ORDER BY discord_username'); return { statusCode: 200, body: JSON.stringify(rows) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
         }
-        // NOUVELLE ACTION
         if (action === 'get_giftable_users') {
             try {
                 const { rows } = await db.query(`
@@ -46,9 +45,7 @@ exports.handler = async function (event, context) {
                     ORDER BY u.discord_username
                 `);
                 return { statusCode: 200, body: JSON.stringify(rows) };
-            } catch (error) {
-                return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch giftable user list.' }) };
-            }
+            } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch giftable user list.' }) }; }
         }
         try { const { rows } = await db.query('SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]); if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) }; return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) }; }
     }
@@ -76,9 +73,7 @@ exports.handler = async function (event, context) {
                 if (userPosition === -1) throw new Error("You are not in the Top 3 to claim a reward.");
                 const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null;
                 if (lastReward && (now.getTime() - lastReward.getTime()) < 22 * 60 * 60 * 1000) throw new Error("You have already claimed your daily reward.");
-                
                 let hoursToAdd = 0; if (userPosition === 0) hoursToAdd = 3; else if (userPosition === 1) hoursToAdd = 2; else if (userPosition === 2) hoursToAdd = 1;
-
                 if (hoursToAdd > 0) {
                     const recipientId = body.recipientId; const isGifting = recipientId && user.user_status === 'Perm'; const targetId = isGifting ? recipientId : id;
                     const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [targetId]);
