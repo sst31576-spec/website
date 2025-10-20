@@ -11,7 +11,7 @@
     --brand-green: #43b581;
     --brand-blue: #5865f2;
     --brand-yellow: #faa61a;
-    --brand-purple: #9b59b6; /* NOUVELLE COULEUR */
+    --brand-purple: #9b59b6;
     --border-radius: 8px;
 }
 
@@ -297,6 +297,13 @@ nav a.active {
     gap: 10px;
     margin-bottom: 15px;
 }
+#leaderboard-controls button[data-sort="rebirth"] {
+    background-color: var(--brand-purple);
+}
+#leaderboard-controls button[data-sort="rebirth"].active {
+    background-color: #7b4593;
+}
+
 .admin-table-container, .leaderboard-container {
     overflow-x: auto;
 }
@@ -358,9 +365,9 @@ nav a.active {
     font-weight: bold;
     font-size: 14px;
 }
-.rank-power { color: var(--brand-purple); } /* MODIFIÉ */
+.rank-power { color: var(--brand-purple); }
 .rank-coins { color: var(--brand-yellow); }
-.rank-prestige { color: var(--brand-blue); }
+.rank-rebirth { color: var(--brand-blue); }
 
 
 /* ======================================= */
@@ -382,10 +389,9 @@ nav a.active {
         "bottom bottom bottom";
     text-align: left;
     width: 100%;
-    position: relative; /* Ajouté pour le positionnement de l'overlay */
+    position: relative;
 }
 
-/* --- Overlay pour clé invalide --- */
 #kg-paused-overlay {
     position: absolute;
     top: 0;
@@ -566,34 +572,24 @@ nav a.active {
     justify-content: space-between;
     align-items: center;
 }
-.upgrade-info { display: flex; flex-direction: column; }
+.upgrade-info { display: flex; flex-direction: column; flex-grow: 1; }
 .upgrade-info strong { color: var(--header-primary); }
 .upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
 .upgrade-info small { font-size: 12px; }
 
-/* NOUVEAU STYLE POUR LES BOUTONS D'ACTION */
 .upgrade-actions {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 .upgrade-actions .secondary-btn {
-    min-width: 60px; /* Donne une largeur minimale aux boutons */
+    min-width: 60px;
     text-align: center;
 }
 
 
 #kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
 #kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
-
-.active-boosts-container {
-    background-color: var(--background-tertiary);
-    padding: 10px;
-    margin-top: 15px;
-    border-radius: var(--border-radius);
-}
-.active-boosts-container h4 { margin: 0 0 5px 0; }
-.active-boosts-container p { margin: 2px 0; font-size: 14px; }
 
 .attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .attack-container h4, .send-coins-container h4 { margin: 0; }
@@ -638,7 +634,7 @@ nav a.active {
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    overflow: hidden; /* Added for truncation */
+    overflow: hidden;
 }
 .user-dropdown-content a:hover, .user-dropdown-content a.highlighted { 
     background-color: var(--brand-blue); 
@@ -648,7 +644,6 @@ nav a.active {
 .user-dropdown-content a:hover .power, .user-dropdown-content a.highlighted .power,
 .user-dropdown-content a:hover .key-time, .user-dropdown-content a.highlighted .key-time { color: white; }
 
-/* FIX: Truncate long usernames in dropdowns */
 .user-dropdown-content a .username {
     white-space: nowrap;
     overflow: hidden;
@@ -661,10 +656,57 @@ nav a.active {
     padding-left: 10px;
 }
 
-
-#kg-prestige-btn { background-color: var(--brand-green); }
-#kg-prestige-btn:hover { background-color: #3aa171; }
-.max-prestige-msg { font-weight: bold; color: var(--brand-green); }
+/* --- Rebirth System Styles --- */
+#kg-rebirth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 250px;
+}
+#rebirth-req-text {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-muted);
+    margin: 0;
+}
+.progress-bar-container {
+    width: 100%;
+    height: 20px;
+    background-color: var(--background-tertiary);
+    border-radius: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: var(--brand-green);
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out;
+}
+#rebirth-info-btn {
+    position: absolute;
+    right: 5px;
+    background: none;
+    border: 1px solid var(--text-normal);
+    color: var(--text-normal);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    font-size: 12px;
+    line-height: 14px;
+    cursor: pointer;
+    text-align: center;
+}
+#rebirth-btn {
+    background-color: var(--brand-purple);
+}
+#rebirth-btn:hover {
+    background-color: #7b4593;
+}
 
 
 .kg-buy-time-container {
@@ -716,11 +758,11 @@ nav a.active {
     border-radius: var(--border-radius);
     padding: 15px;
     margin-bottom: 10px;
-    border-left: 5px solid var(--brand-red); /* Red for a loss from your perspective */
+    border-left: 5px solid var(--brand-red);
 }
 
 .history-log-item.victory {
-    border-left-color: var(--brand-green); /* Green for a victory from your perspective */
+    border-left-color: var(--brand-green);
 }
 
 .history-log-header {
