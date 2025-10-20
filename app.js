@@ -2,7 +2,7 @@ function formatTimeRemaining(expiryDate) { if (!expiryDate) return 'N/A'; const 
 function formatBigNumber(num) { if (num==null)return"0";const t=typeof num=="bigint"?num:BigInt(num);if(t<1000000)return t.toLocaleString("en-US");const o=["","K","M","B","T","q","Q","s","S","o","n","d","ud","dd","td","qd","Qd","sd","Sd","od","nd"],e=Math.floor((t.toString().length-1)/3);if(e>=o.length)return t.toExponential(2);const r=BigInt("1"+"0".repeat(3*e)),a=parseFloat(t/r);let l;return l=a>=100?a.toFixed(1):a>=10?a.toFixed(2):a.toFixed(2),l.replace(/\.0+$/,"")+o[e]}
 document.addEventListener('DOMContentLoaded', () => {
     const loginContainer = document.getElementById('login-container'); const mainAppContainer = document.getElementById('main-app'); const loginError = document.getElementById('login-error-message'); const userNameEl = document.getElementById('user-name'); const homeUserNameEl = document.getElementById('home-username'); const userAvatarEl = document.getElementById('user-avatar'); const userStatusBadgeEl = document.getElementById('user-status-badge'); const navLinks = document.querySelectorAll('.nav-link'); const pages = document.querySelectorAll('.page'); const userProfileToggle = document.getElementById('user-profile-toggle'); const dropdownMenu = document.getElementById('dropdown-menu'); const manageKeysLink = document.getElementById('manage-keys-link'); const suggestionForm = document.getElementById('suggestion-form'); const removeExpiredBtn = document.getElementById('remove-expired-btn'); let currentUser = null; let allUsers = [];
-    const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20; const COST_PER_HOUR = BigInt('1000000000000');
+    const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20; const BASE_COST_PER_HOUR = 1000000000n; // 1 Billion
     const KING_GAME_UPGRADES_CONFIG = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1, description: 'Increases coins per click.' }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1, description: 'Generates 1 coin/sec.' }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8, description: 'Generates 8 coins/sec.' }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35, description: 'Generates 35 coins/sec.' }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150, description: 'Generates 150 coins/sec.' }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720, description: 'Generates 720 coins/sec.' }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800, description: 'Generates 3.8K coins/sec.' }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000, description: 'Generates 21K coins/sec.' }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000, description: 'Generates 115K coins/sec.' }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000, description: 'Generates 650K coins/sec.' }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6, description: 'Generates 3.4M coins/sec.' }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7, description: 'Generates 20M coins/sec.' }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8, description: 'Generates 110M coins/sec.' }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8, description: 'Generates 600M coins/sec.' }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9, description: 'Generates 3.5B coins/sec.' }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10, description: 'Generates 22B coins/sec.' }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11, description: 'Generates 150B coins/sec.' }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11, description: 'Generates 900B coins/sec.' }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12, description: 'Generates 5.5T coins/sec.' }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13, description: 'Generates 30T coins/sec.' }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14, description: 'Generates 180T coins/sec.' } };
     const highTierNames = [ 'Quantum Forge', 'Nebula Reactor', 'Stargate Hub', 'Galactic Exchange', 'Celestial Spire', 'Ethereal Nexus', 'Singularity Core', 'Hyperspace Beacon', 'Chrono-Synth Factory', 'Void Matter Extractor', 'Cosmic Oracle', 'Stellar Shipyard', 'Dimension Weaver', 'Reality Engine', 'Genesis Chamber', 'Omega Citadel', 'Astro-Observatory', 'Dark Matter Plant', 'Supernova Catalyst', 'Infinity Gate', 'Celestial Forge', 'Stardust Silo', 'Event Horizon Lab', 'Galaxy Brain Nexus', 'Time Dilation Spire', 'Reality Bender', 'The Omniverse', 'Finality Point', 'The Great Attractor', 'The Void' ];
     let lastCpsClient = BigInt('180000000000000'); let lastCostClient = BigInt('800000000000000000');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
     const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
     const GEM_BOOSTS_CONFIG = { 'x2_coins': { name: '2x Coin Boost (1h)', cost: 10 }, 'half_cost': { name: '50% Upgrade Discount (5m)', cost: 5 },};
-    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, userRoles: {}, totalBonus: 1.0, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0, has_active_key: false };
+    let kingGameState = { coins: 0n, upgrades: {}, cps: 0n, clickValue: 1n, prestige_level: 0, gems: 0, troops: {}, defenses: {}, power: '0', rank: 'Unranked', title: null, userRoles: {}, totalBonus: 1.0, active_boosts: {}, isRewardAvailable: false, unreadAttackCount: 0, has_active_key: false, time_purchase_count: 0 };
     let kingGameInterval = null; let kingGameSyncInterval = null; let leaderboardInterval = null;
     const setupMobileNav = () => { const mainNav = document.querySelector('.top-bar-left nav'); const mobileNavContainer = document.getElementById('mobile-nav-links'); if (!mainNav || !mobileNavContainer || !dropdownMenu) return; mobileNavContainer.innerHTML = ''; mainNav.querySelectorAll('a').forEach(link => { const clone = link.cloneNode(true); clone.addEventListener('click', (e) => { if (clone.dataset.page) { e.preventDefault(); window.history.pushState({ page: clone.dataset.page }, '', `/${clone.dataset.page === 'home' ? '' : clone.dataset.page}`); switchPage(clone.dataset.page); } dropdownMenu.classList.remove('show'); }); mobileNavContainer.appendChild(clone); }); };
     const checkUserStatus = async () => { try { const response = await fetch('/api/user'); if (response.status === 401) { showLoginView(); return; } if (response.status === 403) { showLoginView('You must join the Discord server.', 'https://discord.gg/RhDnUQr4Du'); return; } if (!response.ok) throw new Error('Failed to fetch user data'); const user = await response.json(); currentUser = user; setupMainApp(user); } catch (error) { console.error(error); showLoginView('An error occurred. Please try again later.'); } };
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.addEventListener('focus', updateDropdown);
         searchInput.addEventListener('blur', () => setTimeout(() => dropdown.style.display = 'none', 200)); 
         searchInput.addEventListener('keydown', (e) => { const items = dropdown.querySelectorAll('a'); if (items.length === 0) return; if (e.key === 'ArrowDown') { e.preventDefault(); highlightedIndex = (highlightedIndex + 1) % items.length; updateHighlight(); } else if (e.key === 'ArrowUp') { e.preventDefault(); highlightedIndex = (highlightedIndex - 1 + items.length) % items.length; updateHighlight(); } else if (e.key === 'Enter' || e.key === 'Tab') { if (highlightedIndex !== -1) { e.preventDefault(); items[highlightedIndex].dispatchEvent(new MouseEvent('mousedown')); } } }); };
-    const openGiftingModal = async () => { const modal = document.getElementById('gifting-modal'); const dropdown = document.getElementById('gift-recipient-dropdown'); dropdown.innerHTML = '<li>Loading players...</li>'; modal.classList.remove('hidden'); try { const response = await fetch('/api/earn-time?action=get_giftable_users'); if (!response.ok) throw new Error('Could not load player list.'); const giftableUsers = await response.json(); let giftRecipientId = null; const setGiftRecipient = (id) => { giftRecipientId = id; document.getElementById('gift-reward-btn').disabled = !id; }; setupUserSearch( 'gift-recipient-search', 'gift-recipient-dropdown', setGiftRecipient, user => `<span>${user.discord_username}</span><span class="key-time">🕒 ${formatTimeRemaining(user.expires_at)}</span>`, giftableUsers ); document.getElementById('gift-reward-btn').onclick = () => { if (giftRecipientId) { handleKingGameAction('claim_daily_reward', { recipientId: giftRecipientId }); modal.classList.add('hidden'); document.getElementById('gift-recipient-search').value = ''; giftRecipientId = null; } else { alert('Please select a player to gift the reward to.'); } }; } catch (error) { dropdown.innerHTML = `<li>${error.message}</li>`; } };
+    const openGiftingModal = async () => { const modal = document.getElementById('gifting-modal'); const dropdown = document.getElementById('gift-recipient-dropdown'); dropdown.innerHTML = '<li>Loading players...</li>'; modal.classList.remove('hidden'); try { const response = await fetch('/api/earn-time?action=get_giftable_users'); if (!response.ok) throw new Error('Could not load player list.'); const giftableUsers = await response.json(); let giftRecipientId = null; const setGiftRecipient = (id) => { giftRecipientId = id; document.getElementById('gift-reward-btn').disabled = !id; }; setupUserSearch( 'gift-recipient-search', 'gift-recipient-dropdown', setGiftRecipient, user => `<span class="username">${user.discord_username}</span><span class="key-time">🕒 ${formatTimeRemaining(user.expires_at)}</span>`, giftableUsers ); document.getElementById('gift-reward-btn').onclick = () => { if (giftRecipientId) { handleKingGameAction('claim_daily_reward', { recipientId: giftRecipientId }); modal.classList.add('hidden'); document.getElementById('gift-recipient-search').value = ''; giftRecipientId = null; } else { alert('Please select a player to gift the reward to.'); } }; } catch (error) { dropdown.innerHTML = `<li>${error.message}</li>`; } };
     const renderKingGame = async () => {
         await fetchUserList();
 
@@ -171,14 +171,31 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('kg-clicker-btn').addEventListener('click', () => handleKingGameAction('click')); 
         const buyTimeSelect = document.getElementById('kg-buy-time-select'); 
         const buyTimeCostDisplay = document.getElementById('kg-buy-time-cost-display'); 
-        const updateCostDisplay = () => { if (!buyTimeSelect || !buyTimeCostDisplay) return; const h = parseInt(buyTimeSelect.value, 10); const c = COST_PER_HOUR * BigInt(h); buyTimeCostDisplay.textContent = `Cost: ${formatBigNumber(c)}`; if(document.getElementById('kg-buy-time-btn')) document.getElementById('kg-buy-time-btn').disabled = kingGameState.coins < c; }; 
-        if(buyTimeSelect) { buyTimeSelect.addEventListener('change', updateCostDisplay); document.getElementById('kg-buy-time-btn').addEventListener('click', () => { const h = parseInt(buyTimeSelect.value, 10); const c = COST_PER_HOUR * BigInt(h); if (confirm(`Are you sure you want to spend ${formatBigNumber(c)} coins to add ${h} hour(s) to your key?`)) handleKingGameAction('buy_time', { hours: h }); }); } 
+        const updateCostDisplay = () => { 
+            if (!buyTimeSelect || !buyTimeCostDisplay) return; 
+            const h = parseInt(buyTimeSelect.value, 10); 
+            const purchaseCount = BigInt(kingGameState.time_purchase_count || 0);
+            const costMultiplier = 100n ** purchaseCount;
+            const c = (BASE_COST_PER_HOUR * BigInt(h)) * costMultiplier;
+            buyTimeCostDisplay.textContent = `Cost: ${formatBigNumber(c)}`; 
+            if(document.getElementById('kg-buy-time-btn')) document.getElementById('kg-buy-time-btn').disabled = kingGameState.coins < c; 
+        }; 
+        if(buyTimeSelect) { 
+            buyTimeSelect.addEventListener('change', updateCostDisplay); 
+            document.getElementById('kg-buy-time-btn').addEventListener('click', () => { 
+                const h = parseInt(buyTimeSelect.value, 10); 
+                const purchaseCount = BigInt(kingGameState.time_purchase_count || 0);
+                const costMultiplier = 100n ** purchaseCount;
+                const c = (BASE_COST_PER_HOUR * BigInt(h)) * costMultiplier;
+                if (confirm(`Are you sure you want to spend ${formatBigNumber(c)} coins to add ${h} hour(s) to your key?`)) handleKingGameAction('buy_time', { hours: h }); 
+            }); 
+        } 
         
         let sendRecipientId = null; let attackTargetId = null;
         const setSendRecipient = (id) => { sendRecipientId = id; }; const setAttackTarget = (id) => { attackTargetId = id; };
         
-        setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span>${user.discord_username}</span>`);
-        setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span>${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
+        setupUserSearch('kg-recipient-search', 'kg-recipient-dropdown', setSendRecipient, user => `<span class="username">${user.discord_username}</span>`);
+        setupUserSearch('kg-attack-target-search', 'kg-attack-target-dropdown', setAttackTarget, user => `<span class="username">${user.discord_username}</span><span class="power">⚡ ${formatBigNumber(user.power)}</span>`);
         
         const sendAmountInput = document.getElementById('kg-send-amount'); const feeInfo = document.getElementById('send-fee-info'); if (sendAmountInput && feeInfo) { sendAmountInput.addEventListener('input', () => { const amount = BigInt(sendAmountInput.value || 0); const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 30; if (amount > 0) { const fee = amount * BigInt(feePercent) / 100n; const net = amount - fee; feeInfo.textContent = `Fee (${feePercent}%): ${formatBigNumber(fee)}. Recipient gets: ${formatBigNumber(net)}.`; } else { feeInfo.textContent = ''; } }); }
         document.getElementById('kg-send-btn').addEventListener('click', () => { const a = BigInt(document.getElementById('kg-send-amount').value || 0); if (sendRecipientId && a > 0) { const feePercent = kingGameState.userRoles.coins === 'King' ? 0 : 30; const fee = a * BigInt(feePercent) / 100n; const net = a - fee; if(confirm(`You are about to send ${formatBigNumber(a)} coins.\nA ${feePercent}% fee (${formatBigNumber(fee)}) will be applied.\nThe recipient will receive ${formatBigNumber(net)} coins.\n\nDo you want to proceed?`)) handleKingGameAction('send_coins', { recipientId: sendRecipientId, amount: a.toString() }); } else { alert("Please select a valid user and enter a positive amount."); } });
@@ -186,8 +203,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const showPrivileges = (category) => {
             const modal = document.getElementById('privileges-modal');
+            const modalTitle = document.getElementById('privileges-title');
             document.querySelectorAll('.privileges-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`privileges-content-${category}`).classList.remove('hidden');
+
+            if (kingGameState.title === 'Emperor') {
+                modalTitle.textContent = 'Emperor Privileges';
+                const emperorContent = document.getElementById('privileges-content-emperor');
+                const emperorList = document.getElementById('emperor-privileges-list');
+                emperorList.innerHTML = ''; // Clear previous content
+
+                for (const cat in kingGameState.userRoles) {
+                    const role = kingGameState.userRoles[cat];
+                    const privilegeItemId = `privilege-${cat}-${role}`;
+                    const originalPrivilegeItem = document.getElementById(privilegeItemId);
+                    if (originalPrivilegeItem) {
+                        const clonedItem = originalPrivilegeItem.cloneNode(true);
+                        const categoryHeader = document.createElement('p');
+                        const categoryName = cat.charAt(0).toUpperCase() + cat.slice(1);
+                        categoryHeader.innerHTML = `<strong>From ${categoryName} Ranking:</strong>`;
+                        categoryHeader.style.marginBottom = '5px';
+                        categoryHeader.style.color = 'var(--header-primary)';
+                        clonedItem.insertBefore(categoryHeader, clonedItem.firstChild);
+                        emperorList.appendChild(clonedItem);
+                    }
+                }
+                emperorContent.classList.remove('hidden');
+
+            } else {
+                modalTitle.textContent = 'Top 3 Rank Privileges';
+                document.getElementById(`privileges-content-${category}`).classList.remove('hidden');
+            }
             
             document.querySelectorAll('.privileges-list li').forEach(li => li.classList.remove('highlight'));
             for(const cat in kingGameState.userRoles) {
