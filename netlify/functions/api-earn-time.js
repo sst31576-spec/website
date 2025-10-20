@@ -1,797 +1,285 @@
-:root {
-    --background-primary: #36393f;
-    --background-secondary: #2f3136;
-    --background-tertiary: #202225;
-    --header-primary: #ffffff;
-    --text-normal: #dcddde;
-    --text-muted: #72767d;
-    --brand-red: #f04747;
-    --brand-green: #43b581;
-    --brand-blue: #5865f2;
-    --brand-yellow: #faa61a;
-    --brand-purple: #9b59b6; /* NOUVELLE COULEUR */
-    --border-radius: 8px;
-}
-
-body {
-    font-family: 'Roboto', sans-serif;
-    background-color: var(--background-primary);
-    color: var(--text-normal);
-    margin: 0;
-}
-
-.hidden { display: none !important; }
-
-/* --- General Views --- */
-.view-container { width: 100%; min-height: 100vh; }
-#login-container { display: flex; justify-content: center; align-items: center; }
-
-.card-box {
-    background-color: var(--background-secondary);
-    padding: 32px;
-    border-radius: var(--border-radius);
-    text-align: center;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
-    width: 100%;
-    max-width: 400px;
-    margin: 20px;
-    box-sizing: border-box;
-}
-
-.logo { width: 80px; height: 80px; margin-bottom: 20px; }
-.card-box h1 { color: var(--header-primary); font-size: 24px; margin-bottom: 10px; }
-.card-box p { color: var(--text-normal); margin-bottom: 20px; }
-
-/* --- Buttons --- */
-.discord-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--brand-blue);
-    color: white;
-    padding: 12px 24px;
-    border-radius: var(--border-radius);
-    text-decoration: none;
-    font-weight: 700;
-    transition: background-color 0.2s, transform 0.1s;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    gap: 8px;
-}
-.discord-btn:hover { background-color: #4e5d94; }
-.discord-btn:active { transform: translateY(1px); }
-.discord-btn:disabled { background-color: #72767d; cursor: not-allowed; }
-
-
-/* --- Top Bar & Navigation --- */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--background-tertiary);
-    padding: 0 32px;
-    height: 60px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.top-bar-left {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.header-logo {
-    width: 40px;
-    height: 40px;
-}
-
-nav a {
-    color: var(--text-muted);
-    text-decoration: none;
-    padding: 18px 12px;
-    transition: color 0.2s, background-color 0.2s;
-    font-weight: 500;
-}
-nav a:hover {
-    color: var(--text-normal);
-}
-nav a.active {
-    color: var(--header-primary);
-    border-bottom: 3px solid var(--brand-blue);
-}
-
-/* --- User Profile & Dropdown --- */
-.top-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-}
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-.status-badge.admin { background-color: var(--brand-red); color: white; }
-.status-badge.perm { background-color: var(--brand-blue); color: white; }
-.status-badge.free { background-color: var(--text-muted); color: white; }
-
-.user-profile {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: var(--border-radius);
-    transition: background-color 0.2s;
-}
-.user-profile:hover {
-    background-color: var(--background-secondary);
-}
-#user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-}
-
-.dropdown-content {
-    position: absolute;
-    top: 55px;
-    right: 0;
-    background-color: var(--background-secondary);
-    min-width: 120px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    border-radius: var(--border-radius);
-    z-index: 100;
-    display: none;
-    overflow: hidden;
-}
-.dropdown-content.show { display: block; }
-.dropdown-content a {
-    color: var(--text-normal);
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-}
-.dropdown-content a:hover {
-    background-color: var(--background-primary);
-}
-
-/* --- Main Content --- */
-.content {
-    padding: 32px;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start; 
-    min-height: calc(100vh - 60px); 
-}
-
-.page {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-/* --- MODAL STYLES --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    padding: 20px;
-    box-sizing: border-box;
-}
-.modal-content {
-    position: relative;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-.modal-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 28px;
-    cursor: pointer;
-    line-height: 1;
-}
-.modal-close-btn:hover {
-    color: var(--text-normal);
-}
-
-
-/* --- Forms & Inputs --- */
-#suggestion-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    text-align: left;
-    margin-top: 16px;
-}
-#suggestion-form input,
-#suggestion-form textarea {
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-tertiary);
-    border-radius: var(--border-radius);
-    color: var(--text-normal);
-    font-family: 'Roboto', sans-serif;
-    font-size: 16px;
-    padding: 12px;
-}
-#suggestion-form textarea {
-    min-height: 120px;
-    resize: vertical;
-}
-
-.status-message { margin-top: 8px; font-weight: 500; }
-.status-message.success { color: var(--brand-green); }
-.status-message.error { color: var(--brand-red); }
-
-/* --- Get Key Page --- */
-.key-container { display: flex; gap: 8px; margin-bottom: 16px; }
-#generated-key-input {
-    flex-grow: 1;
-    background-color: var(--background-tertiary);
-    border: 1px solid var(--background-primary);
-    color: var(--text-normal);
-    padding: 10px;
-    border-radius: var(--border-radius);
-    font-size: 16px;
-    text-align: center;
-}
-
-#generate-key-btn {
-    display: block; 
-    margin: 20px auto 0 auto;
-}
-
-#key-display-area .discord-btn, #key-display-area .secondary-btn {
-    margin-left: auto;
-    margin-right: auto;
-}
-
-#key-display-area button {
-    margin-top: 10px;
-}
-
-.secondary-btn {
-    padding: 10px 16px;
-    border: none;
-    background-color: var(--text-muted);
-    color: white; 
-    border-radius: var(--border-radius); 
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s; 
-}
-.secondary-btn:hover:not(:disabled) { background-color: #63676d; }
-.secondary-btn:disabled { background-color: #484b51; color: #72767d; cursor: not-allowed; }
-.secondary-btn.active { background-color: var(--brand-blue); }
-
-
-.secondary-btn-red { 
-    background-color: var(--brand-red); 
-    color: white; 
-}
-.secondary-btn-red:hover { 
-    background-color: #d83d3d; 
-}
-
-/* --- Admin & Leaderboard Table --- */
-#leaderboard-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-.admin-table-container, .leaderboard-container {
-    overflow-x: auto;
-}
-.admin-table, .leaderboard-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 14px;
-}
-.admin-table th, .admin-table td, .leaderboard-table th, .leaderboard-table td {
-    border: 1px solid var(--background-primary);
-    padding: 10px 8px;
-    text-align: left;
-    white-space: nowrap;
-}
-.admin-table th, .leaderboard-table th {
-    background-color: var(--background-primary);
-    color: var(--header-primary);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-.admin-table tr:nth-child(even), .leaderboard-table tr:nth-child(even) {
-    background-color: var(--background-tertiary);
-}
-.admin-table .actions-cell button {
-    padding: 6px 10px;
-    font-size: 12px;
-}
-#admin-search-input {
-    width: 100%;
-    padding: 10px;
-    background-color: var(--background-primary);
-    border: 1px solid var(--background-tertiary);
-    border-radius: var(--border-radius);
-    color: var(--text-normal);
-    font-size: 16px;
-    box-sizing: border-box;
-    margin-bottom: 10px;
-}
-.key-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 700;
-}
-.key-badge.temp { background-color: var(--brand-red); color: white; }
-.key-badge.perm { background-color: var(--brand-green); color: white; }
-
-#mobile-nav-links { display: none; }
-
-
-/* --- Leaderboard Rank Title Colors --- */
-.leaderboard-name-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.rank-title {
-    font-weight: bold;
-    font-size: 14px;
-}
-.rank-power { color: var(--brand-purple); } /* MODIFIÉ */
-.rank-coins { color: var(--brand-yellow); }
-.rank-prestige { color: var(--brand-blue); }
-
-
-/* ======================================= */
-/* --- KING CLICKER GAME STYLES --- */
-/* ======================================= */
-
-#page-earn-time .card-box {
-    max-width: 1200px;
-}
-
-.king-game-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr 1fr;
-    grid-template-rows: auto 1fr auto;
-    gap: 20px;
-    grid-template-areas:
-        "left middle right"
-        "left middle right"
-        "bottom bottom bottom";
-    text-align: left;
-    width: 100%;
-    position: relative; /* Ajouté pour le positionnement de l'overlay */
-}
-
-/* --- Overlay pour clé invalide --- */
-#kg-paused-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(32, 34, 37, 0.85);
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    border-radius: var(--border-radius);
-    padding: 20px;
-}
-#kg-paused-overlay h3 {
-    color: var(--header-primary);
-    margin-bottom: 10px;
-}
-#kg-paused-overlay p {
-    margin-bottom: 20px;
-}
-
-
-.kg-left-panel { grid-area: left; position: relative; }
-.kg-middle-panel { grid-area: middle; }
-.kg-right-panel { grid-area: right; }
-.kg-bottom-panel { 
-    grid-area: bottom; 
-    display: flex; 
-    justify-content: space-around; 
-    align-items: center; 
-    border-top: 1px solid var(--background-tertiary); 
-    padding-top: 15px; 
-    margin-top: 15px;
-    flex-wrap: wrap;
-    gap: 20px;
-}
-
-.coin-display, .clicker-area { text-align: center; }
-#kg-coin-count { 
-    font-size: 28px; 
-    font-weight: bold; 
-    color: var(--header-primary); 
-    margin: 0;
-    word-wrap: break-word;
-}
-#kg-cps-count { font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0; }
-#kg-bonus-display { color: var(--brand-green); font-weight: bold; }
-
-#kg-clicker-btn {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 3px solid var(--brand-blue);
-    background-color: var(--background-secondary);
-    cursor: pointer;
-    transition: transform 0.1s;
-    font-size: 48px;
-}
-#kg-clicker-btn:active { transform: scale(0.95); }
-
-#kg-player-stats {
-    background-color: var(--background-tertiary);
-    padding: 15px;
-    border-radius: var(--border-radius);
-    margin-top: 15px;
-    text-align: center;
-}
-#kg-player-stats h4 { 
-    margin: 0 0 10px 0; 
-    color: var(--header-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-#kg-player-stats p { margin: 4px 0; }
-#kg-player-title { font-weight: bold; color: var(--brand-green); }
-
-.info-btn {
-    background: none;
-    border: 1px solid var(--text-muted);
-    color: var(--text-muted);
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    line-height: 18px;
-    font-size: 12px;
-    cursor: pointer;
-    padding: 0;
-}
-.info-btn:hover {
-    background-color: var(--background-primary);
-    color: var(--text-normal);
-}
-.privileges-list {
-    list-style: none;
-    padding: 0;
-    text-align: left;
-}
-.privileges-list > li {
-    margin-bottom: 15px;
-    padding: 10px;
-    border-radius: var(--border-radius);
-    border: 1px solid transparent;
-    transition: all 0.2s ease-in-out;
-}
-.privileges-list > li.highlight {
-    border-color: var(--brand-green);
-    background-color: rgba(67, 181, 129, 0.1);
-}
-.privileges-list > li.highlight > strong {
-    color: var(--brand-green);
-}
-
-.privileges-list ul {
-    list-style-type: '✓  ';
-    padding-left: 20px;
-    margin-top: 5px;
-}
-.privileges-list ul li {
-    color: var(--text-normal);
-    font-size: 14px;
-    margin-bottom: 5px;
-}
-
-.reward-chest {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 50px;
-    height: 50px;
-    font-size: 28px;
-    background-color: #a97100;
-    border: 2px solid #ffc700;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    animation: pulse 2s infinite;
-}
-@keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0.7); }
-    70% { transform: scale(1.05); box-shadow: 0 0 10px 15px rgba(255, 199, 0, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 199, 0, 0); }
-}
-
-
-.upgrades-container, .shop-container, .army-container, .defense-container {
-    background-color: var(--background-tertiary);
-    padding: 15px;
-    border-radius: var(--border-radius);
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-}
-.upgrades-container h4, .shop-container h4, .army-container h4, .defense-container h4 {
-    margin: 0 0 10px 0;
-    text-align: center;
-    color: var(--header-primary);
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--background-primary);
-}
-
-#kg-upgrades-list, #kg-army-list, #kg-defenses-list {
-    max-height: 450px;
-    overflow-y: auto;
-    padding-right: 10px;
-    flex-grow: 1;
-}
-
-.upgrade-item {
-    background-color: var(--background-primary);
-    padding: 10px;
-    border-radius: var(--border-radius);
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.upgrade-info { display: flex; flex-direction: column; }
-.upgrade-info strong { color: var(--header-primary); }
-.upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
-.upgrade-info small { font-size: 12px; }
-
-#kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
-#kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
-
-.active-boosts-container {
-    background-color: var(--background-tertiary);
-    padding: 10px;
-    margin-top: 15px;
-    border-radius: var(--border-radius);
-}
-.active-boosts-container h4 { margin: 0 0 5px 0; }
-.active-boosts-container p { margin: 2px 0; font-size: 14px; }
-
-.attack-container, .send-coins-container { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.attack-container h4, .send-coins-container h4 { margin: 0; }
-#kg-recipient-search, #kg-send-amount, #kg-attack-target-search, #gift-recipient-search {
-    background-color: var(--background-tertiary);
-    border: 1px solid var(--background-primary);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: var(--border-radius);
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.user-select-wrapper { position: relative; width: 180px; }
-.user-select-wrapper.gift-search { width: 100%; margin-bottom: 15px; }
-
-.user-dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: var(--background-secondary);
-    min-width: 200px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 10;
-    border-radius: var(--border-radius);
-    max-height: 150px;
-    overflow-y: auto;
-    bottom: 100%; 
-    margin-bottom: 5px;
-    width: 100%;
-}
-.user-select-wrapper.gift-search .user-dropdown-content {
-    bottom: auto;
-    top: 100%;
-    margin-top: 5px;
-    margin-bottom: 0;
-}
-.user-dropdown-content a {
-    color: var(--text-normal);
-    padding: 10px 12px;
-    text-decoration: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    overflow: hidden; /* Added for truncation */
-}
-.user-dropdown-content a:hover, .user-dropdown-content a.highlighted { 
-    background-color: var(--brand-blue); 
-    color: white;
-}
-.user-dropdown-content a .power, .user-dropdown-content a .key-time { font-size: 12px; color: var(--text-muted); }
-.user-dropdown-content a:hover .power, .user-dropdown-content a.highlighted .power,
-.user-dropdown-content a:hover .key-time, .user-dropdown-content a.highlighted .key-time { color: white; }
-
-/* FIX: Truncate long usernames in dropdowns */
-.user-dropdown-content a .username {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-grow: 1;
-    min-width: 0;
-}
-.user-dropdown-content a .power {
-    flex-shrink: 0;
-    padding-left: 10px;
-}
-
-
-#kg-prestige-btn { background-color: var(--brand-green); }
-#kg-prestige-btn:hover { background-color: #3aa171; }
-.max-prestige-msg { font-weight: bold; color: var(--brand-green); }
-
-
-.kg-buy-time-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-#kg-buy-time-select {
-    background-color: var(--background-tertiary);
-    border: 1px solid var(--background-primary);
-    color: var(--text-normal);
-    padding: 8px;
-    border-radius: var(--border-radius);
-}
-.kg-buy-time-container small {
-    color: var(--text-muted);
-    font-size: 12px;
-}
-
-.history-btn-container {
-    position: relative;
-}
-
-.ping {
-    position: absolute;
-    top: 0px;
-    right: 5px;
-    background-color: var(--brand-red);
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    line-height: 20px;
-    text-align: center;
-    font-weight: bold;
-    transform: translate(50%, -50%);
-}
-
-#history-container {
-    max-height: 60vh;
-    overflow-y: auto;
-    margin-top: 15px;
-    padding-right: 10px;
-}
-
-.history-log-item {
-    background-color: var(--background-primary);
-    border-radius: var(--border-radius);
-    padding: 15px;
-    margin-bottom: 10px;
-    border-left: 5px solid var(--brand-red); /* Red for a loss from your perspective */
-}
-
-.history-log-item.victory {
-    border-left-color: var(--brand-green); /* Green for a victory from your perspective */
-}
-
-.history-log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.history-log-header h5 {
-    margin: 0;
-    font-size: 16px;
-}
-
-.history-log-header small {
-    color: var(--text-muted);
-}
-
-.history-log-details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    font-size: 14px;
-    margin-bottom: 15px;
-}
-
-.losses-section h6 {
-    margin: 0 0 5px 0;
-    color: var(--header-primary);
-}
-
-.losses-section ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
-.send-coins-container small {
-    display: block;
-    width: 100%;
-    text-align: center;
-    margin-top: 5px;
-    color: var(--text-muted);
-}
-
-
-/* ======================================= */
-/* --- RESPONSIVE DESIGN --- */
-/* ======================================= */
-
-@media (max-width: 900px) {
-    .top-bar-left nav { display: none; }
-    #mobile-nav-links { display: block; border-bottom: 1px solid var(--background-primary); margin-bottom: 5px; padding-bottom: 5px; }
-    #mobile-nav-links a { color: var(--text-muted); font-weight: 500; }
-    .content { padding: 16px; }
-    .card-box { margin: 10px; padding: 24px; max-width: 100%; }
+// netlify/functions/api-earn-time.js
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
+const db = require('./db');
+
+// --- GAME CONFIGURATION ---
+const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20;
+const TROOPS_CONFIG = { 'warrior': { name: 'Warrior', cost: 10000, power: 10, costMultiplier: 1.05 }, 'archer': { name: 'Archer', cost: 50000, power: 45, costMultiplier: 1.06 }, 'knight': { name: 'Knight', cost: 250000, power: 220, costMultiplier: 1.07 }, 'mage': { name: 'Mage', cost: 1200000, power: 1100, costMultiplier: 1.08 }, 'dragon': { name: 'Dragon', cost: 8000000, power: 6500, costMultiplier: 1.1 },};
+const SPECIAL_UNITS_CONFIG = { 'elite_soldier': { name: 'Elite Soldier', cost: 5000000, power: 3000, costMultiplier: 1.12 }, 'queens_guard': { name: 'Queen\'s Guard', cost: 25000000, power: 12000, costMultiplier: 1.15 }, 'royal_guard': { name: 'Royal Guard', cost: 100000000, power: 50000, costMultiplier: 1.2 },};
+const ALL_TROOPS_CONFIG = { ...TROOPS_CONFIG, ...SPECIAL_UNITS_CONFIG };
+const DEFENSES_CONFIG = { 'wall': { name: 'Wooden Wall', cost: 15000, power: 15, costMultiplier: 1.05 }, 'tower': { name: 'Watchtower', cost: 70000, power: 60, costMultiplier: 1.06 }, 'fortress': { name: 'Fortress', cost: 350000, power: 280, costMultiplier: 1.07 }, 'cannon': { name: 'Cannon', cost: 1800000, power: 1500, costMultiplier: 1.08 }, 'magic_shield': { name: 'Magic Shield', cost: 10000000, power: 8000, costMultiplier: 1.1 },};
+const RANKS_CONFIG = []; const rankTiers = ['Bronze', 'Iron', 'Steel', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Emerald', 'Ruby', 'Sapphire', 'Amethyst', 'Topaz', 'Jade', 'Opal', 'Onyx', 'Quartz', 'Titanium', 'Obsidian', 'Mythril', 'Adamantite']; const subRanks = ['V', 'IV', 'III', 'II', 'I']; let powerThreshold = 1000; let rankIndex = 0; RANKS_CONFIG.push({ power: 0, name: 'Unranked', index: rankIndex }); rankIndex++; for (const tier of rankTiers) { for (const sub of subRanks) { RANKS_CONFIG.push({ power: powerThreshold, name: `${tier} ${sub}`, index: rankIndex }); powerThreshold = Math.floor(powerThreshold * 1.4); rankIndex++; } powerThreshold = Math.floor(powerThreshold * 1.2); }
+const KING_GAME_UPGRADES = { click: { name: 'Royal Scepter', baseCost: 15, costMultiplier: 1.15, value: 1 }, b1: { name: 'Peasant Hut', baseCost: 100, costMultiplier: 1.1, cps: 1 }, b2: { name: 'Farm', baseCost: 1100, costMultiplier: 1.12, cps: 8 }, b3: { name: 'Bakery', baseCost: 8500, costMultiplier: 1.13, cps: 35 }, b4: { name: 'Blacksmith', baseCost: 40000, costMultiplier: 1.13, cps: 150 }, b5: { name: 'Market', baseCost: 210000, costMultiplier: 1.14, cps: 720 }, b6: { name: 'Inn', baseCost: 1.4e6, costMultiplier: 1.15, cps: 3800 }, b7: { name: 'Guard Tower', baseCost: 9e6, costMultiplier: 1.15, cps: 21000 }, b8: { name: 'Church', baseCost: 5.5e7, costMultiplier: 1.16, cps: 115000 }, b9: { name: 'Library', baseCost: 3.8e8, costMultiplier: 1.16, cps: 650000 }, b10: { name: 'Town Hall', baseCost: 2.5e9, costMultiplier: 1.17, cps: 3.4e6 }, b11: { name: 'Castle', baseCost: 1.8e10, costMultiplier: 1.18, cps: 2e7 }, b12: { name: 'Barracks', baseCost: 1.2e11, costMultiplier: 1.18, cps: 1.1e8 }, b13: { name: 'University', baseCost: 8e11, costMultiplier: 1.19, cps: 6e8 }, b14: { name: 'Cathedral', baseCost: 5.2e12, costMultiplier: 1.19, cps: 3.5e9 }, b15: { name: 'Royal Palace', baseCost: 3.6e13, costMultiplier: 1.2, cps: 2.2e10 }, b16: { name: 'Kingdom', baseCost: 2.8e14, costMultiplier: 1.21, cps: 1.5e11 }, b17: { name: 'Empire', baseCost: 2.1e15, costMultiplier: 1.21, cps: 9e11 }, b18: { name: 'Senate', baseCost: 1.5e16, costMultiplier: 1.22, cps: 5.5e12 }, b19: { name: 'Colosseum', baseCost: 1.1e17, costMultiplier: 1.22, cps: 3e13 }, b20: { name: 'Grand Temple', baseCost: 8e17, costMultiplier: 1.23, cps: 1.8e14 },};
+const highTierNames = [ 'Quantum Forge', 'Nebula Reactor', 'Stargate Hub', 'Galactic Exchange', 'Celestial Spire', 'Ethereal Nexus', 'Singularity Core', 'Hyperspace Beacon', 'Chrono-Synth Factory', 'Void Matter Extractor', 'Cosmic Oracle', 'Stellar Shipyard', 'Dimension Weaver', 'Reality Engine', 'Genesis Chamber', 'Omega Citadel', 'Astro-Observatory', 'Dark Matter Plant', 'Supernova Catalyst', 'Infinity Gate', 'Celestial Forge', 'Stardust Silo', 'Event Horizon Lab', 'Galaxy Brain Nexus', 'Time Dilation Spire', 'Reality Bender', 'The Omniverse', 'Finality Point', 'The Great Attractor', 'The Void' ];
+let lastCps = BigInt('180000000000000'); let lastCost = BigInt('800000000000000000');
+for (let i = 21; i <= 50; i++) { const cpsMultiplier = BigInt(Math.round((5 + i * 0.1) * 10)); const costMultiplier = BigInt(Math.round((6 + i * 0.15) * 100)); lastCps = (lastCps * cpsMultiplier) / 10n; lastCost = (lastCost * costMultiplier) / 100n; const name = highTierNames[i - 21] || `Cosmic Entity #${i - 20}`; KING_GAME_UPGRADES[`b${i}`] = { name: name, baseCost: lastCost, costMultiplier: 1.23 + (i * 0.002), cps: lastCps };}
+const GEM_BOOSTS = { 'x2_coins': { name: '2x Coin Boost', cost: 10, duration_minutes: 60 }, 'half_cost': { name: '50% Upgrade Discount', cost: 5, duration_minutes: 5 },};
+const COST_PER_HOUR = BigInt('77045760000');
+
+const getUpgradeCost = (u, c, a) => { const r = KING_GAME_UPGRADES[u], t = BigInt(r.baseCost); let e = BigInt(Math.ceil(Number(t) * Math.pow(r.costMultiplier, c))); return a && a.half_cost && new Date(a.half_cost) > new Date && (e /= 2n), e };
+const getUnitCost = (u, c, i) => { const t = i ? ALL_TROOPS_CONFIG[u] : DEFENSES_CONFIG[u]; return BigInt(Math.ceil(t.cost * Math.pow(t.costMultiplier, c))) };
+const calculatePower = u => { let c = 0; const a = u.troops || {}, r = u.defenses || {}; for (const t in a) { if(ALL_TROOPS_CONFIG[t]) c += (a[t].level || 1) * ALL_TROOPS_CONFIG[t].power * (a[t].quantity || 0) }; for (const t in r) { if(DEFENSES_CONFIG[t]) c += (r[t].level || 1) * DEFENSES_CONFIG[t].power * (r[t].quantity || 0) }; return BigInt(c) };
+const calculateKingGameState = async (u, c) => {
+    const a = u.king_game_upgrades || {}, r = u.active_boosts || {}, t = u => a[u] || 0;
+    let e = 1n + BigInt(t("click") * (KING_GAME_UPGRADES.click?.value || 1)), o = 0n;
+    for (const i in KING_GAME_UPGRADES) "click" !== i && (o += BigInt(t(i)) * BigInt(KING_GAME_UPGRADES[i].cps));
+
+    const prestigeBonus = Math.pow(2, u.prestige_level || 0);
+    const l = RANKS_CONFIG.slice().reverse().find(rank => u.power >= rank.power) || RANKS_CONFIG[0];
+    const rankBonus = 1 + (l.index * 0.1);
+
+    let n = prestigeBonus * rankBonus;
     
-    .king-game-layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-        grid-template-areas:
-            "left"
-            "middle"
-            "right"
-            "bottom";
-    }
-    .kg-bottom-panel {
-        flex-direction: column;
-        gap: 20px;
-        align-items: stretch;
-    }
-    .send-coins-container, .attack-container {
-        width: 100%;
-        justify-content: center;
-    }
-}
+    const g = c.findIndex(p => p.discord_id === u.discord_id);
+    let p = null;
+    if (g === 0) { n *= 1.5; p = "King"; }
+    else if (g === 1) { n *= 2; p = "Queen"; }
+    else if (g === 2) { p = "General"; }
 
-@media (max-width: 500px) {
-    .top-bar { padding: 0 10px; height: 50px; }
-    .header-logo, #user-avatar { width: 30px; height: 30px; }
-    #user-name { display: none; }
-    .dropdown-content { top: 45px; }
-    .key-container { flex-direction: column; gap: 10px; }
-}
+    let d = e * BigInt(Math.round(n));
+    let i = o * BigInt(Math.round(n));
+
+    if (r.x2_coins && new Date(r.x2_coins) > new Date) {
+        d *= 2n;
+        i *= 2n;
+    }
+
+    return {
+        clickValue: d.toString(),
+        cps: i.toString(),
+        power: u.power.toString(),
+        rank: l.name,
+        title: p,
+        totalBonus: n
+    };
+};
+const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
+
+exports.handler = async function (event, context) {
+    const cookies = event.headers?.cookie ? cookie.parse(event.headers.cookie) : {};
+    const token = cookies.auth_token;
+    if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Not authenticated' }) };
+    let decoded;
+    try { decoded = jwt.verify(token, process.env.JWT_SECRET); } 
+    catch (e) { return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) }; }
+    const { id } = decoded;
+
+    if (event.httpMethod === 'GET') {
+        const action = event.queryStringParameters.action;
+        if (action === 'get_users' || action === 'get_giftable_users') {
+             try { const query = action === 'get_giftable_users' ? `SELECT u.discord_id, u.discord_username, k.expires_at FROM users u INNER JOIN keys k ON u.discord_id = k.owner_discord_id WHERE u.user_status != 'Perm' AND k.key_type = 'temp' AND k.expires_at > NOW() ORDER BY u.discord_username` : 'SELECT discord_id, discord_username, power FROM users ORDER BY discord_username'; const { rows } = await db.query(query); return { statusCode: 200, body: JSON.stringify(rows) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
+        }
+        if (action === 'get_attack_history') {
+            try {
+                const query = `
+                    SELECT a.*, attacker.discord_username as attacker_name, defender.discord_username as defender_name
+                    FROM attack_logs a
+                    LEFT JOIN users attacker ON a.attacker_id = attacker.discord_id
+                    LEFT JOIN users defender ON a.defender_id = defender.discord_id
+                    WHERE a.attacker_id = $1 OR a.defender_id = $1
+                    ORDER BY a.timestamp DESC LIMIT 30`;
+                const { rows } = await db.query(query, [id]);
+                return { statusCode: 200, body: JSON.stringify(rows) };
+            } catch (error) {
+                console.error('Error fetching attack history:', error);
+                return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch attack history.' }) };
+            }
+        }
+        return { statusCode: 405, body: 'Method Not Allowed' };
+    }
+
+    if (event.httpMethod === 'POST') {
+        let has_active_key = false;
+        try {
+            const { rows } = await db.query('SELECT 1 FROM keys WHERE owner_discord_id = $1 AND (LOWER(key_type) = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]);
+            if (rows.length > 0) {
+                has_active_key = true;
+            }
+        } catch (keyError) {
+            console.error("Key validation error:", keyError);
+            return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred during key validation.' }) };
+        }
+        
+        const body = JSON.parse(event.body);
+        const client = await db.getClient();
+        try {
+            await client.query('BEGIN');
+
+            if (body.action === 'get_leaderboard') {
+                let sortByField = 'power';
+                let sortOrder = 'DESC';
+                if(body.sortBy === 'coins') sortByField = 'king_game_coins::numeric';
+                if(body.sortBy === 'prestige') sortByField = 'prestige_level';
+
+                const playersRes = await db.query(`SELECT discord_id, discord_username, power, king_game_coins::text, prestige_level FROM users ORDER BY ${sortByField} ${sortOrder} LIMIT 100`);
+                const topPowerRes = await db.query(`SELECT discord_id FROM users ORDER BY power DESC LIMIT 3`);
+                const topCoinsRes = await db.query(`SELECT discord_id FROM users ORDER BY king_game_coins::numeric DESC LIMIT 3`);
+                const topPrestigeRes = await db.query(`SELECT discord_id FROM users ORDER BY prestige_level DESC, power DESC LIMIT 3`);
+                
+                await client.query('COMMIT'); 
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        players: playersRes.rows,
+                        tops: {
+                            power: topPowerRes.rows.map(r => r.discord_id),
+                            coins: topCoinsRes.rows.map(r => r.discord_id),
+                            prestige: topPrestigeRes.rows.map(r => r.discord_id),
+                        }
+                    })
+                };
+            }
+
+            const userRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [id]);
+            if (userRes.rows.length === 0) throw new Error('User not found.');
+            let user = userRes.rows[0];
+            user.power = BigInt(user.power || '0');
+            const topPlayersRes = await client.query('SELECT discord_id, power, troops FROM users ORDER BY power DESC LIMIT 3');
+            const topPlayers = topPlayersRes.rows;
+            const now = new Date();
+            let responseData = { has_active_key };
+
+            const { rows: unreadCountRows } = await client.query('SELECT COUNT(*) FROM attack_logs WHERE defender_id = $1 AND is_read = FALSE', [id]);
+            responseData.unreadAttackCount = parseInt(unreadCountRows[0].count, 10);
+            
+            user.reward_available = false;
+            const userPosition = topPlayers.findIndex(p => p.discord_id === id);
+            const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null;
+            if (has_active_key && userPosition !== -1 && (!lastReward || (now.getTime() - lastReward.getTime()) > 22 * 3600 * 1000)) {
+                user.reward_available = true;
+            }
+            responseData.isRewardAvailable = user.reward_available;
+
+            const lastUpdate = new Date(user.last_king_game_update);
+            const secondsDiff = Math.floor((now - lastUpdate) / 1000);
+            if (secondsDiff > 0 && has_active_key) { const { cps } = await calculateKingGameState(user, topPlayers); user.king_game_coins = (BigInt(user.king_game_coins || '0') + (BigInt(secondsDiff) * BigInt(cps))).toString(); }
+            
+            const { action } = body;
+            if (action !== 'load' && action !== 'mark_history_read' && !has_active_key) {
+                throw new Error("You need an active key to perform this action.");
+            }
+
+            let upgrades = user.king_game_upgrades || {}; let active_boosts = user.active_boosts || {}; let troops = user.troops || {}; let defenses = user.defenses || {};
+            
+            const performAttack = async (attacker, defender) => {
+                const attackerTroopsBefore = deepCopy(attacker.troops); const defenderTroopsBefore = deepCopy(defender.troops); const defenderDefensesBefore = deepCopy(defender.defenses);
+                
+                let attackerPower = attacker.power; 
+                let defenderPower = defender.power; 
+                
+                const attackerPos = topPlayers.findIndex(p => p.discord_id === attacker.discord_id);
+                const defenderPos = topPlayers.findIndex(p => p.discord_id === defender.discord_id);
+                const defenderIsQueen = defenderPos === 1;
+
+                if (attackerPos === 0) attackerPower = attackerPower * 2n;
+                if (attackerPos === 2) attackerPower = attackerPower * 15n / 10n;
+
+                const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75);
+                const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
+                
+                const attackerWins = attackerRoll > defenderRoll;
+
+                const calculateLosses = (unitData, lossPercent) => { if (!unitData) return {}; for (const unitId in unitData) { const losses = Math.ceil(unitData[unitId].quantity * lossPercent); unitData[unitId].quantity -= losses; if (unitData[unitId].quantity < 0) unitData[unitId].quantity = 0; } return unitData; };
+                
+                let stolenAmount = 0n; let battleReport;
+
+                if (attackerWins) {
+                    const defenderTroopLossPercent = defenderIsQueen ? 0.25 * 0.8 : 0.25;
+                    const defenderDefenseLossPercent = defenderIsQueen ? 0.10 * 0.8 : 0.10;
+
+                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n;
+                    attacker.king_game_coins = (BigInt(attacker.king_game_coins || '0') + stolenAmount).toString();
+                    defender.king_game_coins = (BigInt(defender.king_game_coins || '0') - stolenAmount).toString();
+                    
+                    attacker.troops = calculateLosses(attacker.troops, 0.10);
+                    defender.troops = calculateLosses(defender.troops, defenderTroopLossPercent);
+                    defender.defenses = calculateLosses(defender.defenses, defenderDefenseLossPercent);
+                    battleReport = `Victory! You stole ${stolenAmount.toLocaleString('en-US')} coins.`;
+                } else {
+                    const defenderTroopLossPercent = defenderIsQueen ? 0.10 * 0.8 : 0.10;
+                    const defenderDefenseLossPercent = defenderIsQueen ? 0.05 * 0.8 : 0.05;
+
+                    for(const troopId in attacker.troops) { if(!SPECIAL_UNITS_CONFIG[troopId]) attacker.troops[troopId].quantity = 0; }
+                    defender.troops = calculateLosses(defender.troops, defenderTroopLossPercent);
+                    defender.defenses = calculateLosses(defender.defenses, defenderDefenseLossPercent);
+                    battleReport = `Total Defeat! Your regular army was wiped out.`;
+                }
+
+                const getLostUnits = (before, after) => { const losses = {}; for(const unitId in before) { const lostCount = before[unitId].quantity - (after[unitId]?.quantity || 0); if (lostCount > 0) losses[unitId] = lostCount; } return losses; };
+                const attackerLosses = getLostUnits(attackerTroopsBefore, attacker.troops);
+                const defenderLosses = { ...getLostUnits(defenderTroopsBefore, defender.troops), ...getLostUnits(defenderDefensesBefore, defender.defenses) };
+                
+                await client.query('INSERT INTO attack_logs (attacker_id, defender_id, attacker_wins, coins_stolen, attacker_losses, defender_losses) VALUES ($1, $2, $3, $4, $5, $6)', [attacker.discord_id, defender.discord_id, attackerWins, stolenAmount.toString(), JSON.stringify(attackerLosses), JSON.stringify(defenderLosses)]);
+                
+                return { battleReport, attacker, defender };
+            };
+            
+            if (action === 'mark_history_read') { await client.query('UPDATE attack_logs SET is_read = TRUE WHERE defender_id = $1 AND is_read = FALSE', [id]); responseData.unreadAttackCount = 0; }
+            else if (action === 'claim_daily_reward') { if (!user.reward_available) throw new Error("No reward available to claim."); const { title } = await calculateKingGameState(user, topPlayers); let hoursToAdd = 0; if (title === 'King') hoursToAdd = 3; else if (title === 'Queen') hoursToAdd = 2; else if (title === 'General') hoursToAdd = 1; else throw new Error("You are no longer in the Top 3 to claim this reward."); if (hoursToAdd > 0) { const recipientId = body.recipientId; const isGifting = recipientId && user.user_status === 'Perm'; const targetId = isGifting ? recipientId : id; const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [targetId]); if (keyRows.length > 0) { const newExpiresAt = new Date(new Date(keyRows[0].expires_at).getTime() + hoursToAdd * 3600 * 1000); await client.query('UPDATE keys SET expires_at = $1 WHERE id = $2', [newExpiresAt, keyRows[0].id]); user.last_daily_reward_at = now.toISOString(); user.reward_available = false; responseData.message = isGifting ? `Successfully gifted ${hoursToAdd} hours.` : `Successfully claimed ${hoursToAdd} hours.`; } else { throw new Error(isGifting ? "The selected player does not have an active temporary key." : "You do not have an active temporary key to extend."); } } responseData.isRewardAvailable = false; }
+            else if (action === 'send_coins') { const { amount } = body; const amountBigInt = BigInt(amount); if (!body.recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount."); if (body.recipientId === id) throw new Error("You cannot send coins to yourself."); if (BigInt(user.king_game_coins || '0') < amountBigInt) throw new Error("Not enough coins to send."); const fee = amountBigInt * 30n / 100n; const netAmount = amountBigInt - fee; user.king_game_coins = (BigInt(user.king_game_coins || '0') - amountBigInt).toString(); await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [netAmount.toString(), body.recipientId]); }
+            else if (action === 'click') { const { clickValue } = await calculateKingGameState(user, topPlayers); user.king_game_coins = (BigInt(user.king_game_coins || '0') + BigInt(clickValue)).toString(); }
+            else if (action === 'buy_upgrade') { const { upgradeId } = body; if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.'); const level = upgrades[upgradeId] || 0; const cost = getUpgradeCost(upgradeId, level, active_boosts); if (BigInt(user.king_game_coins || '0') < cost) throw new Error("Not enough coins."); user.king_game_coins = (BigInt(user.king_game_coins || '0') - cost).toString(); upgrades[upgradeId] = level + 1; }
+            else if (action === 'prestige') { if ((user.prestige_level || 0) >= MAX_PRESTIGE_LEVEL) throw new Error("You have reached the maximum prestige level."); let canPrestige = true; for (const id in KING_GAME_UPGRADES) { if ((upgrades[id] || 0) < PRESTIGE_REQUIREMENT_LEVEL) { canPrestige = false; break; } } if (!canPrestige) throw new Error(`You must have all upgrades at level ${PRESTIGE_REQUIREMENT_LEVEL} to prestige.`); user.gems = (user.gems || 0) + 2; user.prestige_level = (user.prestige_level || 0) + 1; user.king_game_coins = '0'; upgrades = {}; active_boosts = {}; }
+            else if (action === 'buy_boost') { const { boostId } = body; const boost = GEM_BOOSTS[boostId]; if (!boost) throw new Error('Invalid boost.'); if ((user.gems || 0) < boost.cost) throw new Error('Not enough gems.'); if (active_boosts[boostId] && new Date(active_boosts[boostId]) > now) throw new Error('This boost is already active.'); user.gems -= boost.cost; active_boosts[boostId] = new Date(now.getTime() + boost.duration_minutes * 60000).toISOString(); }
+            else if (action === 'buy_time') { const hours = parseInt(body.hours, 10); if (!hours || hours <= 0 || hours > 168) throw new Error("Invalid number of hours."); const totalCost = COST_PER_HOUR * BigInt(hours); if (BigInt(user.king_game_coins || '0') < totalCost) throw new Error("Not enough coins to buy time."); const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [id]); if (keyRows.length === 0) throw new Error("You do not have an active temporary key to extend."); user.king_game_coins = (BigInt(user.king_game_coins || '0') - totalCost).toString(); const newExpiresAt = new Date(new Date(keyRows[0].expires_at).getTime() + hours * 3600000); await client.query('UPDATE keys SET expires_at = $1 WHERE id = $2', [newExpiresAt, keyRows[0].id]); responseData.newExpiresAt = newExpiresAt.toISOString(); }
+            else if (action === 'buy_troop') { const { unitId, quantity } = body; if (!ALL_TROOPS_CONFIG[unitId] || !quantity || quantity <= 0) throw new Error('Invalid unit or quantity.'); const myTitle = (await calculateKingGameState(user, topPlayers)).title; if (unitId === 'royal_guard' && myTitle !== 'King') throw new Error('Only the King can recruit Royal Guards.'); if (unitId === 'queens_guard' && myTitle !== 'Queen') throw new Error('Only the Queen can recruit Queen\'s Guards.'); if (unitId === 'elite_soldier' && !['King', 'Queen', 'General'].includes(myTitle)) throw new Error('Only Top 3 players can recruit Elite Soldiers.'); if (myTitle === 'King' && unitId === 'queens_guard') throw new Error('The King cannot recruit Queen\'s Guards.'); let totalCost = 0n; const currentQuantity = troops[unitId]?.quantity || 0; for(let i=0; i<quantity; i++){ totalCost += getUnitCost(unitId, currentQuantity + i, true); } if (BigInt(user.king_game_coins || '0') < totalCost) throw new Error('Not enough coins.'); user.king_game_coins = (BigInt(user.king_game_coins || '0') - totalCost).toString(); if (!troops[unitId]) troops[unitId] = { quantity: 0, level: 1 }; troops[unitId].quantity += quantity; user.troops = troops; }
+            else if (action === 'buy_defense') { const { unitId, quantity } = body; const config = DEFENSES_CONFIG[unitId]; const unitData = defenses; if (!config || !quantity || quantity <= 0) throw new Error('Invalid unit or quantity.'); let totalCost = 0n; const currentQuantity = unitData[unitId]?.quantity || 0; for(let i=0; i<quantity; i++){ totalCost += getUnitCost(unitId, currentQuantity + i, false); } if (BigInt(user.king_game_coins || '0') < totalCost) throw new Error('Not enough coins.'); user.king_game_coins = (BigInt(user.king_game_coins || '0') - totalCost).toString(); if (!unitData[unitId]) unitData[unitId] = { quantity: 0, level: 1 }; unitData[unitId].quantity += quantity; user.defenses = defenses; }
+            else if (action === 'attack_player' || action === 'revenge_attack') {
+                let targetId;
+                if (action === 'revenge_attack') {
+                    const { logId } = body;
+                    if (!logId) throw new Error('Attack log ID is missing for revenge.');
+                    const logRes = await client.query('SELECT * FROM attack_logs WHERE id = $1', [logId]);
+                    if (logRes.rows.length === 0) throw new Error('Attack log not found.');
+                    const log = logRes.rows[0];
+                    if (log.defender_id !== id) throw new Error('This is not your battle to revenge.');
+                    if (log.revenge_used) throw new Error('Revenge has already been used for this attack.');
+                    targetId = log.attacker_id;
+                    await client.query('UPDATE attack_logs SET revenge_used = TRUE WHERE id = $1', [logId]);
+                } else {
+                    targetId = body.targetId;
+                    if (!targetId || targetId === id) throw new Error('Invalid target.');
+                    const targetHasActiveKeyRes = await client.query('SELECT 1 FROM keys WHERE owner_discord_id = $1 AND (LOWER(key_type) = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [targetId]);
+                    if (targetHasActiveKeyRes.rows.length === 0) {
+                        throw new Error("You cannot attack a player whose key is expired.");
+                    }
+                    const lastAttacks = user.last_attack_timestamps || {}; if (lastAttacks[targetId] && (now.getTime() - new Date(lastAttacks[targetId]).getTime()) < 24 * 3600 * 1000) throw new Error('You can only attack this player once every 24 hours.');
+                }
+                const oldTop3 = topPlayers.map(p => p.discord_id);
+                
+                const targetRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [targetId]);
+                if (targetRes.rows.length === 0) throw new Error('Target player not found.');
+                let targetUser = targetRes.rows[0]; targetUser.power = BigInt(targetUser.power || '0');
+                const { battleReport, attacker, defender } = await performAttack(user, targetUser);
+                user = attacker; targetUser = defender; responseData.battleReport = battleReport;
+                user.power = calculatePower(user); targetUser.power = calculatePower(targetUser);
+                await client.query('UPDATE users SET king_game_coins = $1, troops = $2, defenses = $3, power = $4, last_king_game_update = $6 WHERE discord_id = $5', [targetUser.king_game_coins.toString(), JSON.stringify(targetUser.troops), JSON.stringify(targetUser.defenses), targetUser.power.toString(), targetId, now.toISOString()]);
+                if (action === 'attack_player') { const lastAttacks = user.last_attack_timestamps || {}; lastAttacks[targetId] = now.toISOString(); user.last_attack_timestamps = lastAttacks; }
+                const newTopPlayersRes = await client.query('SELECT discord_id, troops FROM users ORDER BY power DESC LIMIT 3'); const newTop3 = newTopPlayersRes.rows.map(p => p.discord_id);
+                for (let i = 0; i < 3; i++) { const oldRulerId = oldTop3[i]; const newRulerId = newTop3[i]; if (oldRulerId && newRulerId && oldRulerId !== newRulerId) { const specialUnits = { 0: 'royal_guard', 1: 'queens_guard', 2: 'elite_soldier' }; const unitToTransfer = specialUnits[i]; const oldRulerRes = await client.query('SELECT troops FROM users WHERE discord_id = $1 FOR UPDATE', [oldRulerId]); let oldRulerTroops = oldRulerRes.rows[0].troops || {}; const newRulerRes = await client.query('SELECT troops FROM users WHERE discord_id = $1 FOR UPDATE', [newRulerId]); let newRulerTroops = newRulerRes.rows[0].troops || {}; const quantityToTransfer = oldRulerTroops[unitToTransfer]?.quantity || 0; if (quantityToTransfer > 0) { if (!newRulerTroops[unitToTransfer]) newRulerTroops[unitToTransfer] = { quantity: 0, level: 1 }; newRulerTroops[unitToTransfer].quantity += quantityToTransfer; oldRulerTroops[unitToTransfer].quantity = 0; await client.query('UPDATE users SET troops = $1 WHERE discord_id = $2', [JSON.stringify(oldRulerTroops), oldRulerId]); await client.query('UPDATE users SET troops = $1 WHERE discord_id = $2', [JSON.stringify(newRulerTroops), newRulerId]); } } }
+            }
+            
+            user.power = calculatePower(user);
+            await client.query( `UPDATE users SET king_game_coins = $1, king_game_upgrades = $2, last_king_game_update = $3, prestige_level = $4, gems = $5, active_boosts = $6, power = $7, troops = $8, defenses = $9, last_attack_timestamps = $10, last_daily_reward_at = $12, reward_available = $13 WHERE discord_id = $11`, [user.king_game_coins.toString(), JSON.stringify(upgrades), now.toISOString(), user.prestige_level || 0, user.gems || 0, JSON.stringify(active_boosts), user.power.toString(), JSON.stringify(troops), JSON.stringify(defenses), JSON.stringify(user.last_attack_timestamps || {}), id, user.last_daily_reward_at, user.reward_available] );
+            
+            await client.query('COMMIT');
+
+            const finalGameState = await calculateKingGameState(user, (await db.query('SELECT discord_id, power FROM users ORDER BY power DESC LIMIT 3')).rows);
+            const finalResponse = {
+                coins: user.king_game_coins.toString(), upgrades: upgrades, prestige_level: user.prestige_level || 0, gems: user.gems || 0,
+                troops: troops, defenses: defenses, active_boosts: Object.fromEntries(Object.entries(active_boosts).filter(([_,exp]) => new Date(exp) > now)),
+                power: finalGameState.power, rank: finalGameState.rank, cps: finalGameState.cps, clickValue: finalGameState.clickValue, title: finalGameState.title,
+                totalBonus: finalGameState.totalBonus,
+                ...responseData
+            };
+            return { statusCode: 200, body: JSON.stringify(finalResponse) };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            return { statusCode: 400, body: JSON.stringify({ error: error.message || 'An internal server error occurred.' }) };
+        } finally {
+            client.release();
+        }
+    }
+    return { statusCode: 405, body: 'Method Not Allowed' };
+};
