@@ -1,9 +1,14 @@
-# netlify.toml (Version Complète et Corrigée)
+# ✅ netlify.toml — version corrigée
 
 [build]
   functions = "netlify/functions"
+  publish = "public"   # <-- remplace "public" si ton dossier build est différent (ex: "dist" ou "build")
 
-# Redirige les appels d'API vers les fonctions serverless
+[functions]
+  node_bundler = "esbuild"   # ✅ évite l’erreur d’upload sur gros fichiers
+  included_files = ["netlify/functions/db.js"]  # ✅ force l’inclusion de ton fichier DB local
+
+# Redirections API
 [[redirects]]
   from = "/auth/discord"
   to = "/.netlify/functions/auth-discord"
@@ -29,7 +34,6 @@
   to = "/.netlify/functions/api-generate-key"
   status = 200
 
-# NOUVELLE REDIRECTION AJOUTÉE ICI
 [[redirects]]
   from = "/api/earn-time"
   to = "/.netlify/functions/api-earn-time"
@@ -50,10 +54,7 @@
   to = "/.netlify/functions/api-send-suggestion"
   status = 200
 
-# ## CORRECTION CRUCIALE CI-DESSOUS ##
-# Règle "catch-all" pour les applications à page unique (SPA).
-# Ceci redirige toutes les URLs non trouvées (comme /get-key) vers index.html,
-# permettant au JavaScript de gérer l'affichage de la bonne page.
+# Règle pour SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"
