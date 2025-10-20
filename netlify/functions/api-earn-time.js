@@ -66,6 +66,27 @@ exports.handler = async function (event, context) {
         const client = await db.getClient();
         try {
             await client.query('BEGIN');
+
+            if (body.action === 'get_leaderboard') {
+                const playersRes = await db.query(`SELECT discord_id, discord_username, power, king_game_coins::text, prestige_level FROM users ORDER BY power DESC LIMIT 100`);
+                const topPowerRes = await db.query(`SELECT discord_id FROM users ORDER BY power DESC LIMIT 3`);
+                const topCoinsRes = await db.query(`SELECT discord_id FROM users ORDER BY king_game_coins::numeric DESC LIMIT 3`);
+                const topPrestigeRes = await db.query(`SELECT discord_id FROM users ORDER BY prestige_level DESC, power DESC LIMIT 3`);
+                
+                await client.query('COMMIT'); 
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        players: playersRes.rows,
+                        tops: {
+                            power: topPowerRes.rows.map(r => r.discord_id),
+                            coins: topCoinsRes.rows.map(r => r.discord_id),
+                            prestige: topPrestigeRes.rows.map(r => r.discord_id),
+                        }
+                    })
+                };
+            }
+
             const userRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [id]);
             if (userRes.rows.length === 0) throw new Error('User not found.');
             let user = userRes.rows[0];
@@ -78,7 +99,7 @@ exports.handler = async function (event, context) {
             const { rows: unreadCountRows } = await client.query('SELECT COUNT(*) FROM attack_logs WHERE defender_id = $1 AND is_read = FALSE', [id]);
             responseData.unreadAttackCount = parseInt(unreadCountRows[0].count, 10);
             
-            user.reward_available = false; // FIX: Reset reward availability flag at the start
+            user.reward_available = false;
             const userPosition = topPlayers.findIndex(p => p.discord_id === id);
             const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null;
             if (userPosition !== -1 && (!lastReward || (now.getTime() - lastReward.getTime()) > 22 * 3600 * 1000)) {
@@ -94,21 +115,59 @@ exports.handler = async function (event, context) {
             
             const performAttack = async (attacker, defender) => {
                 const attackerTroopsBefore = deepCopy(attacker.troops); const defenderTroopsBefore = deepCopy(defender.troops); const defenderDefensesBefore = deepCopy(defender.defenses);
-                let attackerPower = attacker.power; let defenderPower = defender.power; const attackerPos = topPlayers.findIndex(p => p.discord_id === attacker.discord_id); const defenderPos = topPlayers.findIndex(p => p.discord_id === defender.discord_id); if (attackerPos === 0) attackerPower = attackerPower * 2n; if (attackerPos === 2) attackerPower = attackerPower * 15n / 10n; if (defenderPos === 0) defenderPower = defenderPower * 2n; if (defenderPos === 2) defenderPower = defenderPower * 15n / 10n;
-                const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75); const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
+                
+                let attackerPower = attacker.power; 
+                let defenderPower = defender.power; 
+                
+                const attackerPos = topPlayers.findIndex(p => p.discord_id === attacker.discord_id);
+                const defenderPos = topPlayers.findIndex(p => p.discord_id === defender.discord_id);
+                const defenderIsQueen = defenderPos === 1;
+
+                if (attackerPos === 0) attackerPower = attackerPower * 15n / 10n; // 50% bonus for king
+                if (attackerPos === 2) attackerPower = attackerPower * 15n / 10n; // 50% bonus for general
+
+                const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75);
+                const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
+                
                 const attackerWins = attackerRoll > defenderRoll;
+
                 const calculateLosses = (unitData, lossPercent) => { if (!unitData) return {}; for (const unitId in unitData) { const losses = Math.ceil(unitData[unitId].quantity * lossPercent); unitData[unitId].quantity -= losses; if (unitData[unitId].quantity < 0) unitData[unitId].quantity = 0; } return unitData; };
+                
                 let stolenAmount = 0n; let battleReport;
-                if (attackerWins) { stolenAmount = BigInt(defender.king_game_coins || '0') / 10n; attacker.king_game_coins = (BigInt(attacker.king_game_coins || '0') + stolenAmount).toString(); defender.king_game_coins = (BigInt(defender.king_game_coins || '0') - stolenAmount).toString(); attacker.troops = calculateLosses(attacker.troops, 0.10); defender.troops = calculateLosses(defender.troops, 0.25); defender.defenses = calculateLosses(defender.defenses, 0.10); battleReport = `Victory! You stole ${stolenAmount.toLocaleString('en-US')} coins.`; } else { for(const troopId in attacker.troops) { if(!SPECIAL_UNITS_CONFIG[troopId]) attacker.troops[troopId].quantity = 0; } defender.troops = calculateLosses(defender.troops, 0.10); defender.defenses = calculateLosses(defender.defenses, 0.05); battleReport = `Total Defeat! Your regular army was wiped out.`; }
+
+                if (attackerWins) {
+                    const defenderTroopLossPercent = defenderIsQueen ? 0.25 * 0.8 : 0.25;
+                    const defenderDefenseLossPercent = defenderIsQueen ? 0.10 * 0.8 : 0.10;
+
+                    stolenAmount = BigInt(defender.king_game_coins || '0') / 10n;
+                    attacker.king_game_coins = (BigInt(attacker.king_game_coins || '0') + stolenAmount).toString();
+                    defender.king_game_coins = (BigInt(defender.king_game_coins || '0') - stolenAmount).toString();
+                    
+                    attacker.troops = calculateLosses(attacker.troops, 0.10);
+                    defender.troops = calculateLosses(defender.troops, defenderTroopLossPercent);
+                    defender.defenses = calculateLosses(defender.defenses, defenderDefenseLossPercent);
+                    battleReport = `Victory! You stole ${stolenAmount.toLocaleString('en-US')} coins.`;
+                } else {
+                    const defenderTroopLossPercent = defenderIsQueen ? 0.10 * 0.8 : 0.10;
+                    const defenderDefenseLossPercent = defenderIsQueen ? 0.05 * 0.8 : 0.05;
+
+                    for(const troopId in attacker.troops) { if(!SPECIAL_UNITS_CONFIG[troopId]) attacker.troops[troopId].quantity = 0; }
+                    defender.troops = calculateLosses(defender.troops, defenderTroopLossPercent);
+                    defender.defenses = calculateLosses(defender.defenses, defenderDefenseLossPercent);
+                    battleReport = `Total Defeat! Your regular army was wiped out.`;
+                }
+
                 const getLostUnits = (before, after) => { const losses = {}; for(const unitId in before) { const lostCount = before[unitId].quantity - (after[unitId]?.quantity || 0); if (lostCount > 0) losses[unitId] = lostCount; } return losses; };
-                const attackerLosses = getLostUnits(attackerTroopsBefore, attacker.troops); const defenderLosses = { ...getLostUnits(defenderTroopsBefore, defender.troops), ...getLostUnits(defenderDefensesBefore, defender.defenses) };
+                const attackerLosses = getLostUnits(attackerTroopsBefore, attacker.troops);
+                const defenderLosses = { ...getLostUnits(defenderTroopsBefore, defender.troops), ...getLostUnits(defenderDefensesBefore, defender.defenses) };
+                
                 await client.query('INSERT INTO attack_logs (attacker_id, defender_id, attacker_wins, coins_stolen, attacker_losses, defender_losses) VALUES ($1, $2, $3, $4, $5, $6)', [attacker.discord_id, defender.discord_id, attackerWins, stolenAmount.toString(), JSON.stringify(attackerLosses), JSON.stringify(defenderLosses)]);
+                
                 return { battleReport, attacker, defender };
             };
             
             if (action === 'mark_history_read') { await client.query('UPDATE attack_logs SET is_read = TRUE WHERE defender_id = $1 AND is_read = FALSE', [id]); responseData.unreadAttackCount = 0; }
             else if (action === 'claim_daily_reward') { if (!user.reward_available) throw new Error("No reward available to claim."); const { title } = await calculateKingGameState(user, topPlayers); let hoursToAdd = 0; if (title === 'King') hoursToAdd = 3; else if (title === 'Queen') hoursToAdd = 2; else if (title === 'General') hoursToAdd = 1; else throw new Error("You are no longer in the Top 3 to claim this reward."); if (hoursToAdd > 0) { const recipientId = body.recipientId; const isGifting = recipientId && user.user_status === 'Perm'; const targetId = isGifting ? recipientId : id; const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [targetId]); if (keyRows.length > 0) { const newExpiresAt = new Date(new Date(keyRows[0].expires_at).getTime() + hoursToAdd * 3600 * 1000); await client.query('UPDATE keys SET expires_at = $1 WHERE id = $2', [newExpiresAt, keyRows[0].id]); user.last_daily_reward_at = now.toISOString(); user.reward_available = false; responseData.message = isGifting ? `Successfully gifted ${hoursToAdd} hours.` : `Successfully claimed ${hoursToAdd} hours.`; } else { throw new Error(isGifting ? "The selected player does not have an active temporary key." : "You do not have an active temporary key to extend."); } } responseData.isRewardAvailable = false; }
-            else if (action === 'get_leaderboard') { await client.query('ROLLBACK'); const sortBy = body.sortBy || 'power'; let orderByClause; switch(sortBy) { case 'coins': orderByClause = 'king_game_coins::numeric DESC'; break; case 'prestige': orderByClause = 'prestige_level DESC, power DESC'; break; default: orderByClause = 'power DESC'; } const leaderboardRes = await db.query(`SELECT discord_username, power, king_game_coins::text, prestige_level FROM users ORDER BY ${orderByClause} LIMIT 50`); return { statusCode: 200, body: JSON.stringify(leaderboardRes.rows) }; }
             else if (action === 'send_coins') { const { amount } = body; const amountBigInt = BigInt(amount); if (!body.recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount."); if (body.recipientId === id) throw new Error("You cannot send coins to yourself."); if (BigInt(user.king_game_coins || '0') < amountBigInt) throw new Error("Not enough coins to send."); const fee = amountBigInt * 30n / 100n; const netAmount = amountBigInt - fee; user.king_game_coins = (BigInt(user.king_game_coins || '0') - amountBigInt).toString(); await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [netAmount.toString(), body.recipientId]); }
             else if (action === 'click') { const { clickValue } = await calculateKingGameState(user, topPlayers); user.king_game_coins = (BigInt(user.king_game_coins || '0') + BigInt(clickValue)).toString(); }
             else if (action === 'buy_upgrade') { const { upgradeId } = body; if (!KING_GAME_UPGRADES[upgradeId]) throw new Error('Invalid upgrade.'); const level = upgrades[upgradeId] || 0; const cost = getUpgradeCost(upgradeId, level, active_boosts); if (BigInt(user.king_game_coins || '0') < cost) throw new Error("Not enough coins."); user.king_game_coins = (BigInt(user.king_game_coins || '0') - cost).toString(); upgrades[upgradeId] = level + 1; }
@@ -135,7 +194,7 @@ exports.handler = async function (event, context) {
                     const lastAttacks = user.last_attack_timestamps || {}; if (lastAttacks[targetId] && (now.getTime() - new Date(lastAttacks[targetId]).getTime()) < 24 * 3600 * 1000) throw new Error('You can only attack this player once every 24 hours.');
                 }
                 const oldTop3 = topPlayers.map(p => p.discord_id);
-                if (topPlayers[1] && targetId === topPlayers[1].discord_id) throw new Error('The Queen is protected and cannot be attacked.');
+                
                 const targetRes = await client.query('SELECT *, king_game_coins::text FROM users WHERE discord_id = $1 FOR UPDATE', [targetId]);
                 if (targetRes.rows.length === 0) throw new Error('Target player not found.');
                 let targetUser = targetRes.rows[0]; targetUser.power = BigInt(targetUser.power || '0');
