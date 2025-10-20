@@ -33,16 +33,22 @@ exports.handler = async function (event, context) {
     if (event.httpMethod === 'GET') {
         const action = event.queryStringParameters.action;
         if (action === 'get_users') {
-             try {
-                // MISE À JOUR : On joint la table 'keys' pour récupérer le temps restant
+             try { const { rows } = await db.query('SELECT discord_id, discord_username, power FROM users ORDER BY discord_username'); return { statusCode: 200, body: JSON.stringify(rows) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
+        }
+        // NOUVELLE ACTION
+        if (action === 'get_giftable_users') {
+            try {
                 const { rows } = await db.query(`
-                    SELECT u.discord_id, u.discord_username, u.power, k.expires_at 
+                    SELECT u.discord_id, u.discord_username, k.expires_at 
                     FROM users u 
-                    LEFT JOIN keys k ON u.discord_id = k.owner_discord_id AND k.key_type = 'temp' AND k.expires_at > NOW() 
+                    INNER JOIN keys k ON u.discord_id = k.owner_discord_id 
+                    WHERE u.user_status != 'Perm' AND k.key_type = 'temp' AND k.expires_at > NOW()
                     ORDER BY u.discord_username
                 `);
                 return { statusCode: 200, body: JSON.stringify(rows) };
-            } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
+            } catch (error) {
+                return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch giftable user list.' }) };
+            }
         }
         try { const { rows } = await db.query('SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]); if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) }; return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) }; }
     }
@@ -59,47 +65,31 @@ exports.handler = async function (event, context) {
             const topPlayers = topPlayersRes.rows;
             const now = new Date();
             let responseData = {};
-            
-            // MODIFICATION: On ne donne plus la récompense automatiquement. On vérifie seulement si elle est disponible.
             const userPosition = topPlayers.findIndex(p => p.discord_id === id);
-            if (userPosition !== -1) {
-                const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null;
-                if (!lastReward || (now.getTime() - lastReward.getTime()) > 22 * 60 * 60 * 1000) {
-                    responseData.isRewardAvailable = true;
-                }
-            }
-
+            if (userPosition !== -1) { const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null; if (!lastReward || (now.getTime() - lastReward.getTime()) > 22 * 3600 * 1000) { responseData.isRewardAvailable = true; } }
             const lastUpdate = new Date(user.last_king_game_update);
             const secondsDiff = Math.floor((now - lastUpdate) / 1000);
             if (secondsDiff > 0) { const { cps } = await calculateKingGameState(user, topPlayers); user.king_game_coins = (BigInt(user.king_game_coins) + (BigInt(secondsDiff) * BigInt(cps))).toString(); }
             const { action } = body;
             let upgrades = user.king_game_upgrades || {}; let active_boosts = user.active_boosts || {}; let troops = user.troops || {}; let defenses = user.defenses || {};
-            
-            // NOUVELLE ACTION: Réclamer la récompense
             if (action === 'claim_daily_reward') {
-                if (!responseData.isRewardAvailable) throw new Error("No reward available to claim.");
+                if (userPosition === -1) throw new Error("You are not in the Top 3 to claim a reward.");
+                const lastReward = user.last_daily_reward_at ? new Date(user.last_daily_reward_at) : null;
+                if (lastReward && (now.getTime() - lastReward.getTime()) < 22 * 60 * 60 * 1000) throw new Error("You have already claimed your daily reward.");
                 
-                let hoursToAdd = 0;
-                if (userPosition === 0) hoursToAdd = 3;
-                else if (userPosition === 1) hoursToAdd = 2;
-                else if (userPosition === 2) hoursToAdd = 1;
+                let hoursToAdd = 0; if (userPosition === 0) hoursToAdd = 3; else if (userPosition === 1) hoursToAdd = 2; else if (userPosition === 2) hoursToAdd = 1;
 
                 if (hoursToAdd > 0) {
-                    const recipientId = body.recipientId;
-                    const isGifting = recipientId && user.user_status === 'Perm';
-                    const targetId = isGifting ? recipientId : id;
-
+                    const recipientId = body.recipientId; const isGifting = recipientId && user.user_status === 'Perm'; const targetId = isGifting ? recipientId : id;
                     const { rows: keyRows } = await client.query('SELECT id, expires_at FROM keys WHERE owner_discord_id = $1 AND key_type = \'temp\' AND expires_at > NOW() ORDER BY expires_at DESC LIMIT 1', [targetId]);
                     if (keyRows.length > 0) {
                         const newExpiresAt = new Date(new Date(keyRows[0].expires_at).getTime() + hoursToAdd * 3600 * 1000);
                         await client.query('UPDATE keys SET expires_at = $1 WHERE id = $2', [newExpiresAt, keyRows[0].id]);
-                        user.last_daily_reward_at = now.toISOString(); // Le donateur met à jour son propre cooldown
+                        user.last_daily_reward_at = now.toISOString();
                         responseData.message = isGifting ? `Successfully gifted ${hoursToAdd} hours.` : `Successfully claimed ${hoursToAdd} hours.`;
-                    } else {
-                        throw new Error(isGifting ? "The selected player does not have an active temporary key." : "You do not have an active temporary key to extend.");
-                    }
+                    } else { throw new Error(isGifting ? "The selected player does not have an active temporary key." : "You do not have an active temporary key to extend."); }
                 }
-                responseData.isRewardAvailable = false; // La récompense a été réclamée
+                responseData.isRewardAvailable = false;
             }
             else if (action === 'get_leaderboard') { const sortBy = body.sortBy || 'power'; let orderByClause; switch(sortBy) { case 'coins': orderByClause = 'king_game_coins::numeric DESC'; break; case 'prestige': orderByClause = 'prestige_level DESC, power DESC'; break; default: orderByClause = 'power DESC'; } const leaderboardRes = await client.query(`SELECT discord_username, power, king_game_coins::text, prestige_level FROM users ORDER BY ${orderByClause} LIMIT 50`); await client.query('ROLLBACK'); return { statusCode: 200, body: JSON.stringify(leaderboardRes.rows) }; }
             else if (action === 'send_coins') { const { recipientId, amount } = body; const amountBigInt = BigInt(amount); if (!recipientId || amountBigInt <= 0) throw new Error("Invalid recipient or amount."); if (recipientId === id) throw new Error("You cannot send coins to yourself."); if (BigInt(user.king_game_coins) < amountBigInt) throw new Error("Not enough coins to send."); user.king_game_coins = (BigInt(user.king_game_coins) - amountBigInt).toString(); await client.query("UPDATE users SET king_game_coins = king_game_coins::numeric + $1 WHERE discord_id = $2", [amount, recipientId]); }
