@@ -37,7 +37,27 @@ exports.handler = async function (event, context) {
              try { const query = action === 'get_giftable_users' ? `SELECT u.discord_id, u.discord_username, k.expires_at FROM users u INNER JOIN keys k ON u.discord_id = k.owner_discord_id WHERE u.user_status != 'Perm' AND k.key_type = 'temp' AND k.expires_at > NOW() ORDER BY u.discord_username` : 'SELECT discord_id, discord_username, power FROM users ORDER BY discord_username'; const { rows } = await db.query(query); return { statusCode: 200, body: JSON.stringify(rows) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch user list.' }) }; }
         }
         if (action === 'get_attack_history') {
-            try { const { rows } = await db.query(`SELECT a.*, u.discord_username as attacker_name FROM attack_logs a JOIN users u ON a.attacker_id = u.discord_id WHERE a.defender_id = $1 ORDER BY a.timestamp DESC LIMIT 30`, [id]); return { statusCode: 200, body: JSON.stringify(rows) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch attack history.' }) }; }
+            try {
+                const query = `
+                    SELECT
+                      a.*,
+                      attacker.discord_username as attacker_name,
+                      defender.discord_username as defender_name
+                    FROM
+                      attack_logs a
+                    LEFT JOIN users attacker ON a.attacker_id = attacker.discord_id
+                    LEFT JOIN users defender ON a.defender_id = defender.discord_id
+                    WHERE
+                      a.attacker_id = $1 OR a.defender_id = $1
+                    ORDER BY
+                      a.timestamp DESC
+                    LIMIT 30`;
+                const { rows } = await db.query(query, [id]);
+                return { statusCode: 200, body: JSON.stringify(rows) };
+            } catch (error) {
+                console.error('Error fetching attack history:', error);
+                return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch attack history.' }) };
+            }
         }
         try { const { rows } = await db.query('SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]); if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) }; return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) }; }
     }
