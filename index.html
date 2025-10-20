@@ -121,27 +121,23 @@
             <button class="modal-close-btn">&times;</button>
             <h2>Top 3 Rank Privileges</h2>
             <ul class="privileges-list">
-                <li><strong>King (Rank 1):</strong>
-                    <ul>
-                        <li>+3 Hours of free key time daily</li>
-                        <li>+100% Power bonus in battles</li>
-                        <li>x1.5 Coin bonus from all sources</li>
-                    </ul>
-                </li>
-                <li><strong>Queen (Rank 2):</strong>
-                    <ul>
-                        <li>+2 Hours of free key time daily</li>
-                        <li>Cannot be attacked</li>
-                        <li>x2 Coin bonus from all sources</li>
-                    </ul>
-                </li>
-                <li><strong>General (Rank 3):</strong>
-                    <ul>
-                        <li>+1 Hour of free key time daily</li>
-                        <li>+50% Power bonus in battles</li>
-                    </ul>
-                </li>
+                <li id="privilege-king"><strong>King (Rank 1):</strong><ul><li>+3 Hours of free key time daily</li><li>+100% Power bonus in battles</li><li>x1.5 Coin bonus from all sources</li><li>Can recruit Royal Guards</li></ul></li>
+                <li id="privilege-queen"><strong>Queen (Rank 2):</strong><ul><li>+2 Hours of free key time daily</li><li>Cannot be attacked</li><li>x2 Coin bonus from all sources</li><li>Can recruit Queen's Guards</li></ul></li>
+                <li id="privilege-general"><strong>General (Rank 3):</strong><ul><li>+1 Hour of free key time daily</li><li>+50% Power bonus in battles</li><li>Can recruit Elite Soldiers</li></ul></li>
             </ul>
+        </div>
+    </div>
+
+    <div id="gifting-modal" class="modal-overlay hidden">
+        <div class="modal-content card-box" style="max-width: 500px;">
+            <button class="modal-close-btn">&times;</button>
+            <h2>Gift Your Daily Reward</h2>
+            <p>As a 'Perm' user, you can gift your daily time reward to another player with a temporary key.</p>
+            <div class="user-select-wrapper gift-search">
+                <input type="text" id="gift-recipient-search" placeholder="Search for a player...">
+                <div id="gift-recipient-dropdown" class="user-dropdown-content"></div>
+            </div>
+            <button id="gift-reward-btn" class="discord-btn" disabled>Gift Reward</button>
         </div>
     </div>
 
