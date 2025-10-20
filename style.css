@@ -1,3 +1,5 @@
+/* Contenu pour: style.css */
+
 :root {
     --background-primary: #36393f;
     --background-secondary: #2f3136;
@@ -568,6 +570,18 @@ nav a.active {
 .upgrade-info strong { color: var(--header-primary); }
 .upgrade-info .desc { color: #a4a4a4; font-style: italic; font-size: 13px; }
 .upgrade-info small { font-size: 12px; }
+
+/* NOUVEAU STYLE POUR LES BOUTONS D'ACTION */
+.upgrade-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.upgrade-actions .secondary-btn {
+    min-width: 60px; /* Donne une largeur minimale aux boutons */
+    text-align: center;
+}
+
 
 #kg-gem-shop { display: flex; flex-direction: column; gap: 10px; }
 #kg-gem-shop .secondary-btn { width: 100%; box-sizing: border-box; }
