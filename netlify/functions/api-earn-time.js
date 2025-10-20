@@ -1,7 +1,7 @@
 // netlify/functions/api-earn-time.js
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
-const db = require('./db'); // Utilise uniquement la connexion principale
+const db = require('./db');
 
 // --- GAME CONFIGURATION ---
 const PRESTIGE_REQUIREMENT_LEVEL = 75; const MAX_PRESTIGE_LEVEL = 20;
@@ -20,7 +20,42 @@ const COST_PER_HOUR = BigInt('77045760000');
 const getUpgradeCost = (u, c, a) => { const r = KING_GAME_UPGRADES[u], t = BigInt(r.baseCost); let e = BigInt(Math.ceil(Number(t) * Math.pow(r.costMultiplier, c))); return a && a.half_cost && new Date(a.half_cost) > new Date && (e /= 2n), e };
 const getUnitCost = (u, c, i) => { const t = i ? ALL_TROOPS_CONFIG[u] : DEFENSES_CONFIG[u]; return BigInt(Math.ceil(t.cost * Math.pow(t.costMultiplier, c))) };
 const calculatePower = u => { let c = 0; const a = u.troops || {}, r = u.defenses || {}; for (const t in a) { if(ALL_TROOPS_CONFIG[t]) c += (a[t].level || 1) * ALL_TROOPS_CONFIG[t].power * (a[t].quantity || 0) }; for (const t in r) { if(DEFENSES_CONFIG[t]) c += (r[t].level || 1) * DEFENSES_CONFIG[t].power * (r[t].quantity || 0) }; return BigInt(c) };
-const calculateKingGameState = async (u, c) => { const a = u.king_game_upgrades || {}, r = u.active_boosts || {}, t = u => a[u] || 0; let e = 1n + BigInt(t("click") * (KING_GAME_UPGRADES.click?.value || 1)), o = 0n; for (const i in KING_GAME_UPGRADES) "click" !== i && (o += BigInt(t(i)) * BigInt(KING_GAME_UPGRADES[i].cps)); let s = Math.pow(2, u.prestige_level || 0), n = s; const l = RANKS_CONFIG.slice().reverse().find(c => u.power >= c.power) || RANKS_CONFIG[0]; n *= Math.pow(1.1, l.index); const g = c.findIndex(c => c.discord_id === u.discord_id); let p = null; 0 === g ? (n *= 1.5, p = "King") : 1 === g ? (n *= 2, p = "Queen") : 2 === g && (p = "General"); let d = e * BigInt(Math.round(n)), i = o * BigInt(Math.round(n)); return r.x2_coins && new Date(r.x2_coins) > new Date && (d *= 2n, i *= 2n), { clickValue: d.toString(), cps: i.toString(), power: u.power.toString(), rank: l.name, title: p } };
+const calculateKingGameState = async (u, c) => {
+    const a = u.king_game_upgrades || {}, r = u.active_boosts || {}, t = u => a[u] || 0;
+    let e = 1n + BigInt(t("click") * (KING_GAME_UPGRADES.click?.value || 1)), o = 0n;
+    for (const i in KING_GAME_UPGRADES) "click" !== i && (o += BigInt(t(i)) * BigInt(KING_GAME_UPGRADES[i].cps));
+
+    let n = 1.0; 
+
+    n *= Math.pow(2, u.prestige_level || 0);
+
+    const l = RANKS_CONFIG.slice().reverse().find(rank => u.power >= rank.power) || RANKS_CONFIG[0];
+    const rankBonus = 1 + (l.index * 0.1);
+    n *= rankBonus;
+
+    const g = c.findIndex(p => p.discord_id === u.discord_id);
+    let p = null;
+    if (g === 0) { n *= 1.5; p = "King"; }
+    else if (g === 1) { n *= 2; p = "Queen"; }
+    else if (g === 2) { p = "General"; }
+
+    let d = e * BigInt(Math.round(n));
+    let i = o * BigInt(Math.round(n));
+
+    if (r.x2_coins && new Date(r.x2_coins) > new Date) {
+        d *= 2n;
+        i *= 2n;
+    }
+
+    return {
+        clickValue: d.toString(),
+        cps: i.toString(),
+        power: u.power.toString(),
+        rank: l.name,
+        title: p,
+        rankBonus: rankBonus
+    };
+};
 const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
 
 exports.handler = async function (event, context) {
@@ -31,6 +66,7 @@ exports.handler = async function (event, context) {
     try { decoded = jwt.verify(token, process.env.JWT_SECRET); } 
     catch (e) { return { statusCode: 401, body: JSON.stringify({ error: 'Invalid token' }) }; }
     const { id } = decoded;
+
     if (event.httpMethod === 'GET') {
         const action = event.queryStringParameters.action;
         if (action === 'get_users' || action === 'get_giftable_users') {
@@ -39,19 +75,12 @@ exports.handler = async function (event, context) {
         if (action === 'get_attack_history') {
             try {
                 const query = `
-                    SELECT
-                      a.*,
-                      attacker.discord_username as attacker_name,
-                      defender.discord_username as defender_name
-                    FROM
-                      attack_logs a
+                    SELECT a.*, attacker.discord_username as attacker_name, defender.discord_username as defender_name
+                    FROM attack_logs a
                     LEFT JOIN users attacker ON a.attacker_id = attacker.discord_id
                     LEFT JOIN users defender ON a.defender_id = defender.discord_id
-                    WHERE
-                      a.attacker_id = $1 OR a.defender_id = $1
-                    ORDER BY
-                      a.timestamp DESC
-                    LIMIT 30`;
+                    WHERE a.attacker_id = $1 OR a.defender_id = $1
+                    ORDER BY a.timestamp DESC LIMIT 30`;
                 const { rows } = await db.query(query, [id]);
                 return { statusCode: 200, body: JSON.stringify(rows) };
             } catch (error) {
@@ -59,9 +88,22 @@ exports.handler = async function (event, context) {
                 return { statusCode: 500, body: JSON.stringify({ error: 'Could not fetch attack history.' }) };
             }
         }
-        try { const { rows } = await db.query('SELECT expires_at FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]); if (rows.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'You do not have an active key to play with.' }) }; return { statusCode: 200, body: JSON.stringify({ expires_at: rows[0].expires_at }) }; } catch (error) { return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred.' }) }; }
+        // Fallback for any other GET request to this endpoint
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
+
     if (event.httpMethod === 'POST') {
+        // FIX: Key validation is now the first step for any POST action.
+        try {
+            const { rows } = await db.query('SELECT 1 FROM keys WHERE owner_discord_id = $1 AND (key_type = \'perm\' OR (key_type = \'temp\' AND expires_at > NOW())) LIMIT 1', [id]);
+            if (rows.length === 0) {
+                return { statusCode: 403, body: JSON.stringify({ error: 'You do not have an active key to play.' }) };
+            }
+        } catch (keyError) {
+            console.error("Key validation error:", keyError);
+            return { statusCode: 500, body: JSON.stringify({ error: 'An internal server error occurred during key validation.' }) };
+        }
+        
         const body = JSON.parse(event.body);
         const client = await db.getClient();
         try {
@@ -123,8 +165,8 @@ exports.handler = async function (event, context) {
                 const defenderPos = topPlayers.findIndex(p => p.discord_id === defender.discord_id);
                 const defenderIsQueen = defenderPos === 1;
 
-                if (attackerPos === 0) attackerPower = attackerPower * 15n / 10n; // 50% bonus for king
-                if (attackerPos === 2) attackerPower = attackerPower * 15n / 10n; // 50% bonus for general
+                if (attackerPos === 0) attackerPower = attackerPower * 2n;
+                if (attackerPos === 2) attackerPower = attackerPower * 15n / 10n;
 
                 const attackerRoll = Number(attackerPower) * (Math.random() * 0.5 + 0.75);
                 const defenderRoll = Number(defenderPower) * (Math.random() * 0.5 + 0.75);
@@ -217,6 +259,7 @@ exports.handler = async function (event, context) {
                 coins: user.king_game_coins.toString(), upgrades: upgrades, prestige_level: user.prestige_level || 0, gems: user.gems || 0,
                 troops: troops, defenses: defenses, active_boosts: Object.fromEntries(Object.entries(active_boosts).filter(([_,exp]) => new Date(exp) > now)),
                 power: finalGameState.power, rank: finalGameState.rank, cps: finalGameState.cps, clickValue: finalGameState.clickValue, title: finalGameState.title,
+                rankBonus: finalGameState.rankBonus,
                 ...responseData
             };
             return { statusCode: 200, body: JSON.stringify(finalResponse) };
